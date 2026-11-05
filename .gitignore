@@ -1,0 +1,22 @@
+node_modules/
+dist/
+out/
+cache/
+broadcast/
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+keys/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+.DS_Store
+# private working notes never enter the repo
+SPEC*.md
+HANDOFF*
+CODEX*
+TASK*
+*-private/
+g0/
