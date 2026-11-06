@@ -41,7 +41,8 @@ export function carriesCode(data: Hex, code: string): boolean {
 
 export function celoTransport(env: NodeJS.ProcessEnv = process.env) {
   const urls = [env.CELO_RPC_URL, env.CELO_RPC_URL_2].filter((u): u is string => Boolean(u));
-  if (urls.length === 0) urls.push("https://forno.celo.org");
+  // forno is load-balanced across nodes at different heights; publicnode answers consistently, forno is the fallback
+  if (urls.length === 0) urls.push("https://celo-rpc.publicnode.com", "https://forno.celo.org");
   return urls.length === 1 ? http(urls[0]) : fallback(urls.map((u) => http(u)));
 }
 
