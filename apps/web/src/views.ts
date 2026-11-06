@@ -3,10 +3,10 @@
 // and the g-* inputs: keep those names when changing markup.
 import { html, raw } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
-import { dollars, pesos, percent, type Quote } from "@adelanto/core";
+import { availableToBorrow, dollars, pesos, percent, type Quote } from "@adelanto/core";
 import { CELO } from "@adelanto/chain";
 import { t, type Lang } from "./i18n.ts";
-import { REFS, dep, labelOf, networkCostUsd, priceHistory, type LoanView, type PoolView } from "./data.ts";
+import { REFS, dep, labelOf, networkCostUsd, type LoanView, type PoolView } from "./data.ts";
 
 type H = HtmlEscapedString | Promise<HtmlEscapedString>;
 
@@ -33,7 +33,7 @@ const pillFor = (a: string, lang: Lang) => {
 };
 
 /** The mark: the word, and a square of the flag's celeste. */
-const MARK = raw(`<span class="word">Adelanto</span><span class="flag" aria-hidden="true"></span>`);
+const MARK = raw(`<span class="mark" aria-hidden="true">A</span><span class="word">Adelanto</span>`);
 
 // ---------------------------------------------------------------- shell
 
@@ -50,13 +50,13 @@ export function layout(lang: Lang, title: string, body: H, opts: { path: string;
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${title} · Adelanto</title>
 <meta name="description" content="${t(lang, "tagline")}">
-<meta name="theme-color" content="#f6f5f0">
+<meta name="theme-color" content="#ffffff">
 <meta property="og:title" content="Adelanto · ${t(lang, "tagline")}">
 <meta property="og:description" content="${es ? "Pesos contra tus dólares, en MiniPay, mucho más barato que el banco. Un agente cuida el préstamo dentro de una regla que firmás vos." : "Pesos against your dollars, in MiniPay, far cheaper than the bank. An agent looks after the loan inside a rule you sign."}">
 <meta property="og:image" content="/static/img/kiosco-1600.webp">
 <link rel="icon" href="/static/adelanto.png">
 <link rel="preload" href="/static/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/static/app.css?v=4">
+<link rel="stylesheet" href="/static/app.css?v=5">
 </head>
 <body>
 <header class="nav"><div class="wrap">
@@ -69,11 +69,10 @@ export function layout(lang: Lang, title: string, body: H, opts: { path: string;
   <a class="lang" href="${otherHref}" hreflang="${es ? "en" : "es"}">${other}</a>
   <a class="btn" href="${href(lang, "/pedir")}">${t(lang, "borrow")}</a>
 </div></header>
-<div class="progress" aria-hidden="true"><i></i></div>
 <main>${body}</main>
 ${footer(lang)}
 ${opts.wallet ? html`<script id="adelanto-cfg" type="application/json">${raw(walletCfg)}</script><script type="module" src="/static/wallet.js"></script>` : ""}
-<script src="/static/site.js?v=4" defer></script>
+<script src="/static/site.js?v=5" defer></script>
 </body>
 </html>`;
 }
@@ -121,208 +120,148 @@ function stateNotice(v: PoolView, lang: Lang) {
 
 // ---------------------------------------------------------------- landing
 
-/** The pool's 30-minute dollar price against Binance, from the minute-by-minute price watch. */
-function chart(lang: Lang) {
-  const h = priceHistory(120);
-  if (h.length < 10) return "";
-  const es = lang === "es";
-  const vals = h.flatMap((p) => [p.pool, p.binance]);
-  const lo = Math.min(...vals), hi = Math.max(...vals), W = 400, H = 70, pad = 4;
-  const x = (i: number) => (pad + (i * (W - 2 * pad)) / (h.length - 1)).toFixed(1);
-  const y = (v: number) => (H - pad - ((v - lo) / (hi - lo || 1)) * (H - 2 * pad)).toFixed(1);
-  const path = (k: "pool" | "binance") => h.map((p, i) => `${i ? "L" : "M"}${x(i)} ${y(p[k])}`).join(" ");
-  const hours = Math.round((h[h.length - 1].t - h[0].t) / 3_600_000);
-  const gap = h.reduce((m, p) => Math.max(m, Math.abs(p.pool / p.binance - 1)), 0) * 100;
-  return html`<div class="board-chart">
-  <div class="what">${es ? `Dólar del fondo contra Binance, últimas ${hours} h` : `Pool dollar against Binance, last ${hours} h`}<small>${es ? `nunca más de ${gap.toLocaleString("es-AR", { maximumFractionDigits: 2 })}% de diferencia; el agente pausa si pasa 1,5%` : `never more than ${gap.toFixed(2)}% apart; the agent pauses past 1.5%`}</small></div>
-  <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path class="l-binance" d="${path("binance")}" pathLength="1"/><path class="l-pool" d="${path("pool")}" pathLength="1"/></svg>
-  <div class="legend"><span class="k-pool">${es ? "fondo" : "pool"}</span><span class="k-binance">Binance</span></div>
-</div>`;
-}
-
-/** A number on the rate board: one tile per character, flipping in one after another. */
-function boardDigits(text: string, start = 0, key = "") {
-  return html`<span class="digits flip" data-live="${key}">${[...text].map((ch, i) =>
-    html`<b class="${/[0-9]/.test(ch) ? "" : "p"}" style="animation-delay:${start + i * 45}ms">${ch}</b>`,
-  )}</span>`;
-}
+const ICON: Record<string, string> = {
+  shield: '<path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/>',
+  chain: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  tag: '<path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  coins: '<ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v5c0 1.7 2.7 3 6 3s6-1.3 6-3V7"/><path d="M15 11.2c3.4.3 6 1.6 6 2.8 0 1.7-2.7 3-6 3-1.3 0-2.6-.2-3.6-.6"/>',
+  bank: '<path d="M3 10l9-6 9 6"/><path d="M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/>',
+  arrows: '<path d="M7 7h12l-3-3M17 17H5l3 3"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  scale: '<path d="M12 4v16M5 20h14M6 8l-3 6h6l-3-6zM18 8l-3 6h6l-3-6zM6 8h12"/>',
+};
+const icon = (k: string) => raw(`<svg viewBox="0 0 24 24" fill="none" stroke="#0e2a47" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`);
 
 export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: any[]; actions: any[] } | null, tickAge: number | null) {
   const es = lang === "es";
   const loc = es ? "es-AR" : "en-US";
   const rate = Number(v.borrowRateBps) / 10_000;
   const bankRate = Number(REFS.bankLoan.bps) / 10_000;
-  // The README's example, at today's rate: 400,000 pesos for 30 days, simple interest.
   const P = 400_000, D = 30;
   const bankCost = Math.round((P * bankRate * D) / 365);
-  const ourInterest = Math.round((P * rate * D) / 365);
-  const fee = Math.round(P * 0.0025);
-  const ourCost = ourInterest + fee;
+  const ourCost = Math.round((P * rate * D) / 365) + Math.round(P * 0.0025);
   const saving = bankCost - ourCost;
-  const price = Number((v.borrowPrice ?? v.liquidationPrice) / 10n ** 15n) / 1000;
-  const lockUsd = Math.round(P / 0.6 / price);
-  const tick = tickAge === null ? null : Math.max(1, Math.round(tickAge / 1000));
-  const pct = (bps: bigint) => (Number(bps) / 100).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
+  const canLend = Number(availableToBorrow(v.pool).pesos / 10n ** 18n);
+  const start = Math.max(1000, Math.min(5000, Math.floor(canLend / 100) * 100));
   const b = proof?.events.find((e) => e.name === "Borrowed");
+  const pct2 = (bps: bigint) => (Number(bps) / 100).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
 
   return layout(
     lang,
     es ? "Pesos ya, sin vender tus dólares" : "Pesos now, without selling your dollars",
     html`
 <section class="hero"><div class="wrap">
-  <div>
-    <span class="eyebrow">${es ? "Préstamos en pesos contra dólares, en MiniPay" : "Peso loans against dollars, in MiniPay"}</span>
-    <h1 class="lines-in">${(es ? ["Pesos ya,", "sin vender", "tus dólares."] : ["Pesos now,", "without selling", "your dollars."]).map((w, i) => html`<span class="ln"><span style="--i:${i}">${w}</span></span>`)}</h1>
-    <p class="lede">${es
-      ? "Dejás USDT en garantía y recibís pesos digitales de Ripio en un minuto. Pagás mucho menos que en el banco, y un agente cuida el préstamo dentro de una regla que firmás vos."
-      : "Leave USDT as a guarantee and get Ripio digital pesos in a minute. You pay far less than at the bank, and an agent looks after the loan inside a rule you sign."}</p>
-    <div class="cta-row">
-      <a class="btn sol" href="${href(lang, "/pedir")}">${t(lang, "borrow")} <span class="arrow">→</span></a>
-      <a class="btn ghost" href="${href(lang, "/probar")}">${t(lang, "tryIt")}</a>
+  <div class="hero-in">
+    <h1>${es ? "Pesos ya, sin vender tus dólares" : "Pesos now, without selling your dollars"}</h1>
+    <p class="lede">${es ? "Dejá USDT en garantía y recibí pesos al instante en MiniPay. Pagás una fracción de lo que cobra el banco, y un agente cuida tu préstamo." : "Leave USDT as a guarantee and get pesos instantly in MiniPay. You pay a fraction of the bank's rate, and an agent looks after your loan."}</p>
+    <div class="cta-row"><a class="btn" href="${href(lang, "/pedir")}">${t(lang, "borrow")}</a><a class="btn ghost" href="${href(lang, "/probar")}">${t(lang, "tryIt")}</a></div>
+  </div>
+  <form class="calc" id="calc" method="get" action="/pedir" data-lang="${lang}" data-bank="${REFS.bankLoan.bps.toString()}" data-rate="${v.borrowRateBps.toString()}" data-price="${(v.borrowPrice ?? v.liquidationPrice).toString()}">
+    ${lang === "en" ? html`<input type="hidden" name="lang" value="en">` : ""}
+    <div class="c-top"><span class="c-live">${es ? "Tasa en vivo de Celo" : "Live rate from Celo"}</span><span class="small muted">${es ? "bloque" : "block"} <span id="c-block">${v.block.toString()}</span></span></div>
+    <div class="field">
+      <label for="c-pesos">${es ? "Necesito" : "I need"}</label>
+      <div class="in"><input id="c-pesos" name="pesos" inputmode="numeric" autocomplete="off" value="${start.toLocaleString(loc)}"><span class="cur"><span class="flag"></span>ARS</span></div>
     </div>
-  </div>
-  <div class="board" role="table" aria-label="${es ? "Pizarra de tasas, leída de la cadena" : "Rate board, read from the chain"}">
-    <div class="board-head"><span>${es ? "Pizarra" : "Board"} · Celo</span><span class="live">${es ? "En vivo" : "Live"}</span></div>
-    <div class="board-row them" role="row"><div class="what" role="cell">${es ? "Banco" : "Bank"}<small>${es ? "préstamo personal" : "personal loan"} · ${REFS.bankLoan.source}</small></div><div role="cell">${boardDigits(pct(REFS.bankLoan.bps))}</div></div>
-    <div class="board-row" role="row"><div class="what" role="cell">Adelanto<small>${es ? "tasa anual hoy" : "yearly rate today"}</small></div><div role="cell">${boardDigits(pct(v.borrowRateBps), 250, "rate")}</div></div>
-    <div class="board-row dim" role="row"><div class="what" role="cell">${es ? "Dólar del fondo" : "Pool dollar"}<small>${es ? "pesos por USDT, promedio 30 min" : "pesos per USDT, 30-min average"}</small></div><div role="cell">${boardDigits(price.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), 500, "price")}</div></div>
-    <div class="board-row dim" role="row"><div class="what" role="cell">${es ? "Pesos para prestar" : "Pesos to lend"}<small>${es ? "libres en el fondo ahora" : "free in the pool now"}</small></div><div role="cell">${boardDigits(Number(v.pool.cash / 10n ** 18n).toLocaleString(loc), 750, "free")}</div></div>
-    ${chart(lang)}
-    <div class="board-foot">${es ? "Bloque" : "Block"} <span data-live="block">${v.block.toString()}</span>${tick !== null ? html` · ${es ? "el agente revisó hace" : "agent checked"} <span data-live="tick">${tick}</span> s${es ? "" : " ago"}` : ""}</div>
-  </div>
-</div></section>
-
-<section class="celeste"><div class="wrap">
-  <div class="reveal">
-    <h2>${es ? "Mismo préstamo, otra cuenta." : "Same loan, different bill."}</h2>
-    <p>${es ? `Por $ 400.000 durante ${D} días, el banco te cobra ${pct(REFS.bankLoan.bps)} al año. Con Adelanto te quedan en el bolsillo` : `For ARS 400,000 over ${D} days, the bank charges ${pct(REFS.bankLoan.bps)} a year. With Adelanto you keep`}</p>
-    <div class="big-saving num" data-count="${saving}" data-pre="$ " data-locale="${loc}">$ ${num(saving, lang)}</div>
-    <p>${es ? "y no vendés ni un dólar: quedan en garantía y vuelven cuando pagás." : "and you sell no dollars: they stay as guarantee and come back when you repay."}</p>
-  </div>
-  <div class="printer reveal"><div class="slot" aria-hidden="true"></div><div class="ticket" aria-label="${es ? "Cotización de ejemplo" : "Example quote"}">
-    <div class="t-head"><b>Adelanto</b>${es ? "Cotización de ejemplo" : "Example quote"}</div>
-    <div class="t-row"><span>${es ? "Pedís" : "You borrow"}</span><span>$ ${num(P, lang)}</span></div>
-    <div class="t-row"><span>${es ? "Plazo" : "Term"}</span><span>${D} ${t(lang, "days")}</span></div>
-    <div class="t-row"><span>${es ? "Tasa anual hoy" : "Yearly rate today"}</span><span>${percent(v.borrowRateBps, lang)}</span></div>
-    <div class="t-sep"></div>
-    <div class="t-row"><span>${es ? "Interés" : "Interest"}</span><span>$ ${num(ourInterest, lang)}</span></div>
-    <div class="t-row"><span>${es ? "Comisión 0,25%" : "Fee 0.25%"}</span><span>$ ${num(fee, lang)}</span></div>
-    <div class="t-row t-total"><span>${es ? "Te cuesta" : "It costs"}</span><span>$ ${num(ourCost, lang)}</span></div>
-    <div class="t-row strike"><span>${es ? "En el banco" : "At the bank"}</span><span>$ ${num(bankCost, lang)}</span></div>
-    <div class="t-sep"></div>
-    <div class="t-row"><span>${es ? "Dejás en garantía" : "Guarantee"}</span><span>US$ ${num(lockUsd, lang)}</span></div>
-    <div class="t-row"><span>${es ? "Dólares vendidos" : "Dollars sold"}</span><span>0</span></div>
-    <div class="t-foot">${es ? "Interés simple a la tasa de hoy. La tasa real sigue el uso del fondo y la ves antes de firmar." : "Simple interest at today's rate. The real rate follows pool use; you see it before you sign."}</div>
-  </div></div>
-</div></section>
-
-<figure class="story-photo parallax">
-  <img src="/static/img/kiosco-1600.webp" srcset="/static/img/kiosco-800.webp 800w, /static/img/kiosco-1600.webp 1600w" sizes="100vw" alt="${es ? "Alfajores apilados en un kiosco de Buenos Aires" : "Alfajores stacked in a Buenos Aires kiosk"}" loading="lazy">
-</figure>
-<div class="caption"><span>${es ? "Kiosco en Buenos Aires. Lucía es un ejemplo, no una clienta." : "A kiosk in Buenos Aires. Lucía is an example, not a customer."}</span><span>Foto: Just a Man, CC BY 4.0</span></div>
-
-<section class="section"><div class="wrap cols">
-  <div class="side reveal"><h2>${es ? "Lucía tiene un kiosco en Caballito." : "Lucía runs a kiosk in Caballito."}</h2></div>
-  <div class="reveal">
-    <p class="quote">${es ? "Ahorra en dólares porque el peso se va. Pero la mercadería la paga en pesos." : "She saves in dollars because the peso melts. But she pays for stock in pesos."}</p>
-    <p class="lede">${es
-      ? "Este mes necesita $ 400.000 para reponer. Vender dólares es perderlos; el banco le cobra 64,63% al año; pagar en cuotas con la tarjeta le sale el dólar tarjeta. Con Adelanto deja una parte de sus USDT, recibe los pesos al instante y sus dólares siguen siendo suyos. Si el peso sigue cayendo, lo que debe en pesos vale cada vez menos en dólares."
-      : "This month she needs ARS 400,000 to restock. Selling dollars means losing them; the bank charges 64.63% a year; card instalments cost the card dollar. With Adelanto she leaves part of her USDT, gets the pesos at once, and her dollars stay hers. If the peso keeps falling, what she owes in pesos is worth less and less in dollars."}</p>
-    <div class="facts">
-      <div><b data-count="33.4" data-dec="1" data-post="%" data-locale="${loc}">33,4%</b><span>${es ? "inflación de los últimos 12 meses (INDEC)" : "inflation over 12 months (INDEC)"}</span></div>
-      <div><b>+22%</b><span>${es ? "el dólar tarjeta contra el dólar cripto" : "card dollar against crypto dollar"}</span></div>
-      <div><b>1 min</b><span>${es ? "de tus USDT a tus pesos" : "from your USDT to your pesos"}</span></div>
+    <div class="terms">${[7, 30, 60, 90].map((d) => html`<label><input type="radio" name="dias" value="${d}" ${d === 30 ? "checked" : ""}><span>${d}<small>${t(lang, "days")}</small></span></label>`)}</div>
+    <div class="lines">
+      <div class="ln"><span><span class="ic">${icon("lock")}</span>${es ? "Dejás en garantía" : "You leave as guarantee"}</span><b id="c-coll">—</b></div>
+      <div class="ln"><span><span class="ic">${icon("clock")}</span>${es ? "Tasa anual hoy" : "Yearly rate today"}</span><b id="c-rate">${percent(v.borrowRateBps, lang)}</b></div>
+      <div class="ln"><span><span class="ic">${icon("coins")}</span>${es ? "Interés + comisión" : "Interest + fee"}</span><b id="c-cost">—</b></div>
+      <div class="ln bank"><span><span class="ic">${icon("bank")}</span>${es ? `En el banco (${pct2(REFS.bankLoan.bps)})` : `At the bank (${pct2(REFS.bankLoan.bps)})`}</span><b id="c-bank">—</b></div>
     </div>
-  </div>
+    <div class="save-box"><span>${t(lang, "youSave")}</span><b id="c-save">—</b></div>
+    <button class="btn block" type="submit" id="c-go">${t(lang, "borrow")}</button>
+    <p class="note" id="c-note"></p>
+  </form>
+</div>
+<div class="wrap trust">
+  <div><span class="ic">${icon("shield")}</span><b>${es ? "Tu plata en contratos públicos" : "Your money in public contracts"}</b><span>${es ? "Cinco contratos verificados en Celo, sin retiro de administrador" : "Five verified contracts on Celo, no admin withdraw"}</span></div>
+  <div><span class="ic">${icon("sliders")}</span><b>${es ? "Un agente con límites" : "An agent with limits"}</b><span>${es ? "Agente ERC-8004 #10043; actúa solo dentro de tu regla" : "ERC-8004 agent #10043; acts only inside your rule"}</span></div>
+  <div><span class="ic">${icon("tag")}</span><b>${es ? "Todo a la vista" : "All in the open"}</b><span>${es ? "Cada transacción en la cadena, con la etiqueta del evento" : "Every transaction on chain, with the event's tag"}</span></div>
 </div></section>
 
-<section class="dark section"><div class="wrap">
-  <div class="sec-head reveal">
-    <h2>${es ? "Firmás una regla. El agente la cumple." : "You sign a rule. The agent keeps it."}</h2>
-    <p>${es ? "Si el préstamo se acerca al riesgo, el agente agrega tus propios dólares o paga con tus propios pesos, en el orden que elegiste y sin pasarse de tus topes diarios. Cada acción cita tu regla." : "If the loan nears risk, the agent adds your own dollars or repays with your own pesos, in the order you chose and never past your daily caps. Every action quotes your rule."}</p>
-  </div>
-  <div class="agent-log chat reveal">
-    <div class="lh"><span>${es ? "Así te avisa" : "How it tells you"}</span><span>${es ? "ejemplos" : "examples"}</span></div>
-    <div class="ll"><time>09:41</time><span>${es ? "Tu préstamo llegó al 71%. Agregué US$ 3 de tus dólares y volvió al 60%." : "Your loan reached 71%. I added US$3 of your dollars; it is back to 60%."}<span class="why">${es ? "Tu regla: «cuidalo con hasta US$ 10 por semana»" : "Your rule: “protect it with up to US$10 a week”"}</span></span></div>
-    <div class="typing" aria-hidden="true"><time></time><span><i></i><i></i><i></i></span></div>
-    <div class="ll"><time>14:05</time><span>${es ? "Te entraron $ 50.000. Pagué $ 40.000 del préstamo y te dejé $ 10.000." : "ARS 50,000 arrived. I repaid ARS 40,000 and left you ARS 10,000."}<span class="why">${es ? "Tu regla: «pagá cuando me entren pesos, dejame siempre $ 10.000»" : "Your rule: “repay when pesos arrive, always leave me ARS 10,000”"}</span></span></div>
-    <div class="ll"><time>18:30</time><span>${es ? "El precio del fondo no coincide con Binance ni con dolarapi hace 3 minutos. Pausé préstamos nuevos; pagar sigue igual." : "The pool price has disagreed with Binance and dolarapi for 3 minutes. I paused new loans; repaying works as usual."}</span></div>
-  </div>
-  <div class="limits reveal">
-    <div><b>${es ? "Nunca mueve plata a otro lado." : "Never moves money elsewhere."}</b><p>${es ? "Solo de tu billetera a tu propio préstamo. Lo hace cumplir el contrato LoanGuard, no nosotros." : "Only from your wallet into your own loan. The LoanGuard contract enforces it, not us."}</p></div>
-    <div><b>${es ? "Nunca se pasa de tus topes." : "Never goes past your caps."}</b><p>${es ? "Dólares por día, pesos por día, lo que siempre te deja y hasta cuándo. Le quitás el permiso cuando quieras." : "Dollars a day, pesos a day, what it always leaves you and until when. Take the permission back any time."}</p></div>
-    <div><b>${es ? "Si tiene que vender, vende lo mínimo." : "If it must sell, it sells the least."}</b><p>${es ? "Primero intenta salvarlo con tu plata. Si no alcanza, vende solo hasta el 78%: en un préstamo de 1.000 USDT perdés US$ 5,80 en vez de US$ 19." : "It first tries to save it with your money. If that fails, it sells only to 78%: on a 1,000 USDT loan you lose US$5.80 instead of US$19."}</p></div>
+<section class="band"><div class="wrap">
+  <h2 class="reveal">${es ? "Dejá de pagar la tasa del banco" : "Stop paying the bank's rate"}</h2>
+  <p class="lede reveal d1">${es ? `Los bancos cobran ${pct2(REFS.bankLoan.bps)} al año por un préstamo personal (${REFS.bankLoan.source}). Nosotros no vendemos tus dólares ni te cobramos de más: la tasa sale del uso del fondo y la ves antes de firmar.` : `Banks charge ${pct2(REFS.bankLoan.bps)} a year for a personal loan (${REFS.bankLoan.source}). We don't sell your dollars or overcharge: the rate comes from pool use and you see it before you sign.`}</p>
+  <div class="cta-row reveal d1"><a class="btn dark" href="${href(lang, "/pedir")}">${t(lang, "borrow")}</a><a class="link-arrow" href="${href(lang, "/como-funciona")}">${t(lang, "how")}</a></div>
+  <div class="cmp reveal d2" style="--w:${Math.max(6, Math.round((ourCost / bankCost) * 100))}%">
+    <div class="cmp-head"><span>${es ? `Ejemplo: $ 400.000 por ${D} días` : `Example: ARS 400,000 for ${D} days`}</span><span>${es ? "Interés simple a la tasa de hoy" : "Simple interest at today's rate"}</span></div>
+    <div class="cmp-grid">
+      <div class="opt us"><div class="who">Adelanto <span class="pill celeste">${percent(v.borrowRateBps, lang)} + 0,25%</span></div><div class="amt" data-count="${ourCost}" data-pre="$ " data-locale="${loc}">$ ${num(ourCost, lang)}</div><p>${es ? "Tus dólares quedan en garantía y vuelven cuando pagás." : "Your dollars stay as guarantee and come back when you repay."}</p><div class="bar"><i></i></div></div>
+      <div class="opt them"><div class="who">${es ? "Banco" : "Bank"} <span class="pill">${pct2(REFS.bankLoan.bps)}</span></div><div class="amt" data-count="${bankCost}" data-pre="$ " data-locale="${loc}">$ ${num(bankCost, lang)}</div><p>${es ? `Pagás $ ${num(saving, lang)} más por el mismo préstamo.` : `You pay ARS ${num(saving, lang)} more for the same loan.`}</p><div class="bar"><i></i></div></div>
+    </div>
   </div>
 </div></section>
 
 <section class="section"><div class="wrap">
-  <div class="sec-head reveal">
-    <h2>${es ? "Si el peso cae, tu préstamo está más seguro." : "If the peso falls, your loan gets safer."}</h2>
-    <p>${es ? "Debés pesos y dejaste dólares. El riesgo llega si el peso se fortalece mucho; la línea es cuánto pediste contra lo que dejaste." : "You owe pesos and left dollars. Risk comes only if the peso strengthens a lot; the line is what you borrowed against what you left."}</p>
+  <div class="feature">
+    <div class="reveal">
+      <h2>${es ? html`Tu préstamo, <em>cuidado</em>` : html`Your loan, <em>looked after</em>`}</h2>
+      <p class="lede">${es ? "Firmás una regla una vez. Si el préstamo se acerca al riesgo, el agente agrega tus propios dólares o paga con tus propios pesos, sin pasarse de tus topes. Si te entran pesos, puede pagar solo. Cada acción cita tu regla." : "You sign a rule once. If the loan nears risk, the agent adds your own dollars or repays with your own pesos, never past your caps. If pesos arrive, it can repay on its own. Every action quotes your rule."}</p>
+      <a class="link-arrow" href="${href(lang, "/como-funciona")}">${es ? "Cómo funciona el agente" : "How the agent works"}</a>
+    </div>
+    <div class="art reveal d1" aria-hidden="true">
+      <div class="mini-phone"><div class="scr">
+        <div class="t">${t(lang, "myLoan")}</div>
+        <div class="big">$ 400.000</div>
+        <div class="mtrack"><i></i></div>
+        <div class="msg"><b>${es ? "Agente · tu regla" : "Agent · your rule"}</b>${es ? "Tu préstamo llegó al 71%. Agregué US$ 3 de tus dólares y volvió al 60%." : "Your loan reached 71%. I added US$3 of your dollars; it's back to 60%."}</div>
+        <div class="mrow"><span>${t(lang, "guarantee")}</span><b>US$ 405</b></div>
+        <div class="mrow"><span>${es ? "Vence" : "Due"}</span><b>${es ? "en 30 días" : "in 30 days"}</b></div>
+        <div class="mbtn">${t(lang, "payAll")}</div>
+      </div></div>
+    </div>
   </div>
-  <div class="ruler reveal" role="img" aria-label="${es ? "Empezás hasta el 60%; el agente actúa al 70%; pasando el 80% se vende lo justo para volver al 78%." : "You start at up to 60%; the agent acts at 70%; past 80% just enough is sold to get back to 78%."}">
-    <div class="ticks"><span style="left:60%">60%</span><span style="left:70%">70%</span><span style="left:80%">80%</span></div>
-    <div class="bar"><i></i><i></i><i></i><i></i></div>
-    <div class="marker" aria-hidden="true"><span class="tag"></span></div>
-  </div>
-  <div class="ruler-legend" data-tags="${es ? "Tranquilo|El agente actúa|Volvió al 60%|Se vende lo justo|Volvió al 78%" : "Calm|The agent acts|Back to 60%|Just enough sold|Back to 78%"}">
-    <span><b>0–60%</b>${es ? "Empezás acá: hasta el 60% de lo que dejás." : "You start here: up to 60% of what you leave."}</span>
-    <span><b>70%</b>${es ? "Te cuida el agente." : "The agent steps in."}</span>
-    <span><b>80%</b>${es ? "Se vende lo justo." : "Just enough is sold."}</span>
-    <span><b>78%</b>${es ? "Hasta volver al 78%. El resto sigue siendo tuyo." : "Back to 78%. The rest stays yours."}</span>
+  <div class="icons3">
+    <div class="reveal"><span class="ic">${icon("arrows")}</span><b>${es ? "Nunca mueve plata a otro lado" : "Never moves money elsewhere"}</b><p>${es ? "Solo de tu billetera a tu propio préstamo. Lo hace cumplir el contrato, no nosotros." : "Only from your wallet into your own loan. The contract enforces it, not us."}</p></div>
+    <div class="reveal d1"><span class="ic">${icon("sliders")}</span><b>${es ? "Nunca se pasa de tus topes" : "Never goes past your caps"}</b><p>${es ? "Dólares por día, pesos por día y lo que siempre te deja. Le quitás el permiso cuando quieras." : "Dollars a day, pesos a day and what it always leaves you. Take the permission back any time."}</p></div>
+    <div class="reveal d2"><span class="ic">${icon("scale")}</span><b>${es ? "Vende lo mínimo, si tiene que vender" : "Sells the least, if it must"}</b><p>${es ? "Solo hasta volver al 78%: en un préstamo de 1.000 USDT perdés US$ 5,80 en vez de US$ 19." : "Only back to 78%: on a 1,000 USDT loan you lose US$5.80 instead of US$19."}</p></div>
   </div>
 </div></section>
 
-<section class="lend">
-  <figure class="kb"><img src="/static/img/mercado-1600.webp" srcset="/static/img/mercado-800.webp 800w, /static/img/mercado-1600.webp 1600w" sizes="(max-width: 900px) 100vw, 50vw" alt="${es ? "Mercado de San Telmo, Buenos Aires" : "San Telmo market, Buenos Aires"}" loading="lazy"><figcaption>Mercado de San Telmo · Josefito123, CC BY-SA 4.0</figcaption></figure>
-  <div class="body reveal">
-    <h2>${es ? "¿Tenés pesos? Prestalos." : "Holding pesos? Lend them."}</h2>
-    <p class="lede" style="margin-top:18px">${es ? "Quienes piden pagan la tasa del día; el 90% del interés va a quienes prestan. Retirás cuando haya pesos libres en el fondo." : "Borrowers pay the day's rate; 90% of the interest goes to lenders. Withdraw whenever the pool has free pesos."}</p>
-    <div class="rates">
-      <div><b data-count="25.9" data-dec="1" data-post="%" data-locale="${loc}">25,9%</b><span>${es ? "lo que ganás con el fondo prestado al 80%" : "what you earn with the pool 80% lent"}</span></div>
-      <div><b>${percent(REFS.badlar.bps, lang)}</b><span>${es ? "BADLAR, depósitos a plazo" : "BADLAR, term deposits"} · ${REFS.badlar.source}</span></div>
-    </div>
-    <a class="btn" href="${href(lang, "/prestar")}">${t(lang, "lend")} <span class="arrow">→</span></a>
+<section class="wrap cards"><div class="bigcard navy reveal"><div class="bc-grid">
+  <div>
+    <h2>${es ? html`¿Tenés pesos? <em>Prestalos</em>` : html`Holding pesos? <em>Lend them</em>`}</h2>
+    <p class="lede" style="margin:18px 0 26px">${es ? "Quienes piden pagan la tasa del día y el 90% del interés va a quienes prestan. Retirás cuando haya pesos libres en el fondo." : "Borrowers pay the day's rate and 90% of the interest goes to lenders. Withdraw whenever the pool has free pesos."}</p>
+    <a class="btn" href="${href(lang, "/prestar")}">${t(lang, "lend")}</a>
   </div>
-</section>
+  <div class="rate-tiles">
+    <div class="hi"><b data-count="25.9" data-dec="1" data-post="%" data-locale="${loc}">25,9%</b><span>${es ? "lo que ganás con el fondo prestado al 80%" : "what you earn with the pool 80% lent"}</span></div>
+    <div><b>${percent(REFS.badlar.bps, lang)}</b><span>${es ? "BADLAR, depósitos a plazo" : "BADLAR, term deposits"} · ${REFS.badlar.source}</span></div>
+  </div>
+</div></div></section>
 
 ${proof && b ? html`<section class="section"><div class="wrap">
-  <div class="sec-head reveal">
-    <h2>${es ? `Préstamo #${proof.loan.id}, de punta a punta.` : `Loan #${proof.loan.id}, end to end.`}</h2>
-    <p>${es ? "En Celo, con wARS de verdad, desde una billetera nuestra. Cada paso tiene su transacción." : "On Celo, with real wARS, from one of our own wallets. Every step has its transaction."}</p>
+  <div class="proof-head reveal">
+    <div><h2>${es ? "Un préstamo real" : "A real loan"}</h2><div class="proof-sum"><span>${es ? "Pidió" : "Borrowed"} <b>${pesos(BigInt(b.args.pesos), lang)}</b></span><span>${es ? "Dejó" : "Left"} <b>${dollars(BigInt(b.args.collateral), lang)}</b></span><span>${es ? "Tasa" : "Rate"} <b>${percent(BigInt(b.args.rateBps), lang)}</b></span><span class="pill ok" style="font-size:15px;padding:8px 14px">${proof.loan.open ? t(lang, "open") : t(lang, "closed")}</span></div></div>
+    <p class="lede" style="margin:0;max-width:26em">${es ? "En Celo, con wARS de verdad, desde una billetera nuestra. Tocá cualquier paso para verlo en el explorador." : "On Celo, with real wARS, from one of our own wallets. Tap any step to see it on the explorer."}</p>
   </div>
-  <div class="proof-sum reveal">
-    <div><b>${pesos(BigInt(b.args.pesos), lang)}</b><span>${es ? "pidió" : "borrowed"}</span></div>
-    <div><b>${dollars(BigInt(b.args.collateral), lang)}</b><span>${es ? "dejó en garantía" : "left as guarantee"}</span></div>
-    <div><b>${percent(BigInt(b.args.rateBps), lang)}</b><span>${es ? "tasa anual" : "yearly rate"}</span></div>
-    <div><b>${proof.loan.open ? t(lang, "open") : t(lang, "closed")}</b><span>${es ? "estado" : "status"} · ${label(proof.loan.borrower, lang)}</span></div>
-  </div>
-  <table class="ledger cascade reveal">
-    <thead><tr><th class="n">#</th><th>${es ? "Qué pasó" : "What happened"}</th><th>${es ? "Transacción" : "Transaction"}</th></tr></thead>
-    <tbody>${proof.events.map((e, i) => html`<tr style="--i:${i}"><td class="n">${String(i + 1).padStart(2, "0")}</td><td>${eventLine(e, lang)}</td><td><a class="tx" href="${txUrl(e.tx)}">${short(e.tx)}</a></td></tr>`)}</tbody>
-  </table>
-  <p style="margin-top:22px"><a href="${href(lang, `/prestamo/${proof.loan.id}`)}">${es ? "Ver la página del préstamo →" : "See the loan page →"}</a> · <a href="${href(lang, "/transparencia")}">${es ? "Transparencia y contratos →" : "Transparency and contracts →"}</a></p>
+  <div class="steps-row">${proof.events.map((e, i) => html`<a class="st reveal" style="text-decoration:none;color:inherit;transition-delay:${i * 60}ms" href="${txUrl(e.tx)}"><span class="n">${i + 1}</span><b>${eventLine(e, lang)}</b><span class="tx">${short(e.tx)} ↗</span></a>`)}</div>
+  <p style="margin-top:24px"><a class="link-arrow" href="${href(lang, `/prestamo/${proof.loan.id}`)}">${es ? "Ver el préstamo completo" : "See the full loan"}</a> &nbsp; <a class="link-arrow" href="${href(lang, "/transparencia")}">${t(lang, "transparency")}</a></p>
 </div></section>` : ""}
 
-<section class="section" style="padding-top:0"><div class="wrap faq">
-  <h2 class="reveal">${es ? "Preguntas." : "Questions."}</h2>
-  <dl class="reveal">
-    <dt>${es ? "¿Qué pasa si no pago a tiempo?" : "What if I don't repay on time?"}</dt><dd>${es ? "La tasa sube 5 puntos hasta que pagues y, a los 7 días, tu historial lo marca como atrasado. Nunca se vende tu garantía por pagar tarde: solo el precio puede hacer que se venda una parte." : "The rate rises 5 points until you repay and, after 7 days, your record marks it late. Your guarantee is never sold for paying late: only the price can trigger a partial sale."}</dd>
-    <dt>${es ? "¿Quién tiene mis dólares?" : "Who holds my dollars?"}</dt><dd>${es ? "El contrato PesoPool en Celo. No tiene ninguna función para que un administrador los retire. Vuelven a tu billetera cuando pagás." : "The PesoPool contract on Celo. It has no function that lets an administrator withdraw them. They return to your wallet when you repay."}</dd>
-    <dt>${es ? "¿Qué son los wARS?" : "What is wARS?"}</dt><dd>${es ? "Pesos digitales de Ripio: 1 wARS = 1 peso. Los podés usar en Celo o pasarlos a tu cuenta bancaria desde la app de Ripio." : "Ripio's digital pesos: 1 wARS = 1 peso. Use them on Celo or move them to your bank account from the Ripio app."}</dd>
-    <dt>${es ? "¿Y si Ripio congela los wARS?" : "What if Ripio freezes wARS?"}</dt><dd>${es ? "Tras 24 horas congelados, cada persona puede recuperar sus dólares hasta la línea del 70%. Está escrito en el contrato y probado." : "After 24 hours frozen, each borrower can take their dollars back down to the 70% line. It is written in the contract and tested."}</dd>
-    <dt>${es ? "¿De dónde sale el precio del dólar?" : "Where does the dollar price come from?"}</dt><dd>${es ? "Del fondo wARS/USDT de Uniswap en Celo, promedio de 30 minutos. El agente lo compara cada minuto con Binance y dolarapi; si no coinciden, pausa préstamos nuevos." : "From the wARS/USDT Uniswap pool on Celo, as a 30-minute average. The agent compares it every minute with Binance and dolarapi; if they disagree, it pauses new loans."}</dd>
-  </dl>
+<section class="wrap cards"><div class="bigcard photo-card reveal">
+  <img src="/static/img/kiosco-1600.webp" srcset="/static/img/kiosco-800.webp 800w, /static/img/kiosco-1600.webp 1600w" sizes="(max-width: 1200px) 100vw, 1200px" alt="${es ? "Alfajores en un kiosco de Buenos Aires" : "Alfajores in a Buenos Aires kiosk"}" loading="lazy">
+  <span class="credit">Just a Man · CC BY 4.0</span>
+  <div class="pc-body">
+    <h2>${es ? "Para el kiosco, el alquiler, el fin de mes" : "For the shop, the rent, the end of the month"}</h2>
+    <p class="lede">${es ? `Lucía (un ejemplo) tiene un kiosco en Caballito y ahorra en dólares. Para reponer $ 400.000 este mes, el banco le cobraría $ ${num(bankCost, lang)} de interés. Con Adelanto paga $ ${num(ourCost, lang)} y sus dólares siguen siendo suyos.` : `Lucía (an example) runs a kiosk in Caballito and saves in dollars. To restock ARS 400,000 this month, the bank would charge ARS ${num(bankCost, lang)} in interest. With Adelanto she pays ARS ${num(ourCost, lang)} and her dollars stay hers.`}</p>
+    <a class="btn light" href="${href(lang, "/probar")}">${t(lang, "tryIt")}</a>
+  </div>
 </div></section>
 
-<section class="closing"><div class="wrap">
-  <div class="reveal">
-    <h2>${es ? "Probalo con un dólar." : "Try it with one dollar."}</h2>
-    <p>${es ? `Pedí $ 1.000 contra cerca de US$ 1, mirá cómo lo cuida el agente y devolvelo. Hoy hay ${pesos(v.pool.cash, lang)} libres para prestar.` : `Borrow ARS 1,000 against about US$1, watch the agent at work and repay it. ${pesos(v.pool.cash, lang)} are free to lend today.`}</p>
-  </div>
-  <div class="cta-row reveal">
-    <a class="btn" href="${href(lang, "/probar")}">${t(lang, "tryIt")} <span class="arrow">→</span></a>
-    <a class="btn ghost" href="${href(lang, "/como-funciona")}">${t(lang, "how")}</a>
+<section class="section"><div class="wrap faq">
+  <div class="reveal"><h2>${es ? "Preguntas frecuentes" : "Questions"}</h2></div>
+  <div class="reveal d1">
+    <details><summary>${es ? "¿Qué pasa si no pago a tiempo?" : "What if I don't repay on time?"}</summary><p>${es ? "La tasa sube 5 puntos hasta que pagues y, a los 7 días, tu historial lo marca como atrasado. Nunca se vende tu garantía por pagar tarde: solo el precio puede hacer que se venda una parte." : "The rate rises 5 points until you repay and, after 7 days, your record marks it late. Your guarantee is never sold for paying late: only the price can trigger a partial sale."}</p></details>
+    <details><summary>${es ? "¿Quién tiene mis dólares?" : "Who holds my dollars?"}</summary><p>${es ? "El contrato PesoPool en Celo. No tiene ninguna función para que un administrador los retire. Vuelven a tu billetera cuando pagás." : "The PesoPool contract on Celo. It has no function that lets an administrator withdraw them. They return to your wallet when you repay."}</p></details>
+    <details><summary>${es ? "¿Qué son los wARS?" : "What is wARS?"}</summary><p>${es ? "Pesos digitales de Ripio: 1 wARS = 1 peso. Los podés usar en Celo o pasarlos a tu cuenta bancaria desde la app de Ripio." : "Ripio's digital pesos: 1 wARS = 1 peso. Use them on Celo or move them to your bank account from the Ripio app."}</p></details>
+    <details><summary>${es ? "¿Cuándo hay riesgo?" : "When is there risk?"}</summary><p>${es ? "Debés pesos y dejaste dólares: si el peso cae, tu préstamo está más seguro. El riesgo llega si el peso se fortalece mucho. Al 70% el agente te protege; pasando el 80% se vende solo lo justo para volver al 78%." : "You owe pesos and left dollars: if the peso falls, your loan gets safer. Risk comes if the peso strengthens a lot. At 70% the agent protects you; past 80% only enough is sold to get back to 78%."}</p></details>
+    <details><summary>${es ? "¿Y si Ripio congela los wARS?" : "What if Ripio freezes wARS?"}</summary><p>${es ? "Tras 24 horas congelados, cada persona puede recuperar sus dólares hasta la línea del 70%. Está escrito en el contrato y probado." : "After 24 hours frozen, each borrower can take their dollars back down to the 70% line. It is written in the contract and tested."}</p></details>
+    <details><summary>${es ? "¿De dónde sale el precio del dólar?" : "Where does the dollar price come from?"}</summary><p>${es ? "Del fondo wARS/USDT de Uniswap en Celo, promedio de 30 minutos. El agente lo compara cada minuto con Binance y dolarapi; si no coinciden, pausa préstamos nuevos." : "From the wARS/USDT Uniswap pool on Celo, as a 30-minute average. The agent compares it every minute with Binance and dolarapi; if they disagree, it pauses new loans."}</p></details>
   </div>
 </div></section>`,
     { path: "/" },
