@@ -34,3 +34,19 @@ forge test --match-path 'test/fork/*'   # against Celo and Ethereum mainnet stat
 ```
 
 Every external function, who can call it and what it can move: [`../docs/security.md`](../docs/security.md).
+
+## Deploy
+
+Celo contracts are deployed by `scripts/deploy-celo.ts`, not by `forge script`: every Celo transaction, contract
+creation included, carries the ERC-8021 attribution tag, and the script stops if a landed transaction does not.
+Each step is written to `deployments/celo.json` as it lands, so a rerun continues instead of sending twice.
+
+```sh
+npm install
+(cd contracts && forge build)
+ATTRIBUTION_TAG=<code> DEPLOYER_KEY_FILE=<path> GUARDIAN_ADDRESS=<addr> AGENT_ADDRESS=<addr> \
+TREASURY_ADDRESS=<addr> npm run deploy:celo
+```
+
+Rehearse against a local fork first: `anvil --fork-url https://forno.celo.org --port 8547`, then the same
+command with `CELO_RPC_URL=http://127.0.0.1:8547 DEPLOY_NETWORK=celo-fork`.
