@@ -6,7 +6,7 @@ import type { HtmlEscapedString } from "hono/utils/html";
 import { dollars, pesos, percent, type Quote } from "@adelanto/core";
 import { CELO } from "@adelanto/chain";
 import { t, type Lang } from "./i18n.ts";
-import { REFS, dep, labelOf, networkCostUsd, type LoanView, type PoolView } from "./data.ts";
+import { REFS, dep, labelOf, networkCostUsd, priceHistory, type LoanView, type PoolView } from "./data.ts";
 
 type H = HtmlEscapedString | Promise<HtmlEscapedString>;
 
@@ -56,7 +56,7 @@ export function layout(lang: Lang, title: string, body: H, opts: { path: string;
 <meta property="og:image" content="/static/img/kiosco-1600.webp">
 <link rel="icon" href="/static/adelanto.png">
 <link rel="preload" href="/static/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/static/app.css?v=3">
+<link rel="stylesheet" href="/static/app.css?v=4">
 </head>
 <body>
 <header class="nav"><div class="wrap">
@@ -69,10 +69,11 @@ export function layout(lang: Lang, title: string, body: H, opts: { path: string;
   <a class="lang" href="${otherHref}" hreflang="${es ? "en" : "es"}">${other}</a>
   <a class="btn" href="${href(lang, "/pedir")}">${t(lang, "borrow")}</a>
 </div></header>
+<div class="progress" aria-hidden="true"><i></i></div>
 <main>${body}</main>
 ${footer(lang)}
 ${opts.wallet ? html`<script id="adelanto-cfg" type="application/json">${raw(walletCfg)}</script><script type="module" src="/static/wallet.js"></script>` : ""}
-<script src="/static/site.js?v=3" defer></script>
+<script src="/static/site.js?v=4" defer></script>
 </body>
 </html>`;
 }
@@ -120,9 +121,28 @@ function stateNotice(v: PoolView, lang: Lang) {
 
 // ---------------------------------------------------------------- landing
 
+/** The pool's 30-minute dollar price against Binance, from the minute-by-minute price watch. */
+function chart(lang: Lang) {
+  const h = priceHistory(120);
+  if (h.length < 10) return "";
+  const es = lang === "es";
+  const vals = h.flatMap((p) => [p.pool, p.binance]);
+  const lo = Math.min(...vals), hi = Math.max(...vals), W = 400, H = 70, pad = 4;
+  const x = (i: number) => (pad + (i * (W - 2 * pad)) / (h.length - 1)).toFixed(1);
+  const y = (v: number) => (H - pad - ((v - lo) / (hi - lo || 1)) * (H - 2 * pad)).toFixed(1);
+  const path = (k: "pool" | "binance") => h.map((p, i) => `${i ? "L" : "M"}${x(i)} ${y(p[k])}`).join(" ");
+  const hours = Math.round((h[h.length - 1].t - h[0].t) / 3_600_000);
+  const gap = h.reduce((m, p) => Math.max(m, Math.abs(p.pool / p.binance - 1)), 0) * 100;
+  return html`<div class="board-chart">
+  <div class="what">${es ? `Dólar del fondo contra Binance, últimas ${hours} h` : `Pool dollar against Binance, last ${hours} h`}<small>${es ? `nunca más de ${gap.toLocaleString("es-AR", { maximumFractionDigits: 2 })}% de diferencia; el agente pausa si pasa 1,5%` : `never more than ${gap.toFixed(2)}% apart; the agent pauses past 1.5%`}</small></div>
+  <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path class="l-binance" d="${path("binance")}" pathLength="1"/><path class="l-pool" d="${path("pool")}" pathLength="1"/></svg>
+  <div class="legend"><span class="k-pool">${es ? "fondo" : "pool"}</span><span class="k-binance">Binance</span></div>
+</div>`;
+}
+
 /** A number on the rate board: one tile per character, flipping in one after another. */
-function boardDigits(text: string, start = 0) {
-  return html`<span class="digits flip">${[...text].map((ch, i) =>
+function boardDigits(text: string, start = 0, key = "") {
+  return html`<span class="digits flip" data-live="${key}">${[...text].map((ch, i) =>
     html`<b class="${/[0-9]/.test(ch) ? "" : "p"}" style="animation-delay:${start + i * 45}ms">${ch}</b>`,
   )}</span>`;
 }
@@ -152,7 +172,7 @@ export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: a
 <section class="hero"><div class="wrap">
   <div>
     <span class="eyebrow">${es ? "Préstamos en pesos contra dólares, en MiniPay" : "Peso loans against dollars, in MiniPay"}</span>
-    <h1>${es ? "Pesos ya, sin vender tus dólares." : "Pesos now, without selling your dollars."}</h1>
+    <h1 class="lines-in">${(es ? ["Pesos ya,", "sin vender", "tus dólares."] : ["Pesos now,", "without selling", "your dollars."]).map((w, i) => html`<span class="ln"><span style="--i:${i}">${w}</span></span>`)}</h1>
     <p class="lede">${es
       ? "Dejás USDT en garantía y recibís pesos digitales de Ripio en un minuto. Pagás mucho menos que en el banco, y un agente cuida el préstamo dentro de una regla que firmás vos."
       : "Leave USDT as a guarantee and get Ripio digital pesos in a minute. You pay far less than at the bank, and an agent looks after the loan inside a rule you sign."}</p>
@@ -164,10 +184,11 @@ export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: a
   <div class="board" role="table" aria-label="${es ? "Pizarra de tasas, leída de la cadena" : "Rate board, read from the chain"}">
     <div class="board-head"><span>${es ? "Pizarra" : "Board"} · Celo</span><span class="live">${es ? "En vivo" : "Live"}</span></div>
     <div class="board-row them" role="row"><div class="what" role="cell">${es ? "Banco" : "Bank"}<small>${es ? "préstamo personal" : "personal loan"} · ${REFS.bankLoan.source}</small></div><div role="cell">${boardDigits(pct(REFS.bankLoan.bps))}</div></div>
-    <div class="board-row" role="row"><div class="what" role="cell">Adelanto<small>${es ? "tasa anual hoy" : "yearly rate today"}</small></div><div role="cell">${boardDigits(pct(v.borrowRateBps), 250)}</div></div>
-    <div class="board-row dim" role="row"><div class="what" role="cell">${es ? "Dólar del fondo" : "Pool dollar"}<small>${es ? "pesos por USDT, promedio 30 min" : "pesos per USDT, 30-min average"}</small></div><div role="cell">${boardDigits(price.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), 500)}</div></div>
-    <div class="board-row dim" role="row"><div class="what" role="cell">${es ? "Pesos para prestar" : "Pesos to lend"}<small>${es ? "libres en el fondo ahora" : "free in the pool now"}</small></div><div role="cell">${boardDigits(Number(v.pool.cash / 10n ** 18n).toLocaleString(loc), 750)}</div></div>
-    <div class="board-foot">${es ? "Bloque" : "Block"} ${v.block.toString()}${tick !== null ? (es ? ` · el agente revisó hace ${tick} s` : ` · agent checked ${tick} s ago`) : ""}</div>
+    <div class="board-row" role="row"><div class="what" role="cell">Adelanto<small>${es ? "tasa anual hoy" : "yearly rate today"}</small></div><div role="cell">${boardDigits(pct(v.borrowRateBps), 250, "rate")}</div></div>
+    <div class="board-row dim" role="row"><div class="what" role="cell">${es ? "Dólar del fondo" : "Pool dollar"}<small>${es ? "pesos por USDT, promedio 30 min" : "pesos per USDT, 30-min average"}</small></div><div role="cell">${boardDigits(price.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), 500, "price")}</div></div>
+    <div class="board-row dim" role="row"><div class="what" role="cell">${es ? "Pesos para prestar" : "Pesos to lend"}<small>${es ? "libres en el fondo ahora" : "free in the pool now"}</small></div><div role="cell">${boardDigits(Number(v.pool.cash / 10n ** 18n).toLocaleString(loc), 750, "free")}</div></div>
+    ${chart(lang)}
+    <div class="board-foot">${es ? "Bloque" : "Block"} <span data-live="block">${v.block.toString()}</span>${tick !== null ? html` · ${es ? "el agente revisó hace" : "agent checked"} <span data-live="tick">${tick}</span> s${es ? "" : " ago"}` : ""}</div>
   </div>
 </div></section>
 
@@ -175,10 +196,10 @@ export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: a
   <div class="reveal">
     <h2>${es ? "Mismo préstamo, otra cuenta." : "Same loan, different bill."}</h2>
     <p>${es ? `Por $ 400.000 durante ${D} días, el banco te cobra ${pct(REFS.bankLoan.bps)} al año. Con Adelanto te quedan en el bolsillo` : `For ARS 400,000 over ${D} days, the bank charges ${pct(REFS.bankLoan.bps)} a year. With Adelanto you keep`}</p>
-    <div class="big-saving num">$ ${num(saving, lang)}</div>
+    <div class="big-saving num" data-count="${saving}" data-pre="$ " data-locale="${loc}">$ ${num(saving, lang)}</div>
     <p>${es ? "y no vendés ni un dólar: quedan en garantía y vuelven cuando pagás." : "and you sell no dollars: they stay as guarantee and come back when you repay."}</p>
   </div>
-  <div class="ticket reveal" aria-label="${es ? "Cotización de ejemplo" : "Example quote"}">
+  <div class="printer reveal"><div class="slot" aria-hidden="true"></div><div class="ticket" aria-label="${es ? "Cotización de ejemplo" : "Example quote"}">
     <div class="t-head"><b>Adelanto</b>${es ? "Cotización de ejemplo" : "Example quote"}</div>
     <div class="t-row"><span>${es ? "Pedís" : "You borrow"}</span><span>$ ${num(P, lang)}</span></div>
     <div class="t-row"><span>${es ? "Plazo" : "Term"}</span><span>${D} ${t(lang, "days")}</span></div>
@@ -192,10 +213,10 @@ export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: a
     <div class="t-row"><span>${es ? "Dejás en garantía" : "Guarantee"}</span><span>US$ ${num(lockUsd, lang)}</span></div>
     <div class="t-row"><span>${es ? "Dólares vendidos" : "Dollars sold"}</span><span>0</span></div>
     <div class="t-foot">${es ? "Interés simple a la tasa de hoy. La tasa real sigue el uso del fondo y la ves antes de firmar." : "Simple interest at today's rate. The real rate follows pool use; you see it before you sign."}</div>
-  </div>
+  </div></div>
 </div></section>
 
-<figure class="story-photo">
+<figure class="story-photo parallax">
   <img src="/static/img/kiosco-1600.webp" srcset="/static/img/kiosco-800.webp 800w, /static/img/kiosco-1600.webp 1600w" sizes="100vw" alt="${es ? "Alfajores apilados en un kiosco de Buenos Aires" : "Alfajores stacked in a Buenos Aires kiosk"}" loading="lazy">
 </figure>
 <div class="caption"><span>${es ? "Kiosco en Buenos Aires. Lucía es un ejemplo, no una clienta." : "A kiosk in Buenos Aires. Lucía is an example, not a customer."}</span><span>Foto: Just a Man, CC BY 4.0</span></div>
@@ -208,7 +229,7 @@ export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: a
       ? "Este mes necesita $ 400.000 para reponer. Vender dólares es perderlos; el banco le cobra 64,63% al año; pagar en cuotas con la tarjeta le sale el dólar tarjeta. Con Adelanto deja una parte de sus USDT, recibe los pesos al instante y sus dólares siguen siendo suyos. Si el peso sigue cayendo, lo que debe en pesos vale cada vez menos en dólares."
       : "This month she needs ARS 400,000 to restock. Selling dollars means losing them; the bank charges 64.63% a year; card instalments cost the card dollar. With Adelanto she leaves part of her USDT, gets the pesos at once, and her dollars stay hers. If the peso keeps falling, what she owes in pesos is worth less and less in dollars."}</p>
     <div class="facts">
-      <div><b>33,4%</b><span>${es ? "inflación de los últimos 12 meses (INDEC)" : "inflation over 12 months (INDEC)"}</span></div>
+      <div><b data-count="33.4" data-dec="1" data-post="%" data-locale="${loc}">33,4%</b><span>${es ? "inflación de los últimos 12 meses (INDEC)" : "inflation over 12 months (INDEC)"}</span></div>
       <div><b>+22%</b><span>${es ? "el dólar tarjeta contra el dólar cripto" : "card dollar against crypto dollar"}</span></div>
       <div><b>1 min</b><span>${es ? "de tus USDT a tus pesos" : "from your USDT to your pesos"}</span></div>
     </div>
@@ -220,9 +241,10 @@ export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: a
     <h2>${es ? "Firmás una regla. El agente la cumple." : "You sign a rule. The agent keeps it."}</h2>
     <p>${es ? "Si el préstamo se acerca al riesgo, el agente agrega tus propios dólares o paga con tus propios pesos, en el orden que elegiste y sin pasarse de tus topes diarios. Cada acción cita tu regla." : "If the loan nears risk, the agent adds your own dollars or repays with your own pesos, in the order you chose and never past your daily caps. Every action quotes your rule."}</p>
   </div>
-  <div class="agent-log reveal">
+  <div class="agent-log chat reveal">
     <div class="lh"><span>${es ? "Así te avisa" : "How it tells you"}</span><span>${es ? "ejemplos" : "examples"}</span></div>
     <div class="ll"><time>09:41</time><span>${es ? "Tu préstamo llegó al 71%. Agregué US$ 3 de tus dólares y volvió al 60%." : "Your loan reached 71%. I added US$3 of your dollars; it is back to 60%."}<span class="why">${es ? "Tu regla: «cuidalo con hasta US$ 10 por semana»" : "Your rule: “protect it with up to US$10 a week”"}</span></span></div>
+    <div class="typing" aria-hidden="true"><time></time><span><i></i><i></i><i></i></span></div>
     <div class="ll"><time>14:05</time><span>${es ? "Te entraron $ 50.000. Pagué $ 40.000 del préstamo y te dejé $ 10.000." : "ARS 50,000 arrived. I repaid ARS 40,000 and left you ARS 10,000."}<span class="why">${es ? "Tu regla: «pagá cuando me entren pesos, dejame siempre $ 10.000»" : "Your rule: “repay when pesos arrive, always leave me ARS 10,000”"}</span></span></div>
     <div class="ll"><time>18:30</time><span>${es ? "El precio del fondo no coincide con Binance ni con dolarapi hace 3 minutos. Pausé préstamos nuevos; pagar sigue igual." : "The pool price has disagreed with Binance and dolarapi for 3 minutes. I paused new loans; repaying works as usual."}</span></div>
   </div>
@@ -241,8 +263,9 @@ export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: a
   <div class="ruler reveal" role="img" aria-label="${es ? "Empezás hasta el 60%; el agente actúa al 70%; pasando el 80% se vende lo justo para volver al 78%." : "You start at up to 60%; the agent acts at 70%; past 80% just enough is sold to get back to 78%."}">
     <div class="ticks"><span style="left:60%">60%</span><span style="left:70%">70%</span><span style="left:80%">80%</span></div>
     <div class="bar"><i></i><i></i><i></i><i></i></div>
+    <div class="marker" aria-hidden="true"><span class="tag"></span></div>
   </div>
-  <div class="ruler-legend">
+  <div class="ruler-legend" data-tags="${es ? "Tranquilo|El agente actúa|Volvió al 60%|Se vende lo justo|Volvió al 78%" : "Calm|The agent acts|Back to 60%|Just enough sold|Back to 78%"}">
     <span><b>0–60%</b>${es ? "Empezás acá: hasta el 60% de lo que dejás." : "You start here: up to 60% of what you leave."}</span>
     <span><b>70%</b>${es ? "Te cuida el agente." : "The agent steps in."}</span>
     <span><b>80%</b>${es ? "Se vende lo justo." : "Just enough is sold."}</span>
@@ -251,12 +274,12 @@ export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: a
 </div></section>
 
 <section class="lend">
-  <figure><img src="/static/img/mercado-1600.webp" srcset="/static/img/mercado-800.webp 800w, /static/img/mercado-1600.webp 1600w" sizes="(max-width: 900px) 100vw, 50vw" alt="${es ? "Mercado de San Telmo, Buenos Aires" : "San Telmo market, Buenos Aires"}" loading="lazy"><figcaption>Mercado de San Telmo · Josefito123, CC BY-SA 4.0</figcaption></figure>
+  <figure class="kb"><img src="/static/img/mercado-1600.webp" srcset="/static/img/mercado-800.webp 800w, /static/img/mercado-1600.webp 1600w" sizes="(max-width: 900px) 100vw, 50vw" alt="${es ? "Mercado de San Telmo, Buenos Aires" : "San Telmo market, Buenos Aires"}" loading="lazy"><figcaption>Mercado de San Telmo · Josefito123, CC BY-SA 4.0</figcaption></figure>
   <div class="body reveal">
     <h2>${es ? "¿Tenés pesos? Prestalos." : "Holding pesos? Lend them."}</h2>
     <p class="lede" style="margin-top:18px">${es ? "Quienes piden pagan la tasa del día; el 90% del interés va a quienes prestan. Retirás cuando haya pesos libres en el fondo." : "Borrowers pay the day's rate; 90% of the interest goes to lenders. Withdraw whenever the pool has free pesos."}</p>
     <div class="rates">
-      <div><b>25,9%</b><span>${es ? "lo que ganás con el fondo prestado al 80%" : "what you earn with the pool 80% lent"}</span></div>
+      <div><b data-count="25.9" data-dec="1" data-post="%" data-locale="${loc}">25,9%</b><span>${es ? "lo que ganás con el fondo prestado al 80%" : "what you earn with the pool 80% lent"}</span></div>
       <div><b>${percent(REFS.badlar.bps, lang)}</b><span>${es ? "BADLAR, depósitos a plazo" : "BADLAR, term deposits"} · ${REFS.badlar.source}</span></div>
     </div>
     <a class="btn" href="${href(lang, "/prestar")}">${t(lang, "lend")} <span class="arrow">→</span></a>
@@ -274,9 +297,9 @@ ${proof && b ? html`<section class="section"><div class="wrap">
     <div><b>${percent(BigInt(b.args.rateBps), lang)}</b><span>${es ? "tasa anual" : "yearly rate"}</span></div>
     <div><b>${proof.loan.open ? t(lang, "open") : t(lang, "closed")}</b><span>${es ? "estado" : "status"} · ${label(proof.loan.borrower, lang)}</span></div>
   </div>
-  <table class="ledger reveal">
+  <table class="ledger cascade reveal">
     <thead><tr><th class="n">#</th><th>${es ? "Qué pasó" : "What happened"}</th><th>${es ? "Transacción" : "Transaction"}</th></tr></thead>
-    <tbody>${proof.events.map((e, i) => html`<tr><td class="n">${String(i + 1).padStart(2, "0")}</td><td>${eventLine(e, lang)}</td><td><a class="tx" href="${txUrl(e.tx)}">${short(e.tx)}</a></td></tr>`)}</tbody>
+    <tbody>${proof.events.map((e, i) => html`<tr style="--i:${i}"><td class="n">${String(i + 1).padStart(2, "0")}</td><td>${eventLine(e, lang)}</td><td><a class="tx" href="${txUrl(e.tx)}">${short(e.tx)}</a></td></tr>`)}</tbody>
   </table>
   <p style="margin-top:22px"><a href="${href(lang, `/prestamo/${proof.loan.id}`)}">${es ? "Ver la página del préstamo →" : "See the loan page →"}</a> · <a href="${href(lang, "/transparencia")}">${es ? "Transparencia y contratos →" : "Transparency and contracts →"}</a></p>
 </div></section>` : ""}
