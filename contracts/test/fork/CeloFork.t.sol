@@ -135,7 +135,7 @@ contract CeloForkTest is Test {
         guard.setLimits(
             LoanGuard.Limits({
                 autoRepay: true,
-                allowRefinance: false,
+                rateWatch: false,
                 protectOrder: LoanGuard.ProtectOrder.TopUpFirst,
                 expiry: uint64(block.timestamp + 30 days),
                 keepWarsBuffer: 0,

@@ -17,7 +17,7 @@ contract LoanGuardTest is Base {
     function _limits() internal view returns (LoanGuard.Limits memory l) {
         l = LoanGuard.Limits({
             autoRepay: true,
-            allowRefinance: false,
+            rateWatch: false,
             protectOrder: LoanGuard.ProtectOrder.TopUpFirst,
             expiry: uint64(block.timestamp + 90 days),
             keepWarsBuffer: 50_000e18,

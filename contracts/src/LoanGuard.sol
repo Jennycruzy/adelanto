@@ -22,7 +22,7 @@ contract LoanGuard is ReentrancyGuard {
 
     struct Limits {
         bool autoRepay;
-        bool allowRefinance;
+        bool rateWatch; // tell me when another market is cheaper and send my next loan there (moves no money)
         ProtectOrder protectOrder;
         uint64 expiry;
         uint128 keepWarsBuffer;
