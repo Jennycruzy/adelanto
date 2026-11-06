@@ -13,7 +13,9 @@ export function celoDeployment(file = join(root, "deployments", "celo.json")) {
     if (!a) throw new Error(`deployments: ${name} has no address`);
     return getAddress(a);
   };
+  const optional = (name: string): Address | undefined => (d.steps?.[name]?.address ? getAddress(d.steps[name].address) : undefined);
   return {
+    gentleKeeper: optional("GentleKeeper"),
     pool: at("PesoPool"),
     guard: at("LoanGuard"),
     creditBook: at("CreditBook"),
@@ -98,6 +100,13 @@ export const priceAbi = parseAbi([
   "function twap(uint32 secondsAgo) view returns (uint256)",
   "function liquidationPrice() view returns (uint256)",
   "function warsDepth() view returns (uint256)",
+]);
+
+export const gentleKeeperAbi = parseAbi([
+  "function liquidateGently(uint256 loanId, uint256 maxPesos) returns (uint256 repaid, uint256 seized)",
+  "function wanted(uint256 loanId) view returns (uint256)",
+  "function agent() view returns (address)",
+  "event GentleLiquidation(uint256 indexed loanId, uint256 wanted, uint256 repaid, uint256 seized)",
 ]);
 
 export const erc20TransferEvent = parseAbi(["event Transfer(address indexed from, address indexed to, uint256 value)"]);

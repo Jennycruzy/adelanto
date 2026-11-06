@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { getAddress } from "viem";
 import { TaggedSender, attributionCode, celoDeployment, celoPublicClient, ethPublicClient } from "@adelanto/chain";
 import { Agent, type Mode } from "./agent.ts";
-import { openDb, setMeta } from "./db.ts";
+import { lockDb, openDb, setMeta } from "./db.ts";
 
 const mode: Mode = process.env.AGENT_MODE === "live" ? "live" : "watch";
 const code = attributionCode();
@@ -17,7 +17,9 @@ const keyFile = process.env.AGENT_KEY_FILE;
 if (!keyFile) throw new Error("AGENT_KEY_FILE is required");
 const keeper = new TaggedSender(keyFile, pub, code);
 const guardian = process.env.GUARDIAN_KEY_FILE ? new TaggedSender(process.env.GUARDIAN_KEY_FILE, pub, code) : undefined;
-const db = openDb(process.env.DB_PATH ?? join(homedir(), "adelanto-data", "agent.sqlite"));
+const dbPath = process.env.DB_PATH ?? join(homedir(), "adelanto-data", "agent.sqlite");
+const db = openDb(dbPath);
+const unlock = lockDb(dbPath); // refuses to start if another agent runs on this database
 
 const labels = new Map<string, string>();
 for (const a of (process.env.OURS_ADDRESSES ?? "").split(",").filter(Boolean)) labels.set(getAddress(a.trim()), "OURS");
@@ -27,7 +29,7 @@ labels.set(keeper.address, "OURS");
 const agent = new Agent({
   db,
   pub,
-  addresses: { pool: deployment.pool, guard: deployment.guard, priceModule: deployment.priceModule, deployBlock: deployment.deployBlock },
+  addresses: { pool: deployment.pool, guard: deployment.guard, priceModule: deployment.priceModule, deployBlock: deployment.deployBlock, gentleKeeper: deployment.gentleKeeper },
   mode,
   keeper,
   guardian,
@@ -56,3 +58,4 @@ for (;;) {
   if (stopping) break;
 }
 db.close();
+unlock();

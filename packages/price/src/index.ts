@@ -54,11 +54,13 @@ export function gap(chain: number, q: Quote): number {
 }
 
 /**
- * True when the chain price disagrees with every off-chain source that answered, by more than `limit`.
- * Requiring every source keeps one bad feed from pausing anything.
+ * True when at least two independent sources answered and the chain price disagrees with every one of them by more
+ * than `limit`. With one source answering there is no disagreement verdict at all (the outage rule covers that), so
+ * a single bad feed can never pause anything.
  */
 export function disagrees(r: Reading, limit = PAUSE_GAP): boolean {
-  return r.quotes.length > 0 && r.quotes.every((q) => gap(r.chain, q) > limit);
+  const sources = new Set(r.quotes.map((q) => q.source));
+  return sources.size >= 2 && r.quotes.every((q) => gap(r.chain, q) > limit);
 }
 
 /** True when the chain price agrees with at least one source within `limit`. */
@@ -66,35 +68,40 @@ export function agrees(r: Reading, limit = RESUME_GAP): boolean {
   return r.quotes.some((q) => gap(r.chain, q) <= limit);
 }
 
+export const MAX_READING_GAP_MS = 90_000; // readings are taken every minute; a longer gap breaks the run
+
+/**
+ * How long `pred` has held without a break, ending now: the newest reading must be recent, every reading in the run
+ * must satisfy `pred`, and no two consecutive readings may be more than MAX_READING_GAP_MS apart.
+ */
+export function heldFor(readings: Reading[], pred: (r: Reading) => boolean, now: number): number {
+  let i = readings.length - 1;
+  if (i < 0 || now - readings[i].at > MAX_READING_GAP_MS || !pred(readings[i])) return 0;
+  while (i > 0 && pred(readings[i - 1]) && readings[i].at - readings[i - 1].at <= MAX_READING_GAP_MS) i--;
+  return now - readings[i].at;
+}
+
 export type Verdict = { action: "pause" | "resume" | "hold"; why: string };
 
 /**
- * Given readings ordered oldest first and whether borrowing is paused by us, decide. Pause needs disagreement in
- * every reading across the last 3 minutes (or both sources down for 10); resume needs agreement in every reading
- * across the last 10 minutes and only undoes a pause this agent made.
+ * Given readings ordered oldest first: pause when the chain disagrees with two or more sources continuously for
+ * 3 minutes, or when every source has been unreachable continuously for 10; resume only a pause this agent made,
+ * after 10 continuous minutes of agreement.
  */
 export function verdict(readings: Reading[], now: number, pausedByUs: boolean, pausedByAnyone: boolean): Verdict {
-  const since = (ms: number) => readings.filter((r) => r.at >= now - ms);
-  const covers = (rs: Reading[], ms: number) => rs.length > 0 && rs[0].at <= now - ms + 90_000; // window is filled
-
   if (!pausedByAnyone) {
-    const recent = since(PAUSE_AFTER_MS);
-    if (covers(recent, PAUSE_AFTER_MS) && recent.length >= 3 && recent.every((r) => disagrees(r))) {
-      const last = recent[recent.length - 1];
+    if (heldFor(readings, (r) => disagrees(r), now) >= PAUSE_AFTER_MS) {
+      const last = readings[readings.length - 1];
       const gaps = last.quotes.map((q) => `${q.source} ${(gap(last.chain, q) * 100).toFixed(2)}%`).join(", ");
       return { action: "pause", why: `chain ${last.chain.toFixed(2)} vs ${gaps} for 3 minutes` };
     }
-    const window = since(SOURCES_DOWN_PAUSE_MS);
-    if (covers(window, SOURCES_DOWN_PAUSE_MS) && window.length >= 5 && window.every((r) => r.quotes.length === 0)) {
+    if (heldFor(readings, (r) => r.quotes.length === 0, now) >= SOURCES_DOWN_PAUSE_MS) {
       return { action: "pause", why: "Binance and dolarapi both unreachable for 10 minutes" };
     }
     return { action: "hold", why: "prices agree" };
   }
-  if (pausedByUs) {
-    const recent = since(RESUME_AFTER_MS);
-    if (covers(recent, RESUME_AFTER_MS) && recent.length >= 5 && recent.every((r) => agrees(r))) {
-      return { action: "resume", why: "chain price back within 1% of an outside source for 10 minutes" };
-    }
+  if (pausedByUs && heldFor(readings, (r) => agrees(r), now) >= RESUME_AFTER_MS) {
+    return { action: "resume", why: "chain price back within 1% of an outside source for 10 minutes" };
   }
   return { action: "hold", why: pausedByUs ? "still disagreeing" : "paused by someone else; left alone" };
 }

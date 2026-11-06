@@ -73,7 +73,10 @@ describe("protect amounts land at or below 60%", () => {
   it("top-up example", () => {
     const add = topUpToTarget(wars(7200), usdt(10), price(1000));
     expect(ltvBps(wars(7200), usdt(10) + add, price(1000))).toBeLessThanOrEqual(6000n);
-    expect(ltvBps(wars(7200), usdt(10) + add - 2n, price(1000))).toBeGreaterThan(6000n); // and is not wasteful
+    expect(ltvBps(wars(7200), usdt(10) + add - 1n, price(1000))).toBeGreaterThan(6000n); // and not one unit more
+  });
+  it("top-up is the exact minimum (700 wARS on 1 USDT at 1,000 needs 1,166,667 units in total)", () => {
+    expect(topUpToTarget(wars(700), usdt(1), price(1000)) + usdt(1)).toBe(1_166_667n);
   });
   it("repay example", () => {
     const pay = repayToTarget(wars(7200), usdt(10), price(1000));
@@ -93,6 +96,7 @@ describe("protect amounts land at or below 60%", () => {
       const debt = (value * BigInt(Math.floor(7_000 + r() * 3_000))) / BPS + BigInt(Math.floor(r() * 1e15));
       const add = topUpToTarget(debt, collateral, p);
       expect(ltvBps(debt, collateral + add, p)).toBeLessThanOrEqual(6000n);
+      if (add > 0n) expect(ltvBps(debt, collateral + add - 1n, p)).toBeGreaterThan(6000n); // minimal
       const pay = repayToTarget(debt, collateral, p);
       expect(pay).toBeLessThanOrEqual(debt);
       expect(ltvBps(debt - pay, collateral, p)).toBeLessThanOrEqual(6000n);

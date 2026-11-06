@@ -40,6 +40,26 @@ describe("pause and resume", () => {
     const mixed = series(11, (i) => ({ chain: i === 6 ? 1600 : 1656, quotes: [q("binance", 1660)] }));
     expect(verdict(mixed, NOW, true, true).action).toBe("hold");
   });
+  it("never pauses on disagreement with only one source answering", () => {
+    const rs = series(10, () => ({ chain: 1000, quotes: [q("dolarapi", 900)] }));
+    expect(verdict(rs, NOW, false, false).action).toBe("hold");
+  });
+  it("needs the full 3 minutes: readings at 0, 60, 120 s are not enough", () => {
+    const rs = series(3, () => ({ chain: 1600, quotes: [q("binance", 1665), q("dolarapi", 1660)] }));
+    expect(verdict(rs, NOW, false, false).action).toBe("hold");
+    const rs4 = series(4, () => ({ chain: 1600, quotes: [q("binance", 1665), q("dolarapi", 1660)] }));
+    expect(verdict(rs4, NOW, false, false).action).toBe("pause");
+  });
+  it("a gap in the readings breaks the run", () => {
+    const rs = series(6, () => ({ chain: 1600, quotes: [q("binance", 1665), q("dolarapi", 1660)] })).filter((_, i) => i !== 3);
+    expect(verdict(rs, NOW, false, false).action).toBe("hold");
+  });
+  it("resume needs the full 10 minutes", () => {
+    const nine = series(10, () => ({ chain: 1656, quotes: [q("binance", 1660)] }));
+    expect(verdict(nine, NOW, true, true).action).toBe("hold");
+    const ten = series(11, () => ({ chain: 1656, quotes: [q("binance", 1660)] }));
+    expect(verdict(ten, NOW, true, true).action).toBe("resume");
+  });
   it("converts the chain price", () => {
     expect(chainToNumber(1656201701372096371684n)).toBeCloseTo(1656.2017, 3);
   });

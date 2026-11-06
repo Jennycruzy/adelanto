@@ -27,10 +27,15 @@ export function collateralValue(collateral: bigint, price: bigint): bigint {
   return (collateral * price) / USDT_UNIT;
 }
 
-/** Debt as a share of collateral value, in basis points, rounded up (PesoPool.loanLtvBps). */
+/**
+ * Debt as a share of collateral value, in basis points, rounded up, exactly as PesoPool.loanLtvBps: 0 when there is
+ * no collateral (the pool has written the loan off or closed it). Collateral so small that its value rounds to zero
+ * makes the contract divide by zero; here it reads as far past every line, so nothing treats it as safe.
+ */
 export function ltvBps(debt: bigint, collateral: bigint, price: bigint): bigint {
+  if (collateral === 0n) return 0n;
   const value = collateralValue(collateral, price);
-  if (value === 0n) return debt === 0n ? 0n : BPS * 100n; // no collateral: treat as far past every line
+  if (value === 0n) return debt === 0n ? 0n : BPS * 100n;
   return ceilDiv(debt * BPS, value);
 }
 
@@ -42,8 +47,10 @@ export function isLiquidatable(debt: bigint, collateral: bigint, price: bigint):
 /** USDT to add so the loan is at or below `targetBps`. Zero if it already is. */
 export function topUpToTarget(debt: bigint, collateral: bigint, price: bigint, targetBps = PROTECT_TARGET_BPS): bigint {
   if (price === 0n || targetBps === 0n) throw new Error("price and target must be positive");
-  // need collateral' such that debt * BPS <= collateral' * price / 1e6 * target
-  const needed = ceilDiv(debt * BPS * USDT_UNIT, targetBps * price) + 1n; // +1 covers PesoPool's floor on value
+  // The pool floors value = collateral * price / 1e6, so first find the smallest whole value that keeps the loan at
+  // or below the target, then the smallest collateral whose floored value reaches it.
+  const value = ceilDiv(debt * BPS, targetBps);
+  const needed = ceilDiv(value * USDT_UNIT, price);
   return needed > collateral ? needed - collateral : 0n;
 }
 

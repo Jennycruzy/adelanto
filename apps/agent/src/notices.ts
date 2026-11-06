@@ -25,6 +25,8 @@ const BAND_WORDS: Record<Band, { es: string; en: string }> = {
   liquidable: { es: "Se puede liquidar", en: "Can be liquidated" },
 };
 const ORDER: Band[] = ["tranquilo", "atencion", "riesgo", "liquidable"];
+const HYSTERESIS_BPS = 200n;
+const COOLDOWN = 6n * 3_600n;
 
 export function loanNotices(loan: LoanState, price: bigint, now: bigint, db: Db): Notice[] {
   const out: Notice[] = [];
@@ -59,27 +61,39 @@ export function loanNotices(loan: LoanState, price: bigint, now: bigint, db: Db)
       },
     });
   }
-  // Health: tell people when it gets worse (and once when it is calm again).
-  const now_ = band(ltvBps(loan.debt, loan.collateral, price));
+  // Health, with hysteresis: getting worse is told at once (at most once per band every 6 hours); a loan has to be
+  // 2 points under a line before it counts as back below it; "calm again" is told only after it was at risk.
+  const ltv = ltvBps(loan.debt, loan.collateral, price);
   const prev = (getMeta(db, `band:${id}`) as Band | undefined) ?? "tranquilo";
-  if (now_ !== prev) {
-    setMeta(db, `band:${id}`, now_);
-    const worse = ORDER.indexOf(now_) > ORDER.indexOf(prev);
-    const riskAt = priceAtLtv(loan.debt, loan.collateral, 7_000n);
-    const words = BAND_WORDS[now_];
-    out.push({
-      key: `${id}:band:${now_}:${now}`,
-      kind: "health",
-      said: worse
-        ? {
-            es: `Tu préstamo pasó a «${words.es}»: el dólar está a ${rate(price)}. Llega a riesgo con el dólar a ${rate(riskAt)}.`,
-            en: `Your loan moved to "${words.en}": the dollar is at ${rate(price, "en")}. It reaches risk with the dollar at ${rate(riskAt, "en")}.`,
-          }
-        : {
-            es: `Tu préstamo volvió a «${words.es}» con el dólar a ${rate(price)}.`,
-            en: `Your loan is back to "${words.en}" with the dollar at ${rate(price, "en")}.`,
-          },
-    });
+  const raw = band(ltv);
+  const rawIdx = ORDER.indexOf(raw);
+  const prevIdx = ORDER.indexOf(prev);
+  const next = rawIdx >= prevIdx ? raw : band(ltv + HYSTERESIS_BPS) === prev ? prev : band(ltv + HYSTERESIS_BPS);
+  if (next !== prev) {
+    setMeta(db, `band:${id}`, next);
+    const worse = ORDER.indexOf(next) > prevIdx;
+    const lastKey = `bandNoticeAt:${id}:${next}`;
+    const last = getMeta(db, lastKey);
+    const cooled = last === undefined || now - BigInt(last) >= COOLDOWN;
+    const tell = worse ? next !== "tranquilo" && cooled : next === "tranquilo" && prevIdx >= ORDER.indexOf("riesgo");
+    if (tell) {
+      setMeta(db, lastKey, now.toString());
+      const riskAt = priceAtLtv(loan.debt, loan.collateral, 7_000n);
+      const words = BAND_WORDS[next];
+      out.push({
+        key: `${id}:band:${next}:${now}`,
+        kind: "health",
+        said: worse
+          ? {
+              es: `Tu préstamo pasó a «${words.es}»: el dólar está a ${rate(price)}. Llega a riesgo con el dólar a ${rate(riskAt)}.`,
+              en: `Your loan moved to "${words.en}": the dollar is at ${rate(price, "en")}. It reaches risk with the dollar at ${rate(riskAt, "en")}.`,
+            }
+          : {
+              es: `Tu préstamo volvió a «${words.es}» con el dólar a ${rate(price)}.`,
+              en: `Your loan is back to "${words.en}" with the dollar at ${rate(price, "en")}.`,
+            },
+      });
+    }
   }
   return out;
 }
@@ -90,7 +104,7 @@ export async function poolNotices(pub: PublicClient, a: { pool: Address }, db: D
   const was = getMeta(db, "poolLow") === "1";
   if (low === was) return [];
   setMeta(db, "poolLow", low ? "1" : "0");
-  const day = new Date().toISOString().slice(0, 10);
+  const day = new Date(Number(await pub.getBlock().then((b) => b.timestamp)) * 1000).toISOString().slice(0, 10);
   return [
     low
       ? {

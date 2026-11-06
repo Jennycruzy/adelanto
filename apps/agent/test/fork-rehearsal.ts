@@ -76,12 +76,19 @@ const bsend = async (to: Address, abi: any, functionName: string, args: any[]) =
 const read = (address: Address, abi: any, functionName: string, args: any[] = []) => pub.readContract({ address, abi, functionName, args } as any) as Promise<any>;
 const ltv = (id: bigint) => read(dep.pool, poolAbi, "loanLtvBps", [id]) as Promise<bigint>;
 
+// GentleKeeper is deployed on the fork from the test borrower (any account works; only the agent can call it).
+const { readFileSync } = await import("node:fs");
+const gk = JSON.parse(readFileSync(new URL("../../../contracts/out/GentleKeeper.sol/GentleKeeper.json", import.meta.url), "utf8"));
+const gkHash = await bw.deployContract({ abi: gk.abi, bytecode: gk.bytecode.object, args: [dep.pool, keeper.address] } as any);
+const gentleKeeper = (await pub.waitForTransactionReceipt({ hash: gkHash })).contractAddress!;
+console.log(`   GentleKeeper on the fork: ${gentleKeeper}`);
+
 const dbPath = join(tmpdir(), `adelanto-fork-${process.pid}.sqlite`);
 rmSync(dbPath, { force: true }); rmSync(dbPath + "-wal", { force: true }); rmSync(dbPath + "-shm", { force: true });
 const db = openDb(dbPath);
 const logs: string[] = [];
 const agent = (mode: "watch" | "live") =>
-  new Agent({ db, pub, addresses: { ...dep }, mode, keeper, labels: new Map(), log: (s) => { logs.push(s); console.log("   agent:", s); } });
+  new Agent({ db, pub, addresses: { ...dep, gentleKeeper }, mode, keeper, labels: new Map(), log: (s) => { logs.push(s); console.log("   agent:", s); } });
 const step = (s: string) => console.log(`\n== ${s}`);
 const actions = () => db.prepare("SELECT id, job, status, tx, sentence_es FROM agent_actions ORDER BY id").all() as any[];
 
@@ -135,7 +142,7 @@ assert.equal(actions().filter((a) => a.job === "A1_protect" && a.status === "lan
 step("A2: 800 wARS arrive from outside; agent repays, keeping the 100 wARS buffer");
 const debtBefore = (await read(dep.pool, poolAbi, "debtOf", [loanId])) as bigint;
 await fromUni(CELO.wars, borrower.address, parseEther("800"));
-await mine(3);
+await mine(40); // the indexer follows the safe head (32 blocks behind on anvil)
 await agent("live").tick();
 const a2 = actions().filter((a) => a.job === "A2_autorepay" && a.status === "landed");
 assert.equal(a2.length, 1, "one auto-repay");
@@ -143,8 +150,9 @@ const debtAfter = (await read(dep.pool, poolAbi, "debtOf", [loanId])) as bigint;
 console.log(`   tx ${a2[0].tx}: debt ${formatEther(debtBefore)} -> ${formatEther(debtAfter)}`);
 console.log(`   es: ${a2[0].sentence_es}`);
 assert.ok(debtBefore - debtAfter >= parseEther("799") && debtBefore - debtAfter <= parseEther("801"));
-await mine(3);
-await agent("live").tick();
+await agent("live").tick(); // right after: the index has not seen the repayment yet, so A2 must wait, not repeat
+await mine(40);
+await agent("live").tick(); // the index now has the repayment: credit is 0
 assert.equal(actions().filter((a) => a.job === "A2_autorepay" && a.status === "landed").length, 1, "an arrival is repaid once");
 
 // ---------------------------------------------------------------- crash after signing, before broadcast
@@ -154,7 +162,12 @@ const signed = await keeper.prepare(CELO.wars, approveData);
 db.prepare("INSERT INTO agent_actions (job, trigger_json, inputs_json, decision, mode, status, tx, at) VALUES ('approve', '{}', '{}', '{}', 'live', 'signed', ?, ?)").run(signed.hash, Date.now());
 const aid = Number((db.prepare("SELECT MAX(id) AS id FROM agent_actions").get() as any).id);
 db.prepare("INSERT INTO pending_tx (hash, action_id, from_addr, nonce, to_addr, data, raw, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'signed', ?)").run(signed.hash, aid, signed.from, signed.nonce, signed.to, signed.data, signed.raw, Date.now());
-await agent("live").tick(); // a new agent instance, as after a restart
+const nonceW = await pub.getTransactionCount({ address: keeper.address });
+await agent("watch").tick(); // watch mode after a crash: reports, never sends
+assert.equal((db.prepare("SELECT status FROM pending_tx WHERE hash = ?").get(signed.hash) as any).status, "signed");
+assert.equal(await pub.getTransactionCount({ address: keeper.address }), nonceW, "watch mode must not broadcast");
+console.log("   watch mode left the signed transaction unsent");
+await agent("live").tick(); // a new live agent instance, as after a restart
 const p = db.prepare("SELECT status FROM pending_tx WHERE hash = ?").get(signed.hash) as any;
 assert.equal(p.status, "landed");
 const tx = await pub.getTransaction({ hash: signed.hash });
@@ -162,7 +175,7 @@ assert.equal(tx.nonce, signed.nonce);
 console.log(`   resumed ${signed.hash} at nonce ${signed.nonce}: landed once`);
 
 // ---------------------------------------------------------------- past 80% -> gentle liquidation
-step("A5: guard revoked, interest past 80%, keeper liquidates gently back to 70%");
+step("A5: guard revoked, interest past 80%, the agent liquidates gently back to 70% through GentleKeeper");
 await bsend(dep.guard, guardAbi, "revoke" as any, []);
 while ((await ltv(loanId)) <= 8_000n) await warp(15 * 86_400);
 await mine(3);
@@ -199,6 +212,7 @@ const ltvAfterA5 = loanAfter.open ? await ltv(loanId) : 0n;
 console.log(`   funded keeper tx ${a5[1].tx}: ltv ${ltvLiq2} -> ${loanAfter.open ? ltvAfterA5 : "closed"}`);
 console.log(`   es: ${a5[1].sentence_es}`);
 assert.ok(!loanAfter.open || ltvAfterA5 <= 7_000n);
+assert.equal(await read(CELO.wars, erc20Abi, "balanceOf", [gentleKeeper]), 0n, "nothing left in GentleKeeper");
 assert.match(a5[1].sentence_es, /lo mínimo para volver al 70%/);
 
 // ---------------------------------------------------------------- every agent transaction tagged

@@ -23,6 +23,15 @@ export type Signed = { hash: Hex; raw: Hex; nonce: number; to: Address; data: He
 
 export type SendResult = { hash: Hex; receipt: TransactionReceipt };
 
+/** The signed transaction's nonce was used by a different transaction: these bytes can never land. */
+export class NonceConsumedError extends Error {
+  readonly signed: Signed;
+  constructor(signed: Signed) {
+    super(`nonce ${signed.nonce} of ${signed.from} was used by another transaction; ${signed.hash} can never land`);
+    this.signed = signed;
+  }
+}
+
 export class TaggedSender {
   readonly address: Address;
   private readonly wallet;
@@ -60,8 +69,15 @@ export class TaggedSender {
       await this.pub.sendRawTransaction({ serializedTransaction: signed.raw });
     } catch (e: any) {
       const msg = String(e?.details ?? e?.shortMessage ?? e);
-      // Already known or already mined (e.g. re-broadcast after a restart): fall through to the receipt.
-      if (!/already known|nonce too low|already exists|known transaction/i.test(msg)) throw e;
+      if (/already known|already exists|known transaction/i.test(msg)) {
+        // the node already has these exact bytes: wait for them below
+      } else if (/nonce too low/i.test(msg)) {
+        // The nonce is used. Only these bytes landing counts; anything else used it and ours can never land.
+        const mine = await this.pub.getTransactionReceipt({ hash: signed.hash }).catch(() => null);
+        if (!mine) throw new NonceConsumedError(signed);
+      } else {
+        throw e;
+      }
     }
     const receipt = await this.pub.waitForTransactionReceipt({ hash: signed.hash, timeout: timeoutMs });
     if (receipt.status !== "success") throw new Error(`reverted on chain: ${signed.hash}`);
