@@ -130,10 +130,11 @@ if (!record.steps["CreditBook.bindPool"]) {
 }
 
 const guard = await deploy("LoanGuard", encodeAbiParameters([{ type: "address" }, { type: "address" }], [pool, agent]));
+const keeper = await deploy("GentleKeeper", encodeAbiParameters([{ type: "address" }, { type: "address" }], [pool, agent]));
 
 // Public RPCs are load-balanced: a node can answer before it has the newest block. Wait until every
 // contract's code is visible before reading anything back.
-for (const address of [price, book, pool, guard]) {
+for (const address of [price, book, pool, guard, keeper]) {
   for (let i = 0; ; i++) {
     const code = await pub.getCode({ address });
     if (code && code !== "0x") break;
@@ -162,9 +163,11 @@ const checks: [string, Address, Address][] = [
   ["pool.asset", await read("asset"), CELO.wars],
   ["book.pool", await pub.readContract({ address: book, abi: parseAbi(["function pool() view returns (address)"]), functionName: "pool" }), pool],
   ["guard.agent", await pub.readContract({ address: guard, abi: parseAbi(["function agent() view returns (address)"]), functionName: "agent" }), agent],
+  ["keeper.agent", await pub.readContract({ address: keeper, abi: parseAbi(["function agent() view returns (address)"]), functionName: "agent" }), agent],
+  ["keeper.pool", await pub.readContract({ address: keeper, abi: parseAbi(["function pool() view returns (address)"]), functionName: "pool" }), pool],
 ];
 for (const [label, got, want] of checks) {
   if (getAddress(got) !== getAddress(want)) throw new Error(`${label} is ${got}, expected ${want}`);
 }
 console.log("all read-backs match");
-console.log(JSON.stringify({ PRICE_ADDRESS: price, CREDITBOOK_ADDRESS: book, POOL_ADDRESS: pool, GUARD_ADDRESS: guard }, null, 2));
+console.log(JSON.stringify({ PRICE_ADDRESS: price, CREDITBOOK_ADDRESS: book, POOL_ADDRESS: pool, GUARD_ADDRESS: guard, KEEPER_ADDRESS: keeper }, null, 2));

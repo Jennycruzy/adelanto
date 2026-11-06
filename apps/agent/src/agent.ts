@@ -127,7 +127,8 @@ export class Agent {
     const action = this.d.db.prepare("SELECT loan_id, borrower FROM agent_actions WHERE id = ?").get(actionId) as any;
     tx(this.d.db, () => {
       this.d.db.prepare("UPDATE pending_tx SET status = ?, settled_at = ? WHERE hash = ?").run(status, this.now(), hash);
-      this.d.db.prepare("UPDATE agent_actions SET status = ?, error = COALESCE(?, error) WHERE id = ?").run(status === "landed" ? "landed" : "failed", error ?? null, actionId);
+      // An action that landed is never downgraded by a later record of a sibling transaction at the same nonce.
+      this.d.db.prepare("UPDATE agent_actions SET status = ?, error = COALESCE(?, error) WHERE id = ? AND status <> 'landed'").run(status === "landed" ? "landed" : "failed", error ?? null, actionId);
       if (status === "landed" && block !== undefined) {
         const loanId = action?.loan_id === null || action?.loan_id === undefined ? null : BigInt(action.loan_id);
         this.markActed(loanId, action?.borrower ?? null, block);
@@ -184,12 +185,17 @@ export class Agent {
         const msg = String(e?.shortMessage ?? e?.message ?? e).slice(0, 300);
         if (e instanceof NonceConsumedError) {
           // Another transaction used the nonce. If it was the replacement, the old intent can never land now.
-          const other = this.d.db.prepare("SELECT hash FROM pending_tx WHERE from_addr = ? AND nonce = ? AND hash <> ?").all(r.from_addr, r.nonce, r.hash) as any[];
+          const other = this.d.db.prepare("SELECT hash, to_addr, data FROM pending_tx WHERE from_addr = ? AND nonce = ? AND hash <> ?").all(r.from_addr, r.nonce, r.hash) as any[];
           for (const o of other) {
             const rc = await this.d.pub.getTransactionReceipt({ hash: o.hash }).catch(() => null);
-            if (rc) this.d.db.prepare("UPDATE pending_tx SET status = 'landed', settled_at = ? WHERE hash = ?").run(this.now(), o.hash);
+            if (!rc) continue;
+            // The sibling that used the nonce is the one that landed: record it at its block (a landed original keeps the action landed).
+            const isCancel = getAddress(o.to_addr) === getAddress(r.from_addr); // cancels are tagged self-transfers
+            if (rc.status === "success" && !isCancel) this.settle(o.hash, r.action_id, "landed", rc.blockNumber);
+            else this.d.db.prepare("UPDATE pending_tx SET status = ?, settled_at = ? WHERE hash = ?").run(rc.status === "success" ? "landed" : "reverted", this.now(), o.hash);
           }
-          this.settle(r.hash, r.action_id, "replaced", undefined, msg);
+          this.d.db.prepare("UPDATE pending_tx SET status = 'replaced', settled_at = ? WHERE hash = ? AND status <> 'landed'").run(this.now(), r.hash);
+          this.d.db.prepare("UPDATE agent_actions SET status = 'failed', error = COALESCE(?, error) WHERE id = ? AND status <> 'landed'").run(msg, r.action_id);
           // A2 must not decide again until the index has seen whatever used that nonce.
           const action = this.d.db.prepare("SELECT borrower FROM agent_actions WHERE id = ?").get(r.action_id) as any;
           if (action?.borrower) this.markActed(null, action.borrower, this.block > 0n ? this.block : await this.d.pub.getBlockNumber({ cacheTime: 0 }));

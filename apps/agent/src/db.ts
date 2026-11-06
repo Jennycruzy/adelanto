@@ -53,6 +53,9 @@ export type Db = DatabaseSyncType;
  * locking_mode=EXCLUSIVE keeps an OS file lock after its first write, and the OS drops it when the process dies, so a
  * crashed agent never leaves a stale lock and two agents can never both hold it. Throws if another process holds it.
  */
+/** Lock connections live here for the life of the process, so dropping the release function can never free a lock. */
+const heldLocks = new Map<string, DatabaseSync>();
+
 export function holdLock(dir: string, name: string): () => void {
   mkdirSync(dir, { recursive: true });
   const lock = new DatabaseSync(join(dir, `${name}.lock.sqlite`), { timeout: 0 } as any);
@@ -62,7 +65,12 @@ export function holdLock(dir: string, name: string): () => void {
     lock.close();
     throw new Error(`another agent holds the lock ${name} in ${dir}: ${e?.message ?? e}`);
   }
-  return () => lock.close();
+  const key = join(dir, name);
+  heldLocks.set(key, lock);
+  return () => {
+    heldLocks.delete(key);
+    lock.close();
+  };
 }
 
 export function openDb(path: string): Db {

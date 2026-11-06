@@ -51,7 +51,7 @@ contract GentleKeeper is ReentrancyGuard {
         // Solve (debt - x) * BPS <= target * (value - x * (1 + bonus)) for x.
         uint256 num = debt * BPS - TARGET_LTV_BPS * value;
         uint256 den = BPS * BPS - TARGET_LTV_BPS * (BPS + pool.LIQUIDATION_BONUS_BPS());
-        return num.mulDiv(BPS, den, Math.Rounding.Ceil) + 4; // covers the pool's 1-2 wei rounding of debt
+        return num.mulDiv(BPS, den, Math.Rounding.Ceil) + 12; // covers the pool's debt rounding with a provable margin
     }
 
     /// @notice Liquidate `loanId` gently, using at most `maxPesos` of the agent's wARS.

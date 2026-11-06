@@ -83,7 +83,7 @@ export function gentleLiquidationRepay(
   const numerator = debt * BPS - targetBps * value; // > 0 because ltv > 80% > target
   const denominator = BPS * BPS - targetBps * (BPS + LIQUIDATION_BONUS_BPS); // in BPS^2 units
   if (denominator <= 0n) return maxLiquidationRepay(debt); // target too high to reach by liquidating: take the most
-  const x = ceilDiv(numerator * BPS, denominator) + 4n; // same margin as GentleKeeper
+  const x = ceilDiv(numerator * BPS, denominator) + 12n; // same margin as GentleKeeper
   const cap = maxLiquidationRepay(debt);
   return x > cap ? cap : x;
 }
