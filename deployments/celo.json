@@ -37,6 +37,13 @@
       "gasUsed": "1222684",
       "tagged": true,
       "address": "0x26c9f3D79f3C835ee74c95A94a701e93f24bEbD3"
+    },
+    "GentleKeeper": {
+      "tx": "0xa697e3fa3b145ed4f0c7fc90071d5562703b16d27f4217520ff3cf7e9b4e9582",
+      "block": "82060979",
+      "gasUsed": "811913",
+      "tagged": true,
+      "address": "0xcd98B9669708F0d193c975B0900169890d6Dd0fE"
     }
   }
 }
