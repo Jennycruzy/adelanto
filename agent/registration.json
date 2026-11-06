@@ -6,7 +6,15 @@
   "services": [
     {
       "name": "web",
+      "endpoint": "https://adelanto-99-80-93-71.sslip.io"
+    },
+    {
+      "name": "source",
       "endpoint": "https://github.com/Jennycruzy/adelanto"
+    },
+    {
+      "name": "llms.txt",
+      "endpoint": "https://adelanto-99-80-93-71.sslip.io/llms.txt"
     },
     {
       "name": "peso-pool",
@@ -27,6 +35,10 @@
     {
       "name": "agentWallet",
       "endpoint": "eip155:42220:0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1"
+    },
+    {
+      "name": "gentle-keeper",
+      "endpoint": "eip155:42220:0xcd98B9669708F0d193c975B0900169890d6Dd0fE"
     }
   ],
   "x402Support": false,
