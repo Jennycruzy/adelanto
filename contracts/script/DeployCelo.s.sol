@@ -24,7 +24,7 @@ contract DeployCelo is Script {
         require(block.chainid == 42220, "Celo only");
 
         vm.startBroadcast();
-        PriceModule price = new PriceModule(IUniswapV3Pool(UNI), WARS, USDT, 30_000_000e18);
+        PriceModule price = new PriceModule(IUniswapV3Pool(UNI), WARS, USDT, 10_000_000e18);
         CreditBook book = new CreditBook();
         PesoPool pool = new PesoPool(
             IERC20(WARS),
@@ -34,7 +34,7 @@ contract DeployCelo is Script {
             IUniswapV3Pool(UNI),
             treasury,
             guardian,
-            PesoPool.Caps({absolute: 20_000_000e18, depositsBps: 7_000, depthBps: 1_500})
+            PesoPool.Caps({absolute: 20_000_000e18, depositsBps: 7_000, depthBps: 6_500})
         );
         book.bindPool(address(pool));
         LoanGuard guard = new LoanGuard(pool, agent);

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IUniswapV3Pool} from "./interfaces/IUniswapV3Pool.sol";
 import {IPriceModule} from "./interfaces/IPriceModule.sol";
 import {TickPrice} from "./libraries/TickPrice.sol";
@@ -13,7 +13,13 @@ import {TickPrice} from "./libraries/TickPrice.sol";
 /// one-block push can't liquidate anyone. The module refuses (borrowing pauses; repay and liquidation don't) when the
 /// pool is too shallow, when spot and the 30-minute average are more than 2% apart, or when the pool has been quiet for
 /// over 2 hours and spot is more than 1% from the 2-hour average. All settings are fixed at deploy.
+///
+/// Depth is the wARS it would take to move the price 2% through the pool's in-range liquidity, using the lower of the
+/// liquidity right now and its 30-minute harmonic average. Liquidity parked out of range, or added for one block,
+/// counts for nothing.
 contract PriceModule is IPriceModule {
+    using Math for uint256;
+
     uint8 public constant OK = 0;
     uint8 public constant SHALLOW = 1;
     uint8 public constant SPOT_VS_TWAP = 2;
@@ -24,6 +30,10 @@ contract PriceModule is IPriceModule {
     uint32 public constant QUIET_AFTER = 2 hours;
     uint256 public constant MAX_SPOT_GAP_BPS = 200; // 2%
     uint256 public constant MAX_QUIET_GAP_BPS = 100; // 1%
+    uint16 public constant MIN_OBSERVATIONS = 600; // enough history that the 30-minute average can't be crowded out
+    uint256 internal constant Q96 = 2 ** 96;
+    uint256 internal constant WAD = 1e18;
+    uint256 internal constant SQRT_102_MINUS_ONE = 9_950_493_836_207_795; // sqrt(1.02) - 1, in WAD: a 2% price move
 
     IUniswapV3Pool public immutable pool;
     address public immutable wars;
@@ -33,11 +43,14 @@ contract PriceModule is IPriceModule {
 
     error PriceRefused(uint8 reason);
     error PoolMismatch();
+    error TooFewObservations(uint16 cardinality);
 
     constructor(IUniswapV3Pool pool_, address wars_, address usdt_, uint256 minWarsDepth_) {
         address t0 = pool_.token0();
         address t1 = pool_.token1();
         if (!((t0 == wars_ && t1 == usdt_) || (t0 == usdt_ && t1 == wars_))) revert PoolMismatch();
+        (,,, uint16 cardinality,,,) = pool_.slot0();
+        if (cardinality < MIN_OBSERVATIONS) revert TooFewObservations(cardinality);
         pool = pool_;
         wars = wars_;
         warsIsToken0 = t0 == wars_;
@@ -62,8 +75,28 @@ contract PriceModule is IPriceModule {
         return TickPrice.pesosPerDollar(TickPrice.sqrtPriceX96AtTick(meanTick), warsIsToken0, scale);
     }
 
+    /// @notice wARS it would take to move the price 2%, at the lower of in-range liquidity now and over 30 minutes.
     function warsDepth() public view returns (uint256) {
-        return IERC20(wars).balanceOf(address(pool));
+        uint256 liq = pool.liquidity();
+        uint256 avg = averageLiquidity(TWAP_SHORT);
+        if (avg < liq) liq = avg;
+        (uint160 sqrtP,,,,,,) = pool.slot0();
+        uint256 raw = warsIsToken0 ? liq.mulDiv(Q96, sqrtP) : liq.mulDiv(sqrtP, Q96);
+        return raw.mulDiv(SQRT_102_MINUS_ONE, WAD);
+    }
+
+    /// @notice Harmonic mean of the pool's in-range liquidity over the last `secondsAgo` seconds.
+    function averageLiquidity(uint32 secondsAgo) public view returns (uint256) {
+        uint32[] memory ago = new uint32[](2);
+        ago[0] = secondsAgo;
+        ago[1] = 0;
+        (, uint160[] memory spl) = pool.observe(ago);
+        uint256 d;
+        unchecked {
+            d = uint256(uint160(spl[1] - spl[0])); // the cumulative wraps by design
+        }
+        if (d == 0) return 0;
+        return (uint256(secondsAgo) << 128) / d;
     }
 
     function status() public view returns (bool, uint8) {

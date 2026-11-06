@@ -238,11 +238,12 @@ contract PesoPoolBorrowTest is Base {
 
     function test_depthCap() public {
         pool.lowerCaps(PesoPool.Caps({absolute: 20_000_000e18, depositsBps: 7_000, depthBps: 1}));
-        // 0.01% of 127.5M = 12,750
+        // 0.01% of the wARS it takes to move the price 2%
+        uint256 cap = price.warsDepth() / 10_000;
         vm.prank(alice);
         vm.expectRevert(PesoPool.AboveCap.selector);
-        pool.borrow(1_000e6, 12_751e18, 30, 10_000);
-        _borrow(alice, 1_000e6, 12_750e18, 30);
+        pool.borrow(1_000e6, cap + 1, 30, 10_000);
+        _borrow(alice, 1_000e6, cap, 30);
     }
 
     function test_notEnoughCash() public {
@@ -502,6 +503,7 @@ contract PesoPoolRepayTest is Base {
     }
 
     function test_onTimeRaisesTier() public {
+        _skip(8 days);
         vm.prank(alice);
         pool.repay(id, type(uint256).max);
         assertEq(book.tier(alice), 1);
@@ -542,6 +544,21 @@ contract PesoPoolRepayTest is Base {
         assertGt(withPenalty, atDue * 1005 / 1000);
     }
 
+    /// Regression: late extra used to go 90% to lenders when a loan was next touched, so someone could deposit just
+    /// before touching an overdue loan and take a cut of what it owed before they came in.
+    function test_lateExtraNeverMovesSharePrice() public {
+        _skip(90 days); // 60 days overdue
+        wars.mint(bob, 1e18);
+        vm.prank(bob);
+        wars.approve(address(pool), type(uint256).max);
+        uint256 before = pool.convertToAssets(1e24);
+        uint256 res = pool.reserve();
+        vm.prank(bob);
+        pool.repay(id, 1);
+        assertGt(pool.reserve(), res); // the late extra was written down, into the reserve
+        assertApproxEqAbs(pool.convertToAssets(1e24), before, 1);
+    }
+
     function test_penaltyNotChargedTwice() public {
         _skip(40 days);
         vm.prank(alice);
@@ -553,6 +570,7 @@ contract PesoPoolRepayTest is Base {
     }
 
     function test_secondLoanAtTierOneGetsMore() public {
+        _skip(8 days);
         vm.prank(alice);
         pool.repay(id, type(uint256).max);
         uint256 max = 1_000e6 * _px() / 1e6 * 6_200 / 10_000;
@@ -839,6 +857,7 @@ contract PesoPoolLiquidationTest is Base {
         // first build a tier
         uint256 a = _borrow(bob, 100e6, 50_000e18, 7);
         wars.mint(bob, 10_000e18);
+        _skip(7 days);
         vm.prank(bob);
         pool.repay(a, type(uint256).max);
         assertEq(book.tier(bob), 1);
@@ -1087,6 +1106,18 @@ contract PesoPoolFreezeTest is Base {
         id = _borrow(alice, 1_000e6, 500_000e18, 30);
     }
 
+    function test_probeReadsPauseFlag() public {
+        wars.setFlags(true, false, address(0), false);
+        assertTrue(pool.probeFreeze());
+    }
+
+    function test_probeReadsBlocklistOnlyWhenEnforced() public {
+        wars.setFlags(false, false, address(pool), true);
+        assertFalse(pool.probeFreeze());
+        wars.setFlags(false, true, address(pool), true);
+        assertTrue(pool.probeFreeze());
+    }
+
     function test_probeNotFrozen() public {
         assertFalse(pool.probeFreeze());
         assertEq(pool.frozenSince(), 0);
@@ -1118,7 +1149,7 @@ contract PesoPoolFreezeTest is Base {
         pool.emergencyReleaseCollateral(id);
     }
 
-    function test_releaseAfter24hKeepsDebtValue() public {
+    function test_releaseAfter24hKeepsLoanAt70() public {
         wars.setFrozen(true);
         pool.probeFreeze();
         _skip(25 hours);
@@ -1127,8 +1158,23 @@ contract PesoPoolFreezeTest is Base {
         uint256 released = pool.emergencyReleaseCollateral(id);
         uint256 keep = pool.loans(id).collateral;
         assertEq(keep + released, 1_000e6);
-        assertApproxEqAbs(keep * price.liquidationPrice() / 1e6, debt, price.liquidationPrice() / 1e6 + 1);
+        assertApproxEqAbs(keep * price.liquidationPrice() / 1e6, debt * 10_000 / 7_000, price.liquidationPrice() / 1e6 + 1);
         assertTrue(pool.loans(id).open);
+        assertLe(pool.loanLtvBps(id), 7_000);
+    }
+
+    /// Regression: the freeze exit used to keep collateral worth exactly the debt, so once wARS moved again the
+    /// borrower could liquidate their own loan from another address and keep part of what they borrowed.
+    function test_selfLiquidationAfterReleaseIsNotPossible() public {
+        wars.setFrozen(true);
+        pool.probeFreeze();
+        _skip(25 hours);
+        vm.prank(alice);
+        pool.emergencyReleaseCollateral(id);
+        wars.setFrozen(false);
+        vm.prank(keeper);
+        vm.expectRevert(PesoPool.NotLiquidatable.selector);
+        pool.liquidate(id, type(uint256).max);
     }
 
     function test_releaseOnlyBorrower() public {

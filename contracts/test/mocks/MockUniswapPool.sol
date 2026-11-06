@@ -19,6 +19,9 @@ contract MockUniswapPool {
     uint32 public lastObservation;
     uint256 public feeBps = 1;
     bool public observeReverts;
+    uint128 public liquidity = 68_599_257_441_741_245_973; // the real pool's, 5 Nov 2026
+    uint128 public avgLiquidity = 68_599_257_441_741_245_973;
+    uint16 public cardinality = 1200;
 
     constructor(address t0, address t1, int24 tick) {
         token0 = t0;
@@ -45,12 +48,21 @@ contract MockUniswapPool {
         lastObservation = ts;
     }
 
+    function setLiquidity(uint128 now_, uint128 avg) external {
+        liquidity = now_;
+        avgLiquidity = avg;
+    }
+
+    function setCardinality(uint16 c) external {
+        cardinality = c;
+    }
+
     function setObserveReverts(bool r) external {
         observeReverts = r;
     }
 
     function slot0() external view returns (uint160, int24, uint16, uint16, uint16, uint8, bool) {
-        return (TickPrice.sqrtPriceX96AtTick(spotTick), spotTick, 0, 1200, 1200, 0, true);
+        return (TickPrice.sqrtPriceX96AtTick(spotTick), spotTick, 0, cardinality, cardinality, 0, true);
     }
 
     function observations(uint256) external view returns (uint32, int56, uint160, bool) {
@@ -64,6 +76,7 @@ contract MockUniswapPool {
         int24 t = avgTick[ago[0]];
         cum[0] = 0;
         cum[1] = int56(t) * int56(uint56(ago[0]));
+        if (avgLiquidity > 0) spl[1] = uint160((uint256(ago[0]) << 128) / avgLiquidity);
     }
 
     /// @dev Exact-input swap of token `zeroForOne ? token0 : token1` for the other, at the spot price.

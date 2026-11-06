@@ -11,8 +11,15 @@ contract CreditBookTest is Test {
     address u = makeAddr("user");
 
     function setUp() public {
+        vm.warp(1_762_300_000);
         b = new CreditBook();
         b.bindPool(p);
+    }
+
+    /// @dev A loan opened a week and a day ago, after the last one closed, closes now.
+    function _close(bool onTime) internal {
+        vm.warp(block.timestamp + 8 days);
+        b.recordClosed(u, onTime, uint64(block.timestamp - 7 days - 1));
     }
 
     function test_bindOnlyOnce() public {
@@ -39,7 +46,7 @@ contract CreditBookTest is Test {
         vm.expectRevert(CreditBook.NotPool.selector);
         b.recordRepayment(u, 1);
         vm.expectRevert(CreditBook.NotPool.selector);
-        b.recordClosed(u, true);
+        b.recordClosed(u, true, 0);
         vm.expectRevert(CreditBook.NotPool.selector);
         b.recordLiquidation(u);
     }
@@ -69,26 +76,26 @@ contract CreditBookTest is Test {
     function test_tierSteps() public {
         assertEq(b.tier(u), 0);
         vm.startPrank(p);
-        b.recordClosed(u, true);
+        _close(true);
         assertEq(b.tier(u), 1);
-        b.recordClosed(u, true);
+        _close(true);
         assertEq(b.tier(u), 1);
-        b.recordClosed(u, true);
+        _close(true);
         assertEq(b.tier(u), 2);
-        b.recordClosed(u, true);
-        b.recordClosed(u, true);
+        _close(true);
+        _close(true);
         assertEq(b.tier(u), 2);
-        b.recordClosed(u, true);
+        _close(true);
         assertEq(b.tier(u), 3);
-        b.recordClosed(u, true);
+        _close(true);
         assertEq(b.tier(u), 3);
         vm.stopPrank();
     }
 
     function test_lateDoesNotRaiseTier() public {
         vm.startPrank(p);
-        b.recordClosed(u, false);
-        b.recordClosed(u, false);
+        _close(false);
+        _close(false);
         vm.stopPrank();
         assertEq(b.tier(u), 0);
         assertEq(b.recordOf(u).repaidLate, 2);
@@ -97,7 +104,7 @@ contract CreditBookTest is Test {
     function test_liquidationResetsStepsButKeepsHistory() public {
         vm.startPrank(p);
         for (uint256 i; i < 6; i++) {
-            b.recordClosed(u, true);
+            _close(true);
         }
         b.recordLiquidation(u);
         vm.stopPrank();
@@ -111,10 +118,45 @@ contract CreditBookTest is Test {
         n = uint8(bound(n, 0, 20));
         vm.startPrank(p);
         for (uint256 i; i < n; i++) {
-            b.recordClosed(u, true);
+            _close(true);
         }
         vm.stopPrank();
         uint8 expected = n >= 6 ? 3 : n >= 3 ? 2 : n >= 1 ? 1 : 0;
         assertEq(b.tier(u), expected);
+    }
+
+    function test_instantRepayDoesNotCount() public {
+        vm.startPrank(p);
+        for (uint256 i; i < 6; i++) {
+            b.recordClosed(u, true, uint64(block.timestamp));
+        }
+        vm.stopPrank();
+        assertEq(b.tier(u), 0);
+        assertEq(b.recordOf(u).repaidOnTime, 6);
+    }
+
+    function test_loanHeldUnderAWeekDoesNotCount() public {
+        uint64 opened = uint64(block.timestamp);
+        vm.warp(block.timestamp + 7 days - 1);
+        vm.prank(p);
+        b.recordClosed(u, true, opened);
+        assertEq(b.tier(u), 0);
+        vm.warp(block.timestamp + 1);
+        vm.prank(p);
+        b.recordClosed(u, true, opened);
+        assertEq(b.tier(u), 1);
+    }
+
+    function test_parallelLoansCountOnce() public {
+        // Six loans opened together and repaid together after a week earn one step, not three.
+        uint64 opened = uint64(block.timestamp);
+        vm.warp(block.timestamp + 8 days);
+        vm.startPrank(p);
+        for (uint256 i; i < 6; i++) {
+            b.recordClosed(u, true, opened);
+        }
+        vm.stopPrank();
+        assertEq(b.tier(u), 1);
+        assertEq(b.recordOf(u).onTimeSinceLiquidation, 1);
     }
 }

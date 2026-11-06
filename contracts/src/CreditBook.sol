@@ -7,7 +7,12 @@ import {ICreditBook} from "./interfaces/ICreditBook.sol";
 /// @notice A credit record per address that anyone can read. Only the peso pool writes to it.
 /// Repaying on time moves a borrower up a step (better rate, higher limit); a liquidation resets the steps.
 /// Nothing is ever erased.
+///
+/// A step only counts a loan that was held at least 7 days and opened after the last loan that counted, so steps
+/// take real time to earn and can't be bought by opening and closing loans in one go.
 contract CreditBook is ICreditBook {
+    uint256 public constant MIN_HELD = 7 days;
+
     address public immutable deployer;
     address public pool;
 
@@ -56,11 +61,14 @@ contract CreditBook is ICreditBook {
         emit Repayment(borrower, pesos);
     }
 
-    function recordClosed(address borrower, bool onTime) external onlyPool {
+    function recordClosed(address borrower, bool onTime, uint64 openedAt) external onlyPool {
         Record storage r = _records[borrower];
         if (onTime) {
             r.repaidOnTime += 1;
-            r.onTimeSinceLiquidation += 1;
+            if (block.timestamp >= uint256(openedAt) + MIN_HELD && openedAt >= r.lastCountedAt) {
+                r.onTimeSinceLiquidation += 1;
+                r.lastCountedAt = uint64(block.timestamp);
+            }
         } else {
             r.repaidLate += 1;
         }
@@ -74,7 +82,8 @@ contract CreditBook is ICreditBook {
         emit Liquidated(borrower);
     }
 
-    /// @notice 0 = first loan, 1 = after 1 on-time repayment, 2 = after 3, 3 = after 6 (since the last liquidation).
+    /// @notice 0 = first loan, 1 = after 1 counted on-time repayment, 2 = after 3, 3 = after 6 (since the last
+    /// liquidation).
     function tier(address borrower) external view returns (uint8) {
         return _tier(_records[borrower].onTimeSinceLiquidation);
     }

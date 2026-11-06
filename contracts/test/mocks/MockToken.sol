@@ -8,6 +8,10 @@ import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20P
 contract MockToken is ERC20Permit {
     uint8 private immutable _dec;
     bool public frozen;
+    // wARS-style flags that only report; they don't stop transfers here, so tests can check the pool reads them.
+    bool public paused;
+    bool public enforceBlocklist;
+    mapping(address => bool) public isBlocked;
 
     error TokenFrozen();
 
@@ -25,6 +29,12 @@ contract MockToken is ERC20Permit {
 
     function setFrozen(bool f) external {
         frozen = f;
+    }
+
+    function setFlags(bool paused_, bool enforce, address blocked, bool isBlocked_) external {
+        paused = paused_;
+        enforceBlocklist = enforce;
+        if (blocked != address(0)) isBlocked[blocked] = isBlocked_;
     }
 
     function _update(address from, address to, uint256 value) internal override {

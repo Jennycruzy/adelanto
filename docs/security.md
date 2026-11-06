@@ -34,9 +34,16 @@ once and checks that no collateral and no lender pesos move.
   lends more pesos.
 - Liquidation uses the **30-minute average only**, so a one-block push can't liquidate anyone
   (`test_liquidationIgnoresSpotSpike`).
-- New borrowing stops (repay and liquidation don't) when: the pool holds under 30M wARS; spot and the 30-minute
-  average are more than 2% apart; or the pool has been quiet for 2 hours and spot is more than 1% from the 2-hour
-  average.
+- **Depth** is the wARS it would take to move the price 2% through the pool's in-range liquidity, at the lower of the
+  liquidity right now and its 30-minute harmonic average (from Uniswap's seconds-per-liquidity record). Tokens parked
+  out of range, or liquidity added for one block, count for nothing (`test_depthIgnoresTokenBalance`,
+  `test_depthUsesLowerOfNowAndAverage`). On 6 Nov 2026 the real pool's depth was about 27.8M wARS.
+- New borrowing and collateral withdrawal stop (repay and liquidation don't) when: depth is under 10M wARS; spot and
+  the 30-minute average are more than 2% apart; or the pool has been quiet for 2 hours and spot is more than 1% from
+  the 2-hour average. Taking collateral out raises a loan's ratio just like borrowing, so it waits for a clean price;
+  repaying in full always returns all collateral.
+- The module refuses to deploy against a pool that keeps fewer than 600 price observations (the real pool keeps
+  1,200), so the 30-minute average can't be crowded out of the record.
 - Off chain, the agent compares the 30-minute average with Binance USDTARS and the dolarapi crypto rate every 60
   seconds, and the guardian pauses new borrowing if they disagree by more than 1.5% for 3 minutes.
 
@@ -50,7 +57,7 @@ Read from the pool on 5 Nov 2026: liquidity `68,599,257,441,741,245,973`, tick �
 | Push pesos-per-dollar down to liquidate | The same push, held for 30 minutes, against the same arbitrage | A 5% bonus on the part liquidated, and only on loans already near 80% |
 
 The caps are set so that the cost is always far above the gain. Caps can only rise after a 24-hour public wait,
-and the depth cap ties total borrowing to 15% of the pool's wARS.
+and the depth cap ties total borrowing to 65% of the depth (about 18M wARS today).
 
 ## Interest and rounding
 
@@ -59,14 +66,19 @@ and the depth cap ties total borrowing to 15% of the pool's wARS.
 - The share token uses 6 virtual decimals, which blocks the first-depositor inflation trick
   (`test_firstDepositorInflationBlocked`).
 - Each credit step has its own interest index. Indices only grow (`invariant_indexMonotonic`).
-- Late loans pay 5 extra points from the due date, added when the loan is next touched.
+- Late loans pay 5 extra points from the due date, added when the loan is next touched. The late extra goes wholly
+  to the reserve, so adding it never changes the share price and nobody can deposit just before an overdue loan is
+  touched to take a cut of what it owed earlier (`test_lateExtraNeverMovesSharePrice`).
 
 ## If Ripio freezes wARS
 
-wARS has `pause()` and per-address blocking. `probeFreeze()` records when a zero transfer from the pool first fails.
-After 24 hours of that, `emergencyReleaseCollateral` lets each borrower take back the collateral above the dollar
-value of their debt at the 30-minute average. The rest stays as the lenders' claim, and the loan stays open until
-wARS moves again. Tested with a token that reverts (`PesoPoolFreezeTest`).
+wARS has `pause()` and per-address blocking. `probeFreeze()` treats wARS as frozen when the token reports itself
+paused, reports the pool as blocked while its blocklist is on, or refuses a zero transfer from the pool, and records
+when that was first seen. After 24 hours of that, `emergencyReleaseCollateral` lets each borrower take back collateral
+down to the 70% line at the 30-minute average. The rest stays as the lenders' claim, and the loan stays open until
+wARS moves again. Because it stays under the 80% liquidation line with room for the 5% bonus, nobody, the borrower
+included, can liquidate it at the lenders' expense the moment wARS moves (`test_selfLiquidationAfterReleaseIsNotPossible`).
+Tested with a token that reverts and with one that only reports its flags (`PesoPoolFreezeTest`).
 
 ## External functions, one by one
 
@@ -83,7 +95,7 @@ wARS moves again. Tested with a token that reverts (`PesoPoolFreezeTest`).
 | `withdrawCollateral` | Borrower | Loan stays ≤ 60% at min(spot, 30-min); price must not be refused | USDT to the borrower |
 | `liquidate` | Anyone | Debt > 80% at the 30-min average; at most half (all under 10,000 wARS); seize ≤ collateral | wARS in from liquidator; USDT to liquidator worth repaid + 5% |
 | `probeFreeze` | Anyone | — | Nothing |
-| `emergencyReleaseCollateral` | Borrower | wARS stuck for 24 h | USDT above the debt's dollar value to the borrower |
+| `emergencyReleaseCollateral` | Borrower | wARS stuck for 24 h | USDT above the 70% line to the borrower |
 | `accrue` | Anyone | — | Nothing |
 | `pause`, `unpause` | Guardian or owner | — | Nothing |
 | `setGuardian`, `lowerCaps`, `scheduleCaps`, `executeCaps`, `transferOwnership` | Owner | Raises wait 24 h; lowers only lower | Nothing |
@@ -106,7 +118,7 @@ The guard holds no funds between calls (`testFuzz_guardLimits` checks its balanc
 
 | Function | Who | Checks | Moves |
 |---|---|---|---|
-| `execute` | Anyone with an order signed by the owner | EIP-712 signature by the owner; borrower field = owner; nonce unused; deadline; market must be wARS loan / USDT collateral; rate ceiling | Supply, borrow, repay or exit on Morpho; pesos only to the owner on Celo (Ripio Bridge); dollars only to the owner on Celo (USDT0) |
+| `execute` | Anyone with an order signed by the owner | EIP-712 signature by the owner; borrower field = owner; nonce unused; deadline; market must be wARS loan / USDT collateral; rate ceiling checked on the rate the borrow itself leaves; the order must do what it says (all collateral supplied, the amount repaid, the loan cleared on exit) or it reverts and its nonce stays unused | Supply, borrow, repay or exit on Morpho; pesos only to the owner on Celo (Ripio Bridge); dollars only to the owner on Celo (USDT0) |
 | `exit` | Owner | Same market check | Repays from the proxy's pesos, withdraws collateral, sends everything home |
 | `sendPesosHome`, `sendDollarsHome` | Owner | — | Balances to the owner on Celo only |
 
@@ -126,6 +138,10 @@ The guard holds no funds between calls (`testFuzz_guardLimits` checks its balanc
 A loan that was ever liquidated closes without counting as an on-time repayment
 (`test_fullLiquidationDoesNotRaiseTier`, `test_repayAfterPartialLiquidationDoesNotRaiseTier`).
 
+A credit step only counts a loan that was held at least 7 days and opened after the last loan that counted, so
+steps take real weeks to earn and can't be bought by opening and closing loans in one go
+(`test_instantRepayDoesNotCount`, `test_parallelLoansCountOnce`).
+
 ## Tests
 
 - **Unit and fuzz:** every function and branch above, with fuzzed borrow, repay, liquidation and guard maths.
@@ -136,7 +152,9 @@ A loan that was ever liquidated closes without counting as an on-time repayment
   repay, real-swap repayment, freeze probe, guard on real tokens.
 - **Fork tests on Ethereum mainnet state:** real Morpho market `0x8e62…9c9e`, Ripio Bridge and USDT0; the proxy
   address is known before deploy; open sends pesos to the owner on Celo; close brings dollars home; replay, wrong
-  signer, wrong borrower, wrong market, expired order and rate ceiling are all refused; strangers cannot exit.
+  signer, wrong borrower, wrong market, expired order and rate ceiling are all refused; strangers cannot exit; an
+  order sent before its money arrives reverts and can be sent again later; a borrow that would push the rate past
+  the ceiling is refused.
 
 Run them with `forge test` in `contracts/`; set `CELO_RPC_URL` and `ETH_RPC_URL` for the fork tests.
 

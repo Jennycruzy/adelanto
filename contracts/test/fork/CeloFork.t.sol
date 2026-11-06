@@ -33,7 +33,7 @@ contract CeloForkTest is Test {
         if (bytes(rpc).length == 0) return;
         vm.createSelectFork(rpc);
         live = true;
-        price = new PriceModule(IUniswapV3Pool(UNI), WARS, USDT, 30_000_000e18);
+        price = new PriceModule(IUniswapV3Pool(UNI), WARS, USDT, 10_000_000e18);
         book = new CreditBook();
         pool = new PesoPool(
             IERC20(WARS),
@@ -79,7 +79,8 @@ contract CeloForkTest is Test {
         assertGt(s, 500e18);
         assertLt(s, 5_000e18);
         assertApproxEqRel(s, t, 0.02e18);
-        assertGt(price.warsDepth(), 30_000_000e18);
+        emit log_named_decimal_uint("wARS to move the price 2%", price.warsDepth(), 18);
+        assertGt(price.warsDepth(), price.minWarsDepth());
     }
 
     function test_fork_statusOkOrExplained() public onlyLive {
@@ -98,7 +99,7 @@ contract CeloForkTest is Test {
         vm.prank(alice);
         uint256 id = pool.borrow(10e6, 9_000e18, 7, 10_000);
         assertGt(IERC20(WARS).balanceOf(alice), 8_900e18);
-        vm.warp(block.timestamp + 3 days);
+        vm.warp(block.timestamp + 7 days);
         deal(WARS, alice, 20_000e18);
         vm.prank(alice);
         pool.repay(id, type(uint256).max);

@@ -42,7 +42,7 @@ abstract contract Base is Test {
         usdt = new MockToken("Tether USD", "USDT", 6);
         uni = new MockUniswapPool(address(wars), address(usdt), TICK_1650);
         wars.mint(address(uni), DEPTH);
-        price = new PriceModule(IUniswapV3Pool(address(uni)), address(wars), address(usdt), 30_000_000e18);
+        price = new PriceModule(IUniswapV3Pool(address(uni)), address(wars), address(usdt), 10_000_000e18);
         book = new CreditBook();
         pool = new PesoPool(
             IERC20(address(wars)),
@@ -52,7 +52,7 @@ abstract contract Base is Test {
             IUniswapV3Pool(address(uni)),
             treasury,
             guardian,
-            PesoPool.Caps({absolute: 20_000_000e18, depositsBps: 7_000, depthBps: 1_500})
+            PesoPool.Caps({absolute: 20_000_000e18, depositsBps: 7_000, depthBps: 6_500})
         );
         book.bindPool(address(pool));
         guard = new LoanGuard(pool, agent);

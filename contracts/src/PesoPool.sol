@@ -12,6 +12,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IPriceModule} from "./interfaces/IPriceModule.sol";
 import {ICreditBook} from "./interfaces/ICreditBook.sol";
 import {IUniswapV3Pool} from "./interfaces/IUniswapV3Pool.sol";
+import {IWarsControls} from "./interfaces/IWarsControls.sol";
 
 /// @title PesoPool
 /// @notice Lenders deposit wARS and get aPESO shares (ERC-4626). Borrowers lock USDT and borrow wARS.
@@ -521,8 +522,9 @@ contract PesoPool is ERC4626, ReentrancyGuard {
         emit FreezeProbe(frozen, frozenSince);
     }
 
-    /// @notice If wARS has not been able to leave the pool for 24 hours, a borrower can take back the collateral above
-    /// the dollar value of their debt. The rest stays as the lenders' claim and the loan stays open.
+    /// @notice If wARS has not been able to leave the pool for 24 hours, a borrower can take back collateral down to
+    /// the 70% line at the 30-minute price. The rest stays as the lenders' claim and the loan stays open, with room
+    /// below the 80% liquidation line so it can't be liquidated at a loss the moment wARS moves again.
     function emergencyReleaseCollateral(uint256 loanId) external nonReentrant returns (uint256 released) {
         probeFreeze();
         if (frozenSince == 0 || block.timestamp - frozenSince < FREEZE_DELAY) revert NotFrozen();
@@ -530,7 +532,9 @@ contract PesoPool is ERC4626, ReentrancyGuard {
         Loan storage l = _openLoan(loanId);
         if (msg.sender != l.borrower) revert NotBorrower();
         _applyPenalty(loanId, l);
-        uint256 keep = _loanDebt(l).mulDiv(usdtUnit, priceModule.liquidationPrice(), Math.Rounding.Ceil);
+        uint256 keep = _loanDebt(l).mulDiv(BPS, RISK_LTV_BPS, Math.Rounding.Ceil).mulDiv(
+            usdtUnit, priceModule.liquidationPrice(), Math.Rounding.Ceil
+        );
         if (keep >= l.collateral) return 0;
         released = l.collateral - keep;
         l.collateral = uint128(keep);
@@ -539,7 +543,20 @@ contract PesoPool is ERC4626, ReentrancyGuard {
         emit EmergencyCollateralReleased(loanId, released);
     }
 
+    /// @dev Reads the token's own pause and block flags where it has them, then tries a zero transfer.
     function _warsMoves() internal returns (bool) {
+        try IWarsControls(address(_wars)).paused() returns (bool p) {
+            if (p) return false;
+        } catch {}
+        try IWarsControls(address(_wars)).isBlocked(address(this)) returns (bool b) {
+            if (b) {
+                try IWarsControls(address(_wars)).enforceBlocklist() returns (bool e) {
+                    if (e) return false;
+                } catch {
+                    return false;
+                }
+            }
+        } catch {}
         try IERC20(address(_wars)).transfer(address(this), 0) returns (bool ok) {
             return ok;
         } catch {
@@ -686,7 +703,9 @@ contract PesoPool is ERC4626, ReentrancyGuard {
         uint256 scaled = extra.mulDiv(WAD, borrowIndex[l.tier], Math.Rounding.Ceil);
         l.scaledDebt += scaled;
         scaledTotal[l.tier] += scaled;
-        reserve += extra.mulDiv(RESERVE_BPS, BPS);
+        // Late extra goes wholly to the reserve, so writing it down never moves the share price: no one can
+        // deposit just before an overdue loan is touched and take a cut of what was owed before they came in.
+        reserve += extra;
         emit PenaltyAdded(loanId, extra);
     }
 
@@ -711,7 +730,7 @@ contract PesoPool is ERC4626, ReentrancyGuard {
         bool onTime = !l.liquidated && block.timestamp <= uint256(l.dueAt) + GRACE;
         address borrower = l.borrower;
         emit LoanClosed(loanId, borrower, onTime, back);
-        if (!l.liquidated) creditBook.recordClosed(borrower, onTime);
+        if (!l.liquidated) creditBook.recordClosed(borrower, onTime, l.openedAt);
         if (back > 0) usdt.safeTransfer(borrower, back);
     }
 

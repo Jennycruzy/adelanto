@@ -66,6 +66,8 @@ contract MorphoProxy is EIP712, ReentrancyGuard {
     error RateAboveMax(uint256 rateBps);
     error NotOwner();
     error NothingToSend();
+    error NotFunded();
+    error NotDone();
 
     constructor(address owner_, IMorpho morpho_, IERC20 usdt_, IERC20 wars_, IRipioBridge ripio_, IOFT usdt0_)
         EIP712("ADELANTO", "1")
@@ -103,16 +105,22 @@ contract MorphoProxy is EIP712, ReentrancyGuard {
         if (err != ECDSA.RecoverError.NoError || signer != owner) revert BadSignature();
         nonceUsed[o.nonce] = true;
 
+        // A signed order either does what it says or reverts, so its nonce is never spent on a no-op and the owner's
+        // signature can be submitted again once the money has arrived.
         MarketParams memory mp = _market(o.marketId);
         if (o.action == Action.Open) {
-            _supply(mp, o.collateralUsdt);
+            if (_supply(mp, o.collateralUsdt) < o.collateralUsdt) revert NotFunded();
             _borrowAndSend(o.marketId, mp, o.borrowWars, o.maxRateBps, o.nonce);
         } else if (o.action == Action.AddCollateral) {
-            _supply(mp, o.collateralUsdt);
+            uint256 supplied = _supply(mp, o.collateralUsdt);
+            if (supplied == 0 || supplied < o.collateralUsdt) revert NotFunded();
         } else if (o.action == Action.Repay) {
-            _repay(o.marketId, mp, o.borrowWars);
+            uint256 before = wars.balanceOf(address(this));
+            uint256 left = _repay(o.marketId, mp, o.borrowWars);
+            uint256 paid = before - wars.balanceOf(address(this));
+            if (left != 0 && (o.borrowWars == 0 || paid < o.borrowWars)) revert NotFunded();
         } else {
-            _exit(o.marketId, mp);
+            if (_exit(o.marketId, mp) != 0) revert NotDone();
         }
         emit OrderExecuted(o.action, o.marketId, o.nonce);
     }
@@ -141,10 +149,10 @@ contract MorphoProxy is EIP712, ReentrancyGuard {
         if (mp.loanToken != address(wars) || mp.collateralToken != address(usdt)) revert WrongMarket();
     }
 
-    function _supply(MarketParams memory mp, uint256 amount) internal {
+    function _supply(MarketParams memory mp, uint256 amount) internal returns (uint256 a) {
         uint256 bal = usdt.balanceOf(address(this));
-        uint256 a = amount == 0 || amount > bal ? bal : amount;
-        if (a == 0) return;
+        a = amount == 0 || amount > bal ? bal : amount;
+        if (a == 0) return 0;
         usdt.forceApprove(address(morpho), a);
         morpho.supplyCollateral(mp, a, address(this), "");
     }
@@ -153,10 +161,11 @@ contract MorphoProxy is EIP712, ReentrancyGuard {
         internal
     {
         morpho.accrueInterest(mp);
-        uint256 rateBps = IIrm(mp.irm).borrowRateView(mp, morpho.market(id)) * YEAR * 10_000 / 1e18;
-        if (rateBps > maxRateBps) revert RateAboveMax(rateBps);
         (, , uint128 col) = morpho.position(id, address(this));
         morpho.borrow(mp, amount, 0, address(this), address(this));
+        // The ceiling applies to the rate this borrow leaves the market at, not the rate before it.
+        uint256 rateBps = IIrm(mp.irm).borrowRateView(mp, morpho.market(id)) * YEAR * 10_000 / 1e18;
+        if (rateBps > maxRateBps) revert RateAboveMax(rateBps);
         emit Borrowed(id, col, amount, rateBps);
         _sendPesosHome(nonce);
     }
@@ -181,8 +190,8 @@ contract MorphoProxy is EIP712, ReentrancyGuard {
         return left;
     }
 
-    function _exit(bytes32 id, MarketParams memory mp) internal {
-        uint256 left = _repay(id, mp, 0);
+    function _exit(bytes32 id, MarketParams memory mp) internal returns (uint256 left) {
+        left = _repay(id, mp, 0);
         if (left == 0) {
             (, , uint128 col) = morpho.position(id, address(this));
             if (col > 0) {

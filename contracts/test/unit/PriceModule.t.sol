@@ -33,8 +33,7 @@ contract PriceModuleTest is Base {
     }
 
     function test_refusesWhenShallow() public {
-        vm.prank(address(uni));
-        wars.transfer(address(1), DEPTH - 29_000_000e18);
+        uni.setLiquidity(20e18, 20e18); // about 8M wARS for a 2% move, under the 10M floor
         (bool ok, uint8 r) = price.status();
         assertFalse(ok);
         assertEq(r, price.SHALLOW());
@@ -101,8 +100,40 @@ contract PriceModuleTest is Base {
         assertApproxEqRel(m.spot(), price.spot(), 0.0002e18);
     }
 
-    function test_warsDepthReadsPoolBalance() public view {
-        assertEq(price.warsDepth(), DEPTH);
+    function test_depthIsTheTwoPercentPush() public view {
+        // The real pool's liquidity needs about 27.8M wARS to move the price 2%.
+        assertApproxEqRel(price.warsDepth(), 27_730_000e18, 0.002e18);
+    }
+
+    function test_depthIgnoresTokenBalance() public {
+        // wARS sitting in the pool out of range adds nothing.
+        uint256 before = price.warsDepth();
+        wars.mint(address(uni), 1_000_000_000e18);
+        assertEq(price.warsDepth(), before);
+    }
+
+    /// Regression: liquidity added just now (or parked for one block) used to count; only the 30-minute average does.
+    function test_depthUsesLowerOfNowAndAverage() public {
+        uni.setLiquidity(1_000e18, 20e18);
+        (bool ok, uint8 r) = price.status();
+        assertFalse(ok);
+        assertEq(r, price.SHALLOW());
+        uni.setLiquidity(20e18, 1_000e18);
+        (ok, r) = price.status();
+        assertEq(r, price.SHALLOW());
+    }
+
+    function test_depthSameEitherTokenOrder() public {
+        MockUniswapPool p = new MockUniswapPool(address(usdt), address(wars), -TICK_1650);
+        PriceModule m = new PriceModule(IUniswapV3Pool(address(p)), address(wars), address(usdt), 1);
+        assertApproxEqRel(m.warsDepth(), price.warsDepth(), 0.0002e18);
+    }
+
+    function test_tooFewObservationsRefusedAtDeploy() public {
+        MockUniswapPool p = new MockUniswapPool(address(wars), address(usdt), TICK_1650);
+        p.setCardinality(599);
+        vm.expectRevert(abi.encodeWithSelector(PriceModule.TooFewObservations.selector, uint16(599)));
+        new PriceModule(IUniswapV3Pool(address(p)), address(wars), address(usdt), 1);
     }
 
     function test_negativeTickAverageRoundsDown() public {

@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MorphoProxy} from "../../src/ethereum/MorphoProxy.sol";
 import {MorphoProxyFactory} from "../../src/ethereum/MorphoProxyFactory.sol";
-import {IMorpho, IRipioBridge, IOFT} from "../../src/ethereum/Interfaces.sol";
+import {IMorpho, IRipioBridge, IOFT, IIrm, MarketParams} from "../../src/ethereum/Interfaces.sol";
 
 /// @dev Runs against Ethereum mainnet state: real Morpho, the wARS/USDT market, Ripio Bridge and USDT0. Needs ETH_RPC_URL.
 contract EthereumForkTest is Test {
@@ -254,6 +254,72 @@ contract EthereumForkTest is Test {
         (, uint128 shares,) = IMorpho(MORPHO).position(MARKET, address(proxy));
         assertGt(shares, 0);
         assertEq(IERC20(WARS).balanceOf(address(proxy)), 0);
+    }
+
+    function _open() internal {
+        _deployAndFund();
+        MorphoProxy.Order memory o = _order(MorphoProxy.Action.Open, 0, 3_000e18, 1);
+        proxy.execute(o, _sign(o));
+    }
+
+    /// Regression: a signed repayment sent before the pesos arrived used to succeed as a no-op and burn its nonce.
+    function test_fork_unfundedRepayRevertsAndCanBeRetried() public onlyLive {
+        _open();
+        MorphoProxy.Order memory r = _order(MorphoProxy.Action.Repay, 0, 1_000e18, 2);
+        bytes memory sig = _sign(r);
+        vm.expectRevert(MorphoProxy.NotFunded.selector);
+        proxy.execute(r, sig);
+        assertFalse(proxy.nonceUsed(2));
+        deal(WARS, address(proxy), 1_000e18);
+        proxy.execute(r, sig);
+        assertTrue(proxy.nonceUsed(2));
+    }
+
+    function test_fork_unfundedAddCollateralReverts() public onlyLive {
+        _open();
+        MorphoProxy.Order memory a = _order(MorphoProxy.Action.AddCollateral, 1e6, 0, 2);
+        bytes memory sig = _sign(a);
+        vm.expectRevert(MorphoProxy.NotFunded.selector);
+        proxy.execute(a, sig);
+        assertFalse(proxy.nonceUsed(2));
+    }
+
+    function test_fork_openWithMissingCollateralReverts() public onlyLive {
+        _deployAndFund();
+        MorphoProxy.Order memory o = _order(MorphoProxy.Action.Open, 10e6, 3_000e18, 1); // only 3.5 USDT there
+        bytes memory sig = _sign(o);
+        vm.expectRevert(MorphoProxy.NotFunded.selector);
+        proxy.execute(o, sig);
+    }
+
+    function test_fork_exitOrderWithDebtLeftReverts() public onlyLive {
+        _open();
+        MorphoProxy.Order memory e = _order(MorphoProxy.Action.Exit, 0, 0, 2);
+        bytes memory sig = _sign(e);
+        vm.expectRevert(MorphoProxy.NotDone.selector);
+        proxy.execute(e, sig);
+        assertFalse(proxy.nonceUsed(2));
+    }
+
+    /// Regression: the rate ceiling used to be checked before the borrow, so a borrow that pushed the market's rate
+    /// above it still went through.
+    function test_fork_rateCeilingAppliesAfterBorrow() public onlyLive {
+        address predicted = factory.proxyOf(user);
+        deal(USDT, predicted, 3_000e6);
+        proxy = MorphoProxy(payable(factory.deploy(user)));
+        IMorpho m = IMorpho(MORPHO);
+        MarketParams memory mp = m.idToMarketParams(MARKET);
+        m.accrueInterest(mp);
+        uint256 before = IIrm(mp.irm).borrowRateView(mp, m.market(MARKET)) * 365 days * 10_000 / 1e18;
+        // 2M wARS on a ~21M market moves its use, and so its rate, well past one basis point.
+        MorphoProxy.Order memory o = _order(MorphoProxy.Action.Open, 0, 2_000_000e18, 1);
+        o.maxRateBps = before; // fine before the borrow, above it after
+        bytes memory sig = _sign(o);
+        vm.expectRevert();
+        proxy.execute(o, sig);
+        o.maxRateBps = before + 2_000;
+        o.nonce = 2;
+        proxy.execute(o, _sign(o)); // with room for its own effect, the same borrow goes through
     }
 }
 
