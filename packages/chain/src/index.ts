@@ -47,7 +47,7 @@ export function celoTransport(env: NodeJS.ProcessEnv = process.env) {
 }
 
 export function celoPublicClient(env: NodeJS.ProcessEnv = process.env): PublicClient {
-  return createPublicClient({ chain: celo, transport: celoTransport(env) }) as PublicClient;
+  return createPublicClient({ chain: celo, transport: celoTransport(env) }) as unknown as PublicClient;
 }
 
 /** Keys are read from files (mode 600), never from environment values. */
@@ -64,3 +64,5 @@ export function celoWalletClient(keyFile: string, code: string = attributionCode
   const account = accountFromKeyFile(keyFile);
   return createWalletClient({ account, chain: celo, transport: celoTransport(env) }).extend(withAttribution(code));
 }
+export * from "./contracts.ts";
+export * from "./sender.ts";

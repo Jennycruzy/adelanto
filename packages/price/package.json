@@ -1,0 +1,1 @@
+{ "name": "@adelanto/price", "private": true, "type": "module", "exports": { ".": "./src/index.ts" } }

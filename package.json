@@ -12,7 +12,9 @@
     "deploy:celo": "node scripts/deploy-celo.ts",
     "test": "vitest run",
     "audit:attribution": "node scripts/attribution-audit.ts",
-    "register:agent": "node scripts/register-agent.ts"
+    "register:agent": "node scripts/register-agent.ts",
+    "agent": "node apps/agent/src/main.ts",
+    "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
     "@celo/attribution-tags": "0.5.0",
