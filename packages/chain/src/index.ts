@@ -66,3 +66,4 @@ export function celoWalletClient(keyFile: string, code: string = attributionCode
 }
 export * from "./contracts.ts";
 export * from "./sender.ts";
+export * from "./morpho.ts";

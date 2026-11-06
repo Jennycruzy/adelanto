@@ -4,7 +4,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { getAddress } from "viem";
-import { TaggedSender, attributionCode, celoDeployment, celoPublicClient } from "@adelanto/chain";
+import { TaggedSender, attributionCode, celoDeployment, celoPublicClient, ethPublicClient } from "@adelanto/chain";
 import { Agent, type Mode } from "./agent.ts";
 import { openDb, setMeta } from "./db.ts";
 
@@ -31,6 +31,7 @@ const agent = new Agent({
   mode,
   keeper,
   guardian,
+  eth: ethPublicClient(),
   labels,
 });
 setMeta(db, "mode", mode);

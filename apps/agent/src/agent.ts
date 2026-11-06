@@ -2,11 +2,16 @@
 // loan decide liquidation (A5), protection (A1) and auto-repay (A2) from fresh chain reads, then price watch (A4)
 // and notices (A6). In "watch" mode every decision is logged with its sentence and nothing is sent.
 import { encodeFunctionData, erc20Abi, getAddress, type Address, type Hex, type PublicClient } from "viem";
-import { CELO, TaggedSender, guardAbi, poolAbi, priceAbi } from "@adelanto/chain";
+import { CELO, TaggedSender, guardAbi, morphoWarsMarket, poolAbi, priceAbi } from "@adelanto/chain";
 import {
   decideAutoRepay,
   decideLiquidation,
   decideProtect,
+  dollars,
+  pesos,
+  percent,
+  perSecondToBps,
+  rateWatch,
   sayDecision,
   type Decision,
   type Limits,
@@ -26,17 +31,20 @@ export type AgentDeps = {
   mode: Mode;
   keeper: TaggedSender; // the agent wallet: guard calls and liquidations
   guardian?: TaggedSender; // pause / unpause
+  eth?: PublicClient; // Ethereum reads for the rate watch (A3); omitted = A3 off
   labels: Map<string, string>; // address -> OURS / JUDGE
   now?: () => number; // ms; injectable for tests
   log?: (s: string) => void;
 };
 
-type Job = "A1_protect" | "A2_autorepay" | "A4_price" | "A5_liquidate" | "approve";
+type Job = "A1_protect" | "A2_autorepay" | "A3_rates" | "A4_price" | "A5_liquidate" | "approve";
 
 export class Agent {
   private readonly now: () => number;
   private readonly log: (s: string) => void;
   private readonly d: AgentDeps;
+  /** The block every decision in this tick is read at; set fresh (uncached) at the start of each tick. */
+  private block = 0n;
   constructor(d: AgentDeps) {
     this.d = d;
     this.now = d.now ?? Date.now;
@@ -72,7 +80,7 @@ export class Agent {
   }
 
   /** Sends one call through a tagged sender, recording the signed bytes before they leave this machine. */
-  private async send(sender: TaggedSender, actionId: number, to: Address, data: Hex): Promise<Hex> {
+  private async send(sender: TaggedSender, actionId: number, to: Address, data: Hex): Promise<{ hash: Hex; block: bigint }> {
     if (this.unsettled(sender.address) > 0) throw new Error("an earlier transaction from this wallet is not settled yet");
     const res = await sender.send(to, data, (s) => {
       tx(this.d.db, () => {
@@ -86,7 +94,7 @@ export class Agent {
       this.d.db.prepare("UPDATE pending_tx SET status = 'landed', settled_at = ? WHERE hash = ?").run(this.now(), res.hash);
       this.d.db.prepare("UPDATE agent_actions SET status = 'landed' WHERE id = ?").run(actionId);
     });
-    return res.hash;
+    return { hash: res.hash, block: res.receipt.blockNumber };
   }
 
   /** After a restart: every signed transaction is re-broadcast (same bytes, same nonce) and settled. */
@@ -116,8 +124,8 @@ export class Agent {
   private async priceState() {
     const { pub, addresses: a } = this.d;
     const [[ok, reason], liq] = await Promise.all([
-      pub.readContract({ address: a.priceModule, abi: priceAbi, functionName: "status" }),
-      pub.readContract({ address: a.priceModule, abi: priceAbi, functionName: "liquidationPrice" }),
+      pub.readContract({ address: a.priceModule, abi: priceAbi, functionName: "status", blockNumber: this.block }),
+      pub.readContract({ address: a.priceModule, abi: priceAbi, functionName: "liquidationPrice", blockNumber: this.block }),
     ]);
     return { ok, reason, liq };
   }
@@ -125,8 +133,8 @@ export class Agent {
   private async loanState(id: bigint): Promise<LoanState> {
     const { pub, addresses: a } = this.d;
     const [l, debt] = await Promise.all([
-      pub.readContract({ address: a.pool, abi: poolAbi, functionName: "loans", args: [id] }),
-      pub.readContract({ address: a.pool, abi: poolAbi, functionName: "debtOf", args: [id] }),
+      pub.readContract({ address: a.pool, abi: poolAbi, functionName: "loans", args: [id], blockNumber: this.block }),
+      pub.readContract({ address: a.pool, abi: poolAbi, functionName: "debtOf", args: [id], blockNumber: this.block }),
     ]);
     return { id, borrower: getAddress(l.borrower), open: l.open, collateral: l.collateral, debt, dueAt: l.dueAt };
   }
@@ -134,12 +142,12 @@ export class Agent {
   private async guardState(borrower: Address) {
     const { pub, addresses: a } = this.d;
     const [lim, usage, usdtBal, warsBal, usdtAllow, warsAllow] = await Promise.all([
-      pub.readContract({ address: a.guard, abi: guardAbi, functionName: "limitsOf", args: [borrower] }),
-      pub.readContract({ address: a.guard, abi: guardAbi, functionName: "usageOf", args: [borrower] }),
-      pub.readContract({ address: CELO.usdt, abi: erc20Abi, functionName: "balanceOf", args: [borrower] }),
-      pub.readContract({ address: CELO.wars, abi: erc20Abi, functionName: "balanceOf", args: [borrower] }),
-      pub.readContract({ address: CELO.usdt, abi: erc20Abi, functionName: "allowance", args: [borrower, a.guard] }),
-      pub.readContract({ address: CELO.wars, abi: erc20Abi, functionName: "allowance", args: [borrower, a.guard] }),
+      pub.readContract({ address: a.guard, abi: guardAbi, functionName: "limitsOf", args: [borrower] , blockNumber: this.block }),
+      pub.readContract({ address: a.guard, abi: guardAbi, functionName: "usageOf", args: [borrower] , blockNumber: this.block }),
+      pub.readContract({ address: CELO.usdt, abi: erc20Abi, functionName: "balanceOf", args: [borrower] , blockNumber: this.block }),
+      pub.readContract({ address: CELO.wars, abi: erc20Abi, functionName: "balanceOf", args: [borrower] , blockNumber: this.block }),
+      pub.readContract({ address: CELO.usdt, abi: erc20Abi, functionName: "allowance", args: [borrower, a.guard] , blockNumber: this.block }),
+      pub.readContract({ address: CELO.wars, abi: erc20Abi, functionName: "allowance", args: [borrower, a.guard] , blockNumber: this.block }),
     ]);
     const limits: Limits = {
       autoRepay: lim.autoRepay,
@@ -160,7 +168,7 @@ export class Agent {
     return r?.rule_text ?? undefined;
   }
 
-  private chainNow = async () => (await this.d.pub.getBlock({ blockTag: "latest" })).timestamp;
+  private chainNow = async () => (await this.d.pub.getBlock({ blockNumber: this.block })).timestamp;
 
   // ------------------------------------------------------------------ jobs
 
@@ -184,7 +192,8 @@ export class Agent {
     }
     const id = this.record(job, loan.id, loan.borrower, { ltvPrice: price }, inputs, d, "decided", said);
     try {
-      const hash = await this.send(this.d.keeper, id, call!.to, call!.data);
+      const { hash, block } = await this.send(this.d.keeper, id, call!.to, call!.data);
+      setMeta(this.d.db, `actedBlock:${loan.id}`, block.toString());
       this.notice(`${loan.id}:${job}:${hash}`, loan, job, said);
       this.log(`${job} loan ${loan.id}: ${hash} ${said.en}`);
       return "landed";
@@ -209,7 +218,7 @@ export class Agent {
   /** A5 for one loan. Returns true when the loan was (or would be) liquidated, so protection is skipped this tick. */
   private async liquidateIfNeeded(loan: LoanState, price: bigint): Promise<boolean> {
     const { pub, addresses: a, keeper } = this.d;
-    const keeperWars = await pub.readContract({ address: CELO.wars, abi: erc20Abi, functionName: "balanceOf", args: [keeper.address] });
+    const keeperWars = await pub.readContract({ address: CELO.wars, abi: erc20Abi, functionName: "balanceOf", args: [keeper.address], blockNumber: this.block });
     const d = decideLiquidation(loan, price, keeperWars, keeperWars); // allowance is topped up just below
     if (d.kind === "none" && d.reason === "NOT_LIQUIDATABLE") return false;
     if (d.kind === "liquidate" && this.d.mode === "live") {
@@ -243,6 +252,12 @@ export class Agent {
     }
 
     // A2: pesos that arrived since the guard was set and are not handled yet
+    // Only pesos that arrived after this loan was opened count; earlier ones are marked handled and ignored.
+    const opened = this.d.db
+      .prepare("SELECT block FROM events WHERE name = 'Borrowed' AND json_extract(args, '$.loanId') = ? ORDER BY block LIMIT 1")
+      .get(loan.id.toString()) as any;
+    if (!opened) return; // the indexer has not seen this loan's opening yet
+    this.d.db.prepare("UPDATE arrivals SET handled = 1 WHERE borrower = ? AND handled = 0 AND block <= ?").run(loan.borrower, opened.block);
     const rows = this.d.db.prepare("SELECT tx, log_index, amount FROM arrivals WHERE borrower = ? AND handled = 0").all(loan.borrower) as any[];
     if (rows.length === 0) return;
     const arrived = rows.reduce((s, r) => s + BigInt(r.amount), 0n);
@@ -310,6 +325,32 @@ export class Agent {
     return [...byAt.values()].filter((r) => r.chain > 0);
   }
 
+  /** A3: every 30 minutes, tell borrowers who asked when Morpho would save them more than twice the moving cost. */
+  private async watchRates(chainNow: bigint, price: bigint) {
+    const { db, pub, addresses: a, eth } = this.d;
+    if (!eth) return;
+    const last = Number(getMeta(db, "rateWatchAt") ?? 0);
+    if (this.now() - last < 30 * 60_000) return;
+    setMeta(db, "rateWatchAt", String(this.now()));
+    const m = await morphoWarsMarket(eth);
+    const otherBps = perSecondToBps(m.ratePerSecond);
+    for (const id of openLoanIds(db)) {
+      const loan = await this.loanState(id);
+      if (!loan.open) continue;
+      const lim = await pub.readContract({ address: a.guard, abi: guardAbi, functionName: "limitsOf", args: [loan.borrower] });
+      if (!lim.rateWatch || lim.expiry < chainNow) continue;
+      const l = await pub.readContract({ address: a.pool, abi: poolAbi, functionName: "loans", args: [id] });
+      const poolBps = await pub.readContract({ address: a.pool, abi: poolAbi, functionName: "borrowRateBps", args: [l.tier] });
+      const w = rateWatch(loan.debt, poolBps, otherBps, loan.dueAt - chainNow, price);
+      if (!w.worthIt || loan.debt > m.freeWars) continue;
+      this.notice(`${id}:ratewatch:${this.day()}`, loan, "rate_watch", {
+        es: `En Morpho (Ethereum) la tasa está en ${percent(otherBps)} contra ${percent(poolBps)} acá. Para tu préstamo de ${pesos(loan.debt)} serían ${pesos(w.save)} menos hasta el vencimiento; mudarse cuesta unos ${dollars(3_500_000n)}. Tu próximo préstamo o renovación puede ir por ahí.`,
+        en: `On Morpho (Ethereum) the rate is ${percent(otherBps, "en")} against ${percent(poolBps, "en")} here. For your ${pesos(loan.debt, "en")} loan that is ${pesos(w.save, "en")} less until it is due; moving costs about ${dollars(3_500_000n, "en")}. Your next loan or renewal can go there.`,
+      });
+      this.record("A3_rates", id, loan.borrower, { otherBps, poolBps }, { debt: loan.debt, save: w.save, moveCost: w.moveCost }, { kind: "notice" }, "noticed");
+    }
+  }
+
   // ------------------------------------------------------------------ tick
 
   async tick() {
@@ -317,10 +358,14 @@ export class Agent {
     await this.resumePending();
     await indexOnce(db, pub, a, labels);
     await sweepLoans(db, pub, a, labels);
+    this.block = await pub.getBlockNumber({ cacheTime: 0 });
     const price = await this.priceState();
     const chainNow = await this.chainNow();
     for (const id of openLoanIds(db)) {
       await refreshLoan(db, pub, a, id, labels);
+      // Never decide on a loan from a view older than the agent's own last action on it.
+      const acted = BigInt(getMeta(db, `actedBlock:${id}`) ?? "0");
+      if (acted >= this.block) continue;
       const loan = await this.loanState(id);
       if (!loan.open) continue;
       try {
@@ -330,6 +375,11 @@ export class Agent {
       } catch (e: any) {
         this.log(`loan ${id}: ${String(e?.shortMessage ?? e?.message ?? e).slice(0, 300)}`);
       }
+    }
+    try {
+      await this.watchRates(chainNow, price.liq);
+    } catch (e: any) {
+      this.log(`rate watch: ${String(e?.shortMessage ?? e?.message ?? e).slice(0, 300)}`);
     }
     try {
       await this.watchPrice();
