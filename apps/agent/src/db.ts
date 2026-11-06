@@ -54,7 +54,7 @@ export type Db = DatabaseSyncType;
  * crashed agent never leaves a stale lock and two agents can never both hold it. Throws if another process holds it.
  */
 /** Lock connections live here for the life of the process, so dropping the release function can never free a lock. */
-const heldLocks = new Map<string, DatabaseSync>();
+const heldLocks = new Map<string, DatabaseSyncType>();
 
 export function holdLock(dir: string, name: string): () => void {
   mkdirSync(dir, { recursive: true });
