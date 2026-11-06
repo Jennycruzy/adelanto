@@ -247,3 +247,22 @@ export const LABELS: Record<string, "OURS" | "JUDGE"> = {
   [getAddress("0x0cff67325Ba688921C36bDf0ff59E351100e2A3d")]: "JUDGE",
 };
 export const labelOf = (a: string) => LABELS[getAddress(a)] ?? "USER";
+
+/** The minute-by-minute price watch (pool 30-min average against Binance), newest last, thinned to `points`. */
+export function priceHistory(points = 96): { t: number; pool: number; binance: number }[] {
+  const candidates = [process.env.PRICE_LOG, join(process.env.HOME ?? "", "adelanto-private", "g0", "p6", "prices.csv"), join(process.cwd(), "evidence", "price-watch.csv")].filter(Boolean) as string[];
+  for (const f of candidates) {
+    try {
+      const rows = readFileSync(f, "utf8").trim().split("\n").slice(1).map((l) => l.split(","));
+      const ok = rows.filter((r) => r.length >= 5 && Number(r[2]) > 0 && Number(r[4]) > 0).map((r) => ({ t: Date.parse(r[0]), pool: Number(r[2]), binance: Number(r[4]) }));
+      if (ok.length < 2) continue;
+      const step = Math.max(1, Math.floor(ok.length / points));
+      const out = ok.filter((_, i) => i % step === 0);
+      if (out[out.length - 1] !== ok[ok.length - 1]) out.push(ok[ok.length - 1]);
+      return out;
+    } catch {
+      /* try the next source */
+    }
+  }
+  return [];
+}
