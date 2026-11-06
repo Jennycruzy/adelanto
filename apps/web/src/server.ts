@@ -216,7 +216,7 @@ app.get("/probar", async (c) => {
 <div class="card"><div class="card-label">${es ? "Cinco minutos" : "Five minutes"}</div><ul class="log">${steps.map((s) => html`<li style="padding-bottom:22px">${s}</li>`)}</ul></div>
 <div>
 ${q.ok
-  ? html`<div class="card" style="background:var(--sol-wash);border-color:transparent">
+  ? html`<div class="card" style="background:var(--celeste-wash);border-color:var(--ink)">
   <div class="card-label">${t(l, "youGet")}</div>
   <div class="figure">${pesos(q.received, l)}</div>
   <div class="row" style="margin-top:12px"><span>${t(l, "youLeave")}</span><span class="v">${dollars(q.collateral, l)}</span></div>
