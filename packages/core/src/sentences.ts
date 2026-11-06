@@ -54,12 +54,12 @@ export function sayDecision(d: Decision, price: bigint, rule?: string): Said {
     case "liquidate":
       return d.partial
         ? {
-            es: `Tu préstamo pasó el ${percent(d.ltvBefore)} con el dólar a ${rate(price)}. Pagué ${pesos(d.wars)} de tu deuda, todo lo que el agente tenía, y tomé esos dólares más 5%. Tu préstamo sigue arriba del 70%: agregá dólares o pagá una parte para que nadie más lo liquide.`,
-            en: `Your loan passed ${percent(d.ltvBefore, "en")} with the dollar at ${rate(price, "en")}. I repaid ${pesos(d.wars, "en")} of your debt, all the agent had, and took that much in dollars plus 5%. Your loan is still above 70%: add dollars or repay part so nobody else liquidates it.`,
+            es: `Tu préstamo pasó el ${percent(d.ltvBefore)} con el dólar a ${rate(price)}. Pagué ${pesos(d.wars)} de tu deuda, todo lo que el agente tenía, y tomé esos dólares más 5%. Tu préstamo sigue arriba del 78%: agregá dólares o pagá una parte para que nadie más lo liquide.`,
+            en: `Your loan passed ${percent(d.ltvBefore, "en")} with the dollar at ${rate(price, "en")}. I repaid ${pesos(d.wars, "en")} of your debt, all the agent had, and took that much in dollars plus 5%. Your loan is still above 78%: add dollars or repay part so nobody else liquidates it.`,
           }
         : {
-            es: `Tu préstamo pasó el ${percent(d.ltvBefore)} con el dólar a ${rate(price)}. Pagué ${pesos(d.wars)} de tu deuda y tomé esos dólares más 5%, lo mínimo para volver al 70%. El resto de tus dólares sigue siendo tuyo.`,
-            en: `Your loan passed ${percent(d.ltvBefore, "en")} with the dollar at ${rate(price, "en")}. I repaid ${pesos(d.wars, "en")} of your debt and took that much in dollars plus 5%, the least needed to get back to 70%. The rest of your dollars are still yours.`,
+            es: `Tu préstamo pasó el ${percent(d.ltvBefore)} con el dólar a ${rate(price)}. Pagué ${pesos(d.wars)} de tu deuda y tomé esos dólares más 5%, lo mínimo para volver al 78%. El resto de tus dólares sigue siendo tuyo.`,
+            en: `Your loan passed ${percent(d.ltvBefore, "en")} with the dollar at ${rate(price, "en")}. I repaid ${pesos(d.wars, "en")} of your debt and took that much in dollars plus 5%, the least needed to get back to 78%. The rest of your dollars are still yours.`,
           };
     case "none":
       return sayRefusal(d, price);

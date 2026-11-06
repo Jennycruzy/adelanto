@@ -74,7 +74,7 @@ export function loanNotices(loan: LoanState, price: bigint, now: bigint, db: Db)
     const worse = ORDER.indexOf(next) > prevIdx;
     const lastKey = `bandNoticeAt:${id}:${next}`;
     const last = getMeta(db, lastKey);
-    const cooled = last === undefined || now - BigInt(last) >= COOLDOWN;
+    const cooled = last === undefined || now - BigInt(last) >= COOLDOWN || next === "liquidable"; // never mute the last line
     const tell = worse ? next !== "tranquilo" && cooled : next === "tranquilo" && prevIdx >= ORDER.indexOf("riesgo");
     if (tell) {
       setMeta(db, lastKey, now.toString());

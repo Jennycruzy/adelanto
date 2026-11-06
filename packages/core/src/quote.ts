@@ -77,6 +77,14 @@ export type Quote =
     }
   | { ok: false; reason: QuoteRefusal; limit?: bigint };
 
+/** The most one new loan can take right now, and what limits it: free pesos or the pool's caps. */
+export function availableToBorrow(pool: PoolState): { pesos: bigint; limitedBy: "POOL_TOO_THIN" | "CAP_REACHED" } {
+  const assets = pool.cash + pool.totalDebt - pool.reserve;
+  const room = [pool.caps.absolute, (assets * pool.caps.depositsBps) / BPS, (pool.warsDepth * pool.caps.depthBps) / BPS].reduce((a, b) => (b < a ? b : a));
+  const capRoom = room > pool.totalDebt ? room - pool.totalDebt : 0n;
+  return capRoom < pool.cash ? { pesos: capRoom, limitedBy: "CAP_REACHED" } : { pesos: pool.cash, limitedBy: "POOL_TOO_THIN" };
+}
+
 const YEAR_DAYS = 365n;
 const ceilDiv = (a: bigint, b: bigint) => (a === 0n ? 0n : (a - 1n) / b + 1n);
 
@@ -86,14 +94,8 @@ export function quote(q: QuoteInput): Quote {
   if (!(TERMS as readonly number[]).includes(termDays)) return { ok: false, reason: "BAD_TERM" };
   const tierMax = maxPesosForTier(tier);
   if (pesos > tierMax) return { ok: false, reason: "OVER_LOAN_LIMIT", limit: tierMax };
-  if (pesos > pool.cash) return { ok: false, reason: "POOL_TOO_THIN", limit: pool.cash };
-  const assets = pool.cash + pool.totalDebt - pool.reserve;
-  const room = [
-    pool.caps.absolute,
-    (assets * pool.caps.depositsBps) / BPS,
-    (pool.warsDepth * pool.caps.depthBps) / BPS,
-  ].reduce((a, b) => (b < a ? b : a));
-  if (pool.totalDebt + pesos > room) return { ok: false, reason: "CAP_REACHED", limit: room > pool.totalDebt ? room - pool.totalDebt : 0n };
+  const available = availableToBorrow(pool);
+  if (pesos > available.pesos) return { ok: false, reason: available.limitedBy, limit: available.pesos };
 
   const maxLtv = maxLtvBpsForTier(tier);
   const wanted = q.startLtvBps ?? 5_000n; // start at half the dollars' value: the price can fall 28% before risk

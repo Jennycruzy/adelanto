@@ -63,9 +63,10 @@ export function disagrees(r: Reading, limit = PAUSE_GAP): boolean {
   return sources.size >= 2 && r.quotes.every((q) => gap(r.chain, q) > limit);
 }
 
-/** True when the chain price agrees with at least one source within `limit`. */
+/** True when at least two independent sources answered and the chain price agrees with every one within `limit`. */
 export function agrees(r: Reading, limit = RESUME_GAP): boolean {
-  return r.quotes.some((q) => gap(r.chain, q) <= limit);
+  const sources = new Set(r.quotes.map((q) => q.source));
+  return sources.size >= 2 && r.quotes.every((q) => gap(r.chain, q) <= limit);
 }
 
 export const MAX_READING_GAP_MS = 90_000; // readings are taken every minute; a longer gap breaks the run
@@ -101,7 +102,7 @@ export function verdict(readings: Reading[], now: number, pausedByUs: boolean, p
     return { action: "hold", why: "prices agree" };
   }
   if (pausedByUs && heldFor(readings, (r) => agrees(r), now) >= RESUME_AFTER_MS) {
-    return { action: "resume", why: "chain price back within 1% of an outside source for 10 minutes" };
+    return { action: "resume", why: "chain price back within 1% of both outside sources for 10 minutes" };
   }
   return { action: "hold", why: pausedByUs ? "still disagreeing" : "paused by someone else; left alone" };
 }

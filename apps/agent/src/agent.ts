@@ -5,12 +5,13 @@
 // In "watch" mode every decision is logged with its sentence and nothing is ever broadcast, not even a transaction
 // signed by an earlier live run.
 import { encodeFunctionData, erc20Abi, getAddress, type Address, type Hex, type PublicClient } from "viem";
-import { CELO, NonceConsumedError, TaggedSender, gentleKeeperAbi as keeperAbi, guardAbi, morphoWarsMarket, poolAbi, priceAbi, type Signed } from "@adelanto/chain";
+import { CELO, NonceConsumedError, TaggedSender, erc20TransferEvent, gentleKeeperAbi as keeperAbi, guardAbi, morphoWarsMarket, poolAbi, priceAbi, type Signed } from "@adelanto/chain";
 import {
   decideAutoRepay,
   decideLiquidation,
   decideProtect,
   dollars,
+  isLiquidatable,
   pesos,
   percent,
   perSecondToBps,
@@ -135,29 +136,64 @@ export class Agent {
   }
 
   /**
-   * Signed transactions from an earlier run. Live mode re-broadcasts the same bytes (same nonce, so they can land at
-   * most once). Watch mode never broadcasts: it only looks for a receipt and reports what it finds.
+   * Signed transactions from an earlier tick or run. Watch mode never broadcasts: it only looks for receipts. Live
+   * mode re-broadcasts the same bytes (same nonce, so they land at most once) for up to STUCK_AFTER; after that it
+   * never sends the old decision again: it replaces the nonce with an empty self-transfer at a higher fee, and the
+   * next tick decides again from fresh state.
    */
   async settlePending() {
-    const rows = this.d.db.prepare("SELECT * FROM pending_tx WHERE status = 'signed' ORDER BY created_at").all() as any[];
+    const STUCK_AFTER = 10 * 60_000;
+    const rows = this.d.db.prepare("SELECT * FROM pending_tx WHERE status IN ('signed', 'replacing') ORDER BY created_at").all() as any[];
     for (const r of rows) {
       const signed: Signed = { hash: r.hash, raw: r.raw, nonce: r.nonce, to: r.to_addr, data: r.data, from: r.from_addr };
-      if (this.d.mode !== "live") {
-        const receipt = await this.d.pub.getTransactionReceipt({ hash: r.hash }).catch(() => null);
-        if (receipt) this.settle(r.hash, r.action_id, receipt.status === "success" ? "landed" : "reverted", receipt.blockNumber);
-        else if (!this.seenRecently(`pending:${r.hash}`, "unsent")) this.log(`[watch] signed ${r.hash} from an earlier live run is not on chain; watch mode will not send it`);
+      const receipt = await this.d.pub.getTransactionReceipt({ hash: r.hash }).catch(() => null);
+      if (receipt) {
+        this.settle(r.hash, r.action_id, receipt.status === "success" ? "landed" : "reverted", receipt.blockNumber);
         continue;
       }
-      const sender = getAddress(r.from_addr) === this.d.keeper.address ? this.d.keeper : this.d.guardian;
-      if (!sender) continue;
+      if (this.d.mode !== "live") {
+        if (!this.seenRecently(`pending:${r.hash}`, "unsent")) this.log(`[watch] signed ${r.hash} from an earlier live run is not on chain; watch mode will not send it`);
+        continue;
+      }
+      const sender = getAddress(r.from_addr) === this.d.keeper.address ? this.d.keeper : this.d.guardian && getAddress(r.from_addr) === this.d.guardian.address ? this.d.guardian : undefined;
+      if (!sender) {
+        if (!this.seenRecently(`pending:${r.hash}`, "no-key")) this.log(`signed ${r.hash} is from ${r.from_addr}, whose key is not loaded; left as it is`);
+        continue;
+      }
+      if (r.status === "replacing") continue; // its replacement is the 'signed' row with the same nonce
       try {
-        const res = await sender.broadcast(signed);
+        if (this.now() - Number(r.created_at) > STUCK_AFTER) {
+          const cancel = await sender.prepareCancel(signed);
+          tx(this.d.db, () => {
+            this.d.db.prepare("UPDATE pending_tx SET status = 'replacing' WHERE hash = ?").run(r.hash);
+            this.d.db
+              .prepare("INSERT INTO pending_tx (hash, action_id, from_addr, nonce, to_addr, data, raw, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'signed', ?)")
+              .run(cancel.hash, r.action_id, cancel.from, cancel.nonce, cancel.to, cancel.data, cancel.raw, this.now());
+          });
+          this.log(`${r.hash} stuck over 10 minutes: replacing nonce ${r.nonce} with ${cancel.hash}`);
+          const res = await sender.broadcast(cancel, 20_000);
+          this.d.db.prepare("UPDATE pending_tx SET status = 'landed', settled_at = ? WHERE hash = ?").run(this.now(), cancel.hash);
+          this.settle(r.hash, r.action_id, "replaced", undefined, "replaced after 10 minutes stuck");
+          this.markActed(null, null, res.receipt.blockNumber);
+          continue;
+        }
+        const res = await sender.broadcast(signed, 20_000);
         this.settle(r.hash, r.action_id, "landed", res.receipt.blockNumber);
         this.log(`resumed ${r.hash}: landed`);
       } catch (e: any) {
         const msg = String(e?.shortMessage ?? e?.message ?? e).slice(0, 300);
-        if (e instanceof NonceConsumedError) this.settle(r.hash, r.action_id, "replaced", undefined, msg);
-        else if (/reverted on chain/.test(msg)) this.settle(r.hash, r.action_id, "reverted", undefined, msg);
+        if (e instanceof NonceConsumedError) {
+          // Another transaction used the nonce. If it was the replacement, the old intent can never land now.
+          const other = this.d.db.prepare("SELECT hash FROM pending_tx WHERE from_addr = ? AND nonce = ? AND hash <> ?").all(r.from_addr, r.nonce, r.hash) as any[];
+          for (const o of other) {
+            const rc = await this.d.pub.getTransactionReceipt({ hash: o.hash }).catch(() => null);
+            if (rc) this.d.db.prepare("UPDATE pending_tx SET status = 'landed', settled_at = ? WHERE hash = ?").run(this.now(), o.hash);
+          }
+          this.settle(r.hash, r.action_id, "replaced", undefined, msg);
+          // A2 must not decide again until the index has seen whatever used that nonce.
+          const action = this.d.db.prepare("SELECT borrower FROM agent_actions WHERE id = ?").get(r.action_id) as any;
+          if (action?.borrower) this.markActed(null, action.borrower, this.block > 0n ? this.block : await this.d.pub.getBlockNumber({ cacheTime: 0 }));
+        } else if (/reverted on chain/.test(msg)) this.settle(r.hash, r.action_id, "reverted", undefined, msg);
         this.log(`resume ${r.hash}: ${msg}`); // anything else stays 'signed' and is tried again next tick
       }
     }
@@ -216,8 +252,12 @@ export class Agent {
     return r?.rule_text ?? undefined;
   }
 
-  /** The A2 credit for a borrower, rebuilt from indexed chain events (see ledger.ts). */
-  private creditOf(borrower: Address): bigint {
+  /**
+   * The A2 credit for a borrower, rebuilt from indexed chain events (see ledger.ts), plus every wARS that left the
+   * wallet after the indexed range, read live up to this tick's block: outflows only ever lower the credit, so the
+   * newest spending always counts.
+   */
+  private async creditOf(borrower: Address): Promise<bigint> {
     const { db, addresses: a } = this.d;
     const items: LedgerItem[] = [];
     const ev = db
@@ -232,7 +272,7 @@ export class Agent {
     for (const e of ev) {
       const pos = { block: BigInt(e.block), logIndex: Number(e.log_index) };
       const args = JSON.parse(e.args);
-      if (e.name === "LimitsSet") items.push({ kind: "guardOn", ...pos });
+      if (e.name === "LimitsSet") items.push({ kind: "guardOn", autoRepay: Boolean(args.limits?.autoRepay), ...pos });
       else if (e.name === "Revoked") items.push({ kind: "guardOff", ...pos });
       else if (e.name === "Borrowed") items.push({ kind: "loanOpened", loanId: BigInt(args.loanId), ...pos });
       else items.push({ kind: "loanEnded", loanId: BigInt(args.loanId), ...pos });
@@ -243,6 +283,10 @@ export class Agent {
       const pos = { block: BigInt(f.block), logIndex: Number(f.log_index) };
       if (f.direction === "out") items.push({ kind: "out", amount: BigInt(f.amount), ...pos });
       else if (!notIncome.has(getAddress(f.counterparty))) items.push({ kind: "in", amount: BigInt(f.amount), ...pos });
+    }
+    if (this.block > this.indexed) {
+      const tail = await this.d.pub.getLogs({ address: CELO.wars, event: erc20TransferEvent[0], args: { from: borrower }, fromBlock: this.indexed + 1n, toBlock: this.block });
+      for (const t of tail) items.push({ kind: "out", amount: t.args.value!, block: t.blockNumber!, logIndex: Number(t.logIndex) });
     }
     return credit(items);
   }
@@ -282,53 +326,64 @@ export class Agent {
     }
   }
 
-  /** A5 for one loan. Returns true when the loan is past 80%, so protection is skipped this tick. */
-  private async liquidateIfNeeded(loan: LoanState, price: bigint): Promise<boolean> {
+  /** A5 for one loan past 80%, used only when the borrower's own protection could not act. */
+  private async liquidate(loan: LoanState, price: bigint) {
     const { pub, addresses: a, keeper } = this.d;
     const keeperWars = await pub.readContract({ address: CELO.wars, abi: erc20Abi, functionName: "balanceOf", args: [keeper.address], ...this.at() });
     const d = decideLiquidation(loan, price, keeperWars, keeperWars);
-    if (d.kind === "none" && d.reason === "NOT_LIQUIDATABLE") return false;
+    if (d.kind === "none" && d.reason === "NOT_LIQUIDATABLE") return;
     if (!a.gentleKeeper) {
       if (!this.seenRecently(`A5:${loan.id}`, "no-keeper")) this.log(`loan ${loan.id} is past 80% and no GentleKeeper is configured`);
-      return true;
+      return;
     }
     if (d.kind === "liquidate" && this.d.mode === "live") {
-      // GentleKeeper pulls the pesos from the agent: allow it the most this call may use.
+      // GentleKeeper can pull from the agent only when the agent itself calls it, so one unlimited approval is safe
+      // and avoids changing a non-zero allowance (some tokens refuse that).
       const allowance = await pub.readContract({ address: CELO.wars, abi: erc20Abi, functionName: "allowance", args: [keeper.address, a.gentleKeeper] });
       if (allowance < keeperWars) {
         const id = this.record("approve", loan.id, null, { for: "GentleKeeper" }, { allowance, keeperWars }, { kind: "approve" }, "decided");
-        await this.send(keeper, id, CELO.wars, encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [a.gentleKeeper, keeperWars] }));
+        await this.send(keeper, id, CELO.wars, encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [a.gentleKeeper, 2n ** 256n - 1n] }));
       }
     }
     // The amount is decided again on chain from the price in the block; the agent only sets the ceiling.
     const call = d.kind === "liquidate" ? { to: a.gentleKeeper, data: encodeFunctionData({ abi: keeperAbi, functionName: "liquidateGently", args: [loan.id, keeperWars] }) } : undefined;
     await this.act("A5_liquidate", loan, d, price, { keeperWars, debt: loan.debt, collateral: loan.collateral }, call);
-    return true;
   }
 
-  private async protectAndRepay(loan: LoanState, price: bigint, priceOk: boolean, chainNow: bigint, indexedOk: boolean) {
+  /**
+   * One loan per tick: the borrower's own protection first (A1, also past 80%: their signed dollars beat a sale);
+   * a gentle liquidation (A5) only when protection could not act; auto-repay (A2) only for a loan that is not at risk.
+   */
+  private async decide(loan: LoanState, price: bigint, priceOk: boolean, chainNow: bigint, indexedOk: boolean) {
     const { addresses: a } = this.d;
     const g = await this.guardState(loan.borrower);
-    if (g.limits.expiry === 0n) return; // no guard: nothing for the agent to do with this loan
+    const guarded = g.limits.expiry !== 0n;
     const inputs = { limits: g.limits, usage: g.usage, wallet: g.wallet, debt: loan.debt, collateral: loan.collateral };
-
-    const p = decideProtect(loan, g.limits, g.usage, g.wallet, price, priceOk, chainNow);
-    if (p.kind !== "none" || p.reason !== "NOT_AT_RISK") {
-      const call =
-        p.kind === "topUp"
-          ? { to: a.guard, data: encodeFunctionData({ abi: guardAbi, functionName: "protectWithTopUp", args: [loan.id, p.usdt] }) }
-          : p.kind === "protectRepay"
-            ? { to: a.guard, data: encodeFunctionData({ abi: guardAbi, functionName: "protectWithRepay", args: [loan.id, p.wars] }) }
-            : undefined;
-      await this.act("A1_protect", loan, p, price, inputs, call);
-      if (p.kind !== "none") return; // one action per loan per tick; the next tick sees the new state
+    let protectedNow: Outcome | null = null;
+    if (guarded) {
+      const p = decideProtect(loan, g.limits, g.usage, g.wallet, price, priceOk, chainNow);
+      if (p.kind !== "none" || p.reason !== "NOT_AT_RISK") {
+        const call =
+          p.kind === "topUp"
+            ? { to: a.guard, data: encodeFunctionData({ abi: guardAbi, functionName: "protectWithTopUp", args: [loan.id, p.usdt] }) }
+            : p.kind === "protectRepay"
+              ? { to: a.guard, data: encodeFunctionData({ abi: guardAbi, functionName: "protectWithRepay", args: [loan.id, p.wars] }) }
+              : undefined;
+        const outcome = await this.act("A1_protect", loan, p, price, inputs, call);
+        if (p.kind !== "none" && outcome !== "failed") protectedNow = outcome;
+      }
     }
+    if (isLiquidatable(loan.debt, loan.collateral, price)) {
+      if (!protectedNow) await this.liquidate(loan, price);
+      return;
+    }
+    if (protectedNow || !guarded) return; // one action per loan per tick; the next tick sees the new state
 
     // A2 decides only from an index that has seen every earlier action on this borrower's wallet.
     if (!indexedOk) return;
     const actedOnBorrower = BigInt(getMeta(this.d.db, `actedBorrower:${loan.borrower}`) ?? "0");
     if (actedOnBorrower > this.indexed) return;
-    const arrived = this.creditOf(loan.borrower);
+    const arrived = await this.creditOf(loan.borrower);
     if (arrived === 0n) return;
     const r = decideAutoRepay(loan, g.limits, g.usage, g.wallet, arrived, priceOk, chainNow);
     const call = r.kind === "autoRepay" ? { to: a.guard, data: encodeFunctionData({ abi: guardAbi, functionName: "autoRepay", args: [loan.id, r.wars] }) } : undefined;
@@ -365,15 +420,15 @@ export class Agent {
    * Who made the pool's current pause: the newest Paused/Unpaused event, read from the index and then live from the
    * blocks the index has not reached yet. The agent's own pause is a Paused event whose `by` is its guardian.
    */
-  private async pausedByUs(): Promise<boolean> {
+  private async pausedByUs(block: bigint): Promise<boolean> {
     const { db, pub, addresses: a, guardian } = this.d;
     if (!guardian) return false;
     let last = db.prepare("SELECT name, args FROM events WHERE name IN ('Paused', 'Unpaused') ORDER BY block DESC, log_index DESC LIMIT 1").get() as any;
     const tail = await pub.getLogs({
       address: a.pool,
       events: poolAbi.filter((x: any) => x.type === "event" && (x.name === "Paused" || x.name === "Unpaused")) as any,
-      fromBlock: this.indexed + 1n,
-      toBlock: this.block,
+      fromBlock: BigInt(getMeta(db, "celo.indexedTo") ?? "0") + 1n,
+      toBlock: block,
     });
     if (tail.length > 0) {
       const t: any = tail[tail.length - 1];
@@ -383,12 +438,16 @@ export class Agent {
     return getAddress(JSON.parse(last.args).by) === guardian.address;
   }
 
-  /** A4: pause new borrowing when the chain price disagrees with every outside source; resume only our own pause. */
-  private async watchPrice() {
+  /**
+   * A4, on its own loop (main.ts) so its once-a-minute readings never wait for the loan loop: pause new borrowing
+   * when the chain price disagrees with every outside source; resume only our own pause.
+   */
+  async priceTick() {
     const { pub, addresses: a, db } = this.d;
+    const block = await pub.getBlockNumber({ cacheTime: 0 });
     const [spot, twap] = await Promise.all([
-      pub.readContract({ address: a.priceModule, abi: priceAbi, functionName: "spot", ...this.at() }),
-      pub.readContract({ address: a.priceModule, abi: priceAbi, functionName: "liquidationPrice", ...this.at() }),
+      pub.readContract({ address: a.priceModule, abi: priceAbi, functionName: "spot", blockNumber: block }),
+      pub.readContract({ address: a.priceModule, abi: priceAbi, functionName: "liquidationPrice", blockNumber: block }),
     ]);
     const { quotes, failed } = await offChainQuotes();
     const at = this.now();
@@ -398,10 +457,11 @@ export class Agent {
     for (const q of quotes) ins.run(q.source, q.pesosPerDollar, at, json(q.raw));
     for (const f of failed) if (!this.seenRecently(`source:${f.source}`, "down")) this.log(`price source down: ${f.source}: ${f.error}`);
 
-    const paused = await pub.readContract({ address: a.pool, abi: poolAbi, functionName: "paused", ...this.at() });
-    const ours = paused && (await this.pausedByUs());
+    const paused = await pub.readContract({ address: a.pool, abi: poolAbi, functionName: "paused", blockNumber: block });
+    const ours = paused && (await this.pausedByUs(block));
     const v = verdict(this.readings(at), at, ours, paused);
     if (v.action === "hold") return;
+    if (this.unsettled(this.d.guardian?.address ?? "0x0000000000000000000000000000000000000000") > 0) return; // one guardian decision at a time
     if (this.d.mode !== "live" || !this.d.guardian) {
       if (!this.seenRecently("A4", v.action)) {
         this.record("A4_price", null, null, { why: v.why }, {}, { kind: v.action }, "watch_only", { es: "", en: v.why });
@@ -469,12 +529,11 @@ export class Agent {
           await refreshLoan(db, pub, a, id, labels);
           const loan = await this.loanState(id);
           if (!loan.open) return;
-          if (!(await this.liquidateIfNeeded(loan, p.liq))) await this.protectAndRepay(loan, p.liq, p.ok, chainNow, indexedOk);
+          await this.decide(loan, p.liq, p.ok, chainNow, indexedOk);
           for (const n of loanNotices(loan, p.liq, chainNow, db)) this.notice(n.key, loan, n.kind, n.said);
         });
       }
       await this.phase("rates", () => this.watchRates(chainNow, p.liq));
-      await this.phase("price watch", () => this.watchPrice());
     }
     await this.phase("pool notices", async () => {
       for (const n of await poolNotices(pub, a, db)) this.notice(n.key, null, n.kind, n.said);

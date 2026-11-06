@@ -44,7 +44,9 @@ describe("quote matches PesoPool", () => {
   it("refuses what the contract would refuse", () => {
     expect(quote({ pesos: 999n * W, termDays: 7, borrowPrice: price, tier: 0, pool })).toMatchObject({ ok: false, reason: "BELOW_MIN" });
     expect(quote({ pesos: 1_000n * W, termDays: 14, borrowPrice: price, tier: 0, pool })).toMatchObject({ ok: false, reason: "BAD_TERM" });
-    expect(quote({ pesos: 6_000n * W, termDays: 7, borrowPrice: price, tier: 0, pool })).toMatchObject({ ok: false, reason: "POOL_TOO_THIN" });
+    // 6,000 is more than the free pesos, but the cap (70% of deposits, 3,931.8) binds first: say the real limit
+    expect(quote({ pesos: 6_000n * W, termDays: 7, borrowPrice: price, tier: 0, pool })).toMatchObject({ ok: false, reason: "CAP_REACHED", limit: (pool.cash * 7_000n) / 10_000n });
+    expect(quote({ pesos: 6_000n * W, termDays: 7, borrowPrice: price, tier: 0, pool: { ...pool, caps: { ...pool.caps, depositsBps: 10_000n } } })).toMatchObject({ ok: false, reason: "POOL_TOO_THIN", limit: pool.cash });
     // 70% of deposits: 3,931 wARS is the most all loans together can reach today
     expect(quote({ pesos: 4_000n * W, termDays: 7, borrowPrice: price, tier: 0, pool })).toMatchObject({ ok: false, reason: "CAP_REACHED" });
     expect(quote({ pesos: 3_900n * W, termDays: 7, borrowPrice: price, tier: 0, pool }).ok).toBe(true);

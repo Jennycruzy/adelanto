@@ -17,8 +17,9 @@ export const MIN_LOAN = 1_000n * WAD; // PesoPool.MIN_LOAN
 
 /** The agent protects a loan back down to this share: the borrowing line, so the loan is as safe as on day one. */
 export const PROTECT_TARGET_BPS = 6_000n;
-/** A gentle liquidation stops here: just under the risk line, taking as little collateral as possible. */
-export const LIQUIDATION_TARGET_BPS = 7_000n;
+/** A gentle liquidation stops here (GentleKeeper.TARGET_LTV_BPS): 2 points under the 80% line, so the borrower loses
+ * as little as possible and ordinary price noise does not sell again at once. */
+export const LIQUIDATION_TARGET_BPS = 7_800n;
 
 const ceilDiv = (a: bigint, b: bigint) => (a === 0n ? 0n : (a - 1n) / b + 1n);
 
@@ -82,7 +83,7 @@ export function gentleLiquidationRepay(
   const numerator = debt * BPS - targetBps * value; // > 0 because ltv > 80% > target
   const denominator = BPS * BPS - targetBps * (BPS + LIQUIDATION_BONUS_BPS); // in BPS^2 units
   if (denominator <= 0n) return maxLiquidationRepay(debt); // target too high to reach by liquidating: take the most
-  const x = ceilDiv(numerator * BPS, denominator) + 1n;
+  const x = ceilDiv(numerator * BPS, denominator) + 4n; // same margin as GentleKeeper
   const cap = maxLiquidationRepay(debt);
   return x > cap ? cap : x;
 }

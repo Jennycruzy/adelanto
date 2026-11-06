@@ -108,14 +108,14 @@ describe("gentle liquidation", () => {
   it("zero unless above 80%", () => {
     expect(gentleLiquidationRepay(wars(8000), usdt(10), price(1000))).toBe(0n);
   });
-  it("example lands at or below 70% through the pool's own arithmetic", () => {
+  it("example lands at or below 78% through the pool's own arithmetic", () => {
     const debt = wars(8500);
     const x = gentleLiquidationRepay(debt, usdt(10), price(1000));
     const after = poolLiquidate(debt, usdt(10), price(1000), x);
-    expect(ltvBps(after.debt, after.collateral, price(1000))).toBeLessThanOrEqual(7000n);
-    // and is about (8500 - 7000) / 0.265 = 5,660 pesos: far less than the whole debt
-    expect(x / WAD).toBeGreaterThanOrEqual(5660n);
-    expect(x / WAD).toBeLessThanOrEqual(5661n);
+    expect(ltvBps(after.debt, after.collateral, price(1000))).toBeLessThanOrEqual(7800n);
+    // and is about (8500 - 7800) / 0.181 = 3,867 pesos: well under half the debt
+    expect(x / WAD).toBeGreaterThanOrEqual(3867n);
+    expect(x / WAD).toBeLessThanOrEqual(3868n);
   });
   it("never asks for more than the pool allows", () => {
     const debt = wars(50_000);
@@ -136,24 +136,23 @@ describe("gentle liquidation", () => {
       const after = poolLiquidate(debt, collateral, p, x);
       const ltv = ltvBps(after.debt, after.collateral, p);
       if (x < maxLiquidationRepay(debt)) {
-        expect(ltv).toBeLessThanOrEqual(7000n); // uncapped: always back to 70%
+        expect(ltv).toBeLessThanOrEqual(7800n); // uncapped: always back to 78%
         reachedTarget++;
       }
       expect(after.collateral).toBeGreaterThanOrEqual(0n);
     }
-    // Above ~80.7% a debt of 10,000 wARS or more can't get back to 70% in one call (the pool caps it at half),
-    // so many random loans are capped; the next test shows repeated calls still end at 70%.
+    // Far above 80% a debt of 10,000 wARS or more can't get back to 78% in one call (the pool caps it at half);
+    // the next test shows repeated calls still end under the line.
     expect(reachedTarget).toBeGreaterThan(100);
   });
-  it("repeated gentle liquidations always end at or below 70%, taking no more than needed", () => {
+  it("repeated gentle liquidations always end under the 80% line", () => {
     const r = rng(99);
     for (let i = 0; i < 2_000; i++) {
       let collateral = BigInt(Math.floor(r() * 5_000 * 1e6)) + 10_000n;
       const p = BigInt(Math.floor((300 + r() * 5_000) * 1e6)) * 10n ** 12n;
       let debt = (collateralValue(collateral, p) * BigInt(Math.floor(8_001 + r() * 1_400))) / BPS + 10n ** 15n;
       let rounds = 0;
-      while (isLiquidatable(debt, collateral, p) || ltvBps(debt, collateral, p) > 7_000n) {
-        if (!isLiquidatable(debt, collateral, p)) break; // between 70% and 80% nobody may liquidate: correct
+      while (isLiquidatable(debt, collateral, p)) {
         const x = gentleLiquidationRepay(debt, collateral, p);
         ({ debt, collateral } = poolLiquidate(debt, collateral, p, x));
         if (++rounds > 20) throw new Error("did not converge");

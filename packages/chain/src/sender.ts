@@ -11,6 +11,7 @@ import {
   concatHex,
   createWalletClient,
   keccak256,
+  parseTransaction,
   type Address,
   type Hex,
   type PublicClient,
@@ -71,10 +72,20 @@ export class TaggedSender {
       const msg = String(e?.details ?? e?.shortMessage ?? e);
       if (/already known|already exists|known transaction/i.test(msg)) {
         // the node already has these exact bytes: wait for them below
+      } else if (/underpriced|fee cap|less than block base fee|max fee per gas/i.test(msg)) {
+        // too cheap for now: it stays signed, and after a while the agent replaces the nonce (prepareCancel)
       } else if (/nonce too low/i.test(msg)) {
-        // The nonce is used. Only these bytes landing counts; anything else used it and ours can never land.
-        const mine = await this.pub.getTransactionReceipt({ hash: signed.hash }).catch(() => null);
-        if (!mine) throw new NonceConsumedError(signed);
+        // The nonce is used. Only these bytes landing counts. A lagging node can miss a receipt, so look a few times
+        // before concluding another transaction used it.
+        let mine = null;
+        for (let i = 0; i < 5 && !mine; i++) {
+          mine = await this.pub.getTransactionReceipt({ hash: signed.hash }).catch(() => null);
+          if (!mine) await new Promise((r) => setTimeout(r, 2_000));
+        }
+        if (!mine) {
+          const used = await this.pub.getTransactionCount({ address: signed.from, blockTag: "latest" });
+          if (used > signed.nonce) throw new NonceConsumedError(signed);
+        }
       } else {
         throw e;
       }
@@ -84,6 +95,33 @@ export class TaggedSender {
     const tx = await this.pub.getTransaction({ hash: signed.hash });
     if (!carriesCode(tx.input, this.code)) throw new Error(`landed without the attribution tag: ${signed.hash}`);
     return { hash: signed.hash, receipt };
+  }
+
+  /**
+   * A replacement for a stuck transaction: an empty, tagged self-transfer with the same nonce at a higher fee, so the
+   * old decision can never land later. The caller records it before broadcasting, like any other send.
+   */
+  async prepareCancel(stuck: Signed): Promise<Signed> {
+    const old = parseTransaction(stuck.raw) as any;
+    const fees = await this.pub.estimateFeesPerGas();
+    const bump = (a?: bigint, b?: bigint) => {
+      const x = ((a ?? 0n) * 13n) / 10n + 1n;
+      const y = (b ?? 0n) * 2n;
+      return x > y ? x : y;
+    };
+    const data = this.tag("0x");
+    const request = await this.wallet.prepareTransactionRequest({
+      account: this.account,
+      to: this.address,
+      value: 0n,
+      data,
+      nonce: stuck.nonce,
+      maxFeePerGas: bump(old.maxFeePerGas ?? old.gasPrice, fees.maxFeePerGas),
+      maxPriorityFeePerGas: bump(old.maxPriorityFeePerGas ?? old.gasPrice, fees.maxPriorityFeePerGas),
+      chain: celo,
+    } as any);
+    const raw = await this.wallet.signTransaction(request as any);
+    return { hash: keccak256(raw), raw, nonce: stuck.nonce, to: this.address, data, from: this.address };
   }
 
   /** Full send: prepare, let the caller record, then broadcast. */

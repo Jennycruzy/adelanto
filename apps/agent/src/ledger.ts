@@ -3,7 +3,9 @@
 // a restart or watch mode can neither count an arrival twice nor lose one.
 //
 // Policy, chosen to be conservative:
-//   - an arrival counts only while the borrower's guard is on and the borrower has an open loan;
+//   - an arrival counts only while the borrower has auto-repay on and an open loan; every new signature of the limits
+//     starts the credit from zero, so pesos that arrived before the borrower agreed (auto-repay off, or an expired
+//     guard later renewed) are never repaid;
 //   - any wARS leaving the wallet (spending, the borrower's own repayment, the agent's repayment) uses the credit
 //     first, so credit never pays for pesos the borrower already used;
 //   - pesos from the pool or the guard (the loan itself, refunds, lender withdrawals) are not income and are ignored;
@@ -12,7 +14,7 @@
 // still bound by the limits they signed (daily cap and the pesos they keep).
 
 export type LedgerItem =
-  | { kind: "guardOn"; block: bigint; logIndex: number }
+  | { kind: "guardOn"; block: bigint; logIndex: number; autoRepay: boolean }
   | { kind: "guardOff"; block: bigint; logIndex: number }
   | { kind: "loanOpened"; block: bigint; logIndex: number; loanId: bigint }
   | { kind: "loanEnded"; block: bigint; logIndex: number; loanId: bigint }
@@ -26,8 +28,9 @@ export function credit(items: LedgerItem[]): bigint {
   let c = 0n;
   for (const it of ordered) {
     switch (it.kind) {
-      case "guardOn":
-        on = true;
+      case "guardOn": // a new signature of the limits: credit restarts, and counts only with auto-repay on
+        on = it.autoRepay;
+        c = 0n;
         break;
       case "guardOff":
         on = false;

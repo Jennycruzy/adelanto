@@ -9,15 +9,17 @@ import {PesoPool} from "./PesoPool.sol";
 import {IPriceModule} from "./interfaces/IPriceModule.sol";
 
 /// @title GentleKeeper
-/// @notice The agent's way to liquidate: it repays the smallest amount that brings a loan back to 70% of its
-/// collateral, computed inside the liquidation transaction from that moment's debt and price, so a price move between
-/// the agent's decision and the block can never make it take more of the borrower's dollars than needed.
+/// @notice The agent's way to liquidate: it repays the smallest amount that brings a loan back to 78% of its
+/// collateral (2 points under the 80% line, so ordinary price noise does not sell again at once), computed inside the
+/// liquidation transaction from that moment's debt and price. A price move between the agent's decision and the block
+/// can never make it take more of the borrower's dollars than needed, and the 5% bonus is paid only on that small
+/// amount.
 /// The agent supplies the pesos and receives the dollars; nothing stays here between calls.
 contract GentleKeeper is ReentrancyGuard {
     using SafeERC20 for IERC20;
     using Math for uint256;
 
-    uint256 public constant TARGET_LTV_BPS = 7_000;
+    uint256 public constant TARGET_LTV_BPS = 7_800;
     uint256 internal constant BPS = 10_000;
 
     PesoPool public immutable pool;
@@ -37,7 +39,7 @@ contract GentleKeeper is ReentrancyGuard {
         agent = agent_;
     }
 
-    /// @notice The smallest repayment that brings `loanId` back to 70% right now (0 if it is not past 80%), before the
+    /// @notice The smallest repayment that brings `loanId` back to 78% right now (0 if it is not past 80%), before the
     /// pool's cap of half the debt (all of it under 10,000 wARS).
     function wanted(uint256 loanId) public view returns (uint256) {
         PesoPool.Loan memory l = pool.loans(loanId);
@@ -49,7 +51,7 @@ contract GentleKeeper is ReentrancyGuard {
         // Solve (debt - x) * BPS <= target * (value - x * (1 + bonus)) for x.
         uint256 num = debt * BPS - TARGET_LTV_BPS * value;
         uint256 den = BPS * BPS - TARGET_LTV_BPS * (BPS + pool.LIQUIDATION_BONUS_BPS());
-        return num.mulDiv(BPS, den, Math.Rounding.Ceil) + 1;
+        return num.mulDiv(BPS, den, Math.Rounding.Ceil) + 4; // covers the pool's 1-2 wei rounding of debt
     }
 
     /// @notice Liquidate `loanId` gently, using at most `maxPesos` of the agent's wARS.

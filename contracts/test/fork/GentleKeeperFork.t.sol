@@ -75,19 +75,19 @@ contract GentleKeeperForkTest is Test {
     function aboveTarget() internal view returns (bool) {
         PesoPool.Loan memory l = pool.loans(loanId);
         uint256 value = uint256(l.collateral) * price.liquidationPrice() / 1e6;
-        return pool.debtOf(loanId) * 10_000 > value * 7_000;
+        return pool.debtOf(loanId) * 10_000 > value * 7_800;
     }
 
-    function test_backTo70AndNoMore() public {
+    function test_backTo78AndNoMore() public {
         if (!live) return;
         uint256 want = keeper.wanted(loanId);
         assertGt(want, 0);
 
         // Minimal to within the pool's own rounding: it floors the dollars it hands over to whole micro-USDT, which
         // leaves up to one micro-USDT of slack. Less than `want` by more than that slack (~0.0044 pesos at 1,660
-        // pesos per dollar) leaves the loan strictly above 70% by the pool's exact ratio (on a copy of the state).
+        // pesos per dollar) leaves the loan strictly above 78% by the pool's exact ratio (on a copy of the state).
         uint256 step = price.liquidationPrice() / 1e6; // wARS value of one micro-USDT
-        uint256 slack = step * 7_000 / (10_000 - 7_350) + 1e12;
+        uint256 slack = step * 7_800 / (10_000 - 8_190) + 1e12;
         uint256 snap = vm.snapshotState();
         vm.prank(other);
         pool.liquidate(loanId, want - slack);
@@ -98,8 +98,8 @@ contract GentleKeeperForkTest is Test {
         vm.prank(agent);
         (uint256 repaid, uint256 seized) = keeper.liquidateGently(loanId, type(uint256).max);
         assertEq(repaid, want);
-        assertFalse(aboveTarget(), "back to 70% by the exact ratio");
-        assertLe(pool.loanLtvBps(loanId), 7_000);
+        assertFalse(aboveTarget(), "back to 78% by the exact ratio");
+        assertLe(pool.loanLtvBps(loanId), 7_800);
         assertEq(IERC20(USDT).balanceOf(agent) - usdtBefore, seized);
         assertEq(IERC20(WARS).balanceOf(address(keeper)), 0, "no pesos left behind");
         assertEq(IERC20(USDT).balanceOf(address(keeper)), 0, "no dollars left behind");
@@ -111,7 +111,7 @@ contract GentleKeeperForkTest is Test {
         vm.prank(agent);
         (uint256 repaid,) = keeper.liquidateGently(loanId, 1_000e18);
         assertEq(repaid, 1_000e18);
-        assertGt(pool.loanLtvBps(loanId), 7_000);
+        assertGt(pool.loanLtvBps(loanId), 7_800);
     }
 
     function test_onlyTheAgent() public {

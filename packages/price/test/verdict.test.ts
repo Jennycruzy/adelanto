@@ -34,10 +34,10 @@ describe("pause and resume", () => {
     expect(verdict(rs, NOW, false, false)).toMatchObject({ action: "pause" });
   });
   it("resumes only its own pause, after 10 minutes of agreement", () => {
-    const ok = series(11, () => ({ chain: 1656, quotes: [q("binance", 1660)] }));
+    const ok = series(11, () => ({ chain: 1656, quotes: [q("binance", 1660), q("dolarapi", 1652)] }));
     expect(verdict(ok, NOW, true, true).action).toBe("resume");
     expect(verdict(ok, NOW, false, true).action).toBe("hold"); // someone else paused: leave it
-    const mixed = series(11, (i) => ({ chain: i === 6 ? 1600 : 1656, quotes: [q("binance", 1660)] }));
+    const mixed = series(11, (i) => ({ chain: i === 6 ? 1600 : 1656, quotes: [q("binance", 1660), q("dolarapi", 1652)] }));
     expect(verdict(mixed, NOW, true, true).action).toBe("hold");
   });
   it("never pauses on disagreement with only one source answering", () => {
@@ -55,10 +55,14 @@ describe("pause and resume", () => {
     expect(verdict(rs, NOW, false, false).action).toBe("hold");
   });
   it("resume needs the full 10 minutes", () => {
-    const nine = series(10, () => ({ chain: 1656, quotes: [q("binance", 1660)] }));
+    const nine = series(10, () => ({ chain: 1656, quotes: [q("binance", 1660), q("dolarapi", 1652)] }));
     expect(verdict(nine, NOW, true, true).action).toBe("hold");
-    const ten = series(11, () => ({ chain: 1656, quotes: [q("binance", 1660)] }));
+    const ten = series(11, () => ({ chain: 1656, quotes: [q("binance", 1660), q("dolarapi", 1652)] }));
     expect(verdict(ten, NOW, true, true).action).toBe("resume");
+  });
+  it("never resumes on one agreeing source", () => {
+    const one = series(11, () => ({ chain: 1656, quotes: [q("binance", 1660)] }));
+    expect(verdict(one, NOW, true, true).action).toBe("hold");
   });
   it("converts the chain price", () => {
     expect(chainToNumber(1656201701372096371684n)).toBeCloseTo(1656.2017, 3);

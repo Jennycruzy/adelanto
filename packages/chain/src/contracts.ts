@@ -53,6 +53,7 @@ export const poolAbi = parseAbi([
   "function borrowWithPermit(uint256 collateral, uint256 pesos, uint16 termDays, uint256 maxRateBps, uint256 deadline, uint8 v, bytes32 r, bytes32 s) returns (uint256 loanId)",
   "function addCollateral(uint256 loanId, uint256 amount)",
   "function repay(uint256 loanId, uint256 pesos) returns (uint256 paid)",
+  "function repayWithPermit(uint256 loanId, uint256 pesos, uint256 deadline, uint8 v, bytes32 r, bytes32 s) returns (uint256 paid)",
   "function repayWithSwap(uint256 loanId, uint256 usdtIn, uint256 minPesosOut) returns (uint256 paid)",
   "function withdrawCollateral(uint256 loanId, uint256 amount)",
   "function deposit(uint256 assets, address receiver) returns (uint256)",

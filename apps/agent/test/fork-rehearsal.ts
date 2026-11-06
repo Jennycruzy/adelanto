@@ -175,7 +175,7 @@ assert.equal(tx.nonce, signed.nonce);
 console.log(`   resumed ${signed.hash} at nonce ${signed.nonce}: landed once`);
 
 // ---------------------------------------------------------------- past 80% -> gentle liquidation
-step("A5: guard revoked, interest past 80%, the agent liquidates gently back to 70% through GentleKeeper");
+step("A5: guard revoked, interest past 80%, the agent liquidates gently back to 78% through GentleKeeper");
 await bsend(dep.guard, guardAbi, "revoke" as any, []);
 while ((await ltv(loanId)) <= 8_000n) await warp(15 * 86_400);
 await mine(3);
@@ -199,7 +199,7 @@ console.log(`   es: ${a5[0].sentence_es}`);
 assert.ok(ltvPartial < ltvLiq);
 assert.match(a5[0].sentence_es, /todo lo que el agente tenía/);
 
-// Then with enough pesos: the next liquidation brings it back to 70% at most.
+// Then with enough pesos: the next liquidation brings it back to 78% at most.
 while ((await ltv(loanId)) <= 8_000n) await warp(5 * 86_400);
 await fromUni(CELO.wars, keeper.address, parseEther("5000"));
 await mine(3);
@@ -211,16 +211,51 @@ const loanAfter = await read(dep.pool, poolAbi, "loans", [loanId]);
 const ltvAfterA5 = loanAfter.open ? await ltv(loanId) : 0n;
 console.log(`   funded keeper tx ${a5[1].tx}: ltv ${ltvLiq2} -> ${loanAfter.open ? ltvAfterA5 : "closed"}`);
 console.log(`   es: ${a5[1].sentence_es}`);
-assert.ok(!loanAfter.open || ltvAfterA5 <= 7_000n);
+assert.ok(!loanAfter.open || ltvAfterA5 <= 7_800n);
 assert.equal(await read(CELO.wars, erc20Abi, "balanceOf", [gentleKeeper]), 0n, "nothing left in GentleKeeper");
-assert.match(a5[1].sentence_es, /lo mínimo para volver al 70%/);
+assert.match(a5[1].sentence_es, /lo mínimo para volver al 78%/);
+
+// ---------------------------------------------------------------- past 80% WITH a guard: protection beats a sale
+step("N3: a guarded loan past 80% gets the borrower's own protection, not a liquidation");
+await fromUni(CELO.usdt, borrower.address, parseUnits("5", 6));
+const price2 = (await read(dep.priceModule, parseAbi(["function borrowPrice() view returns (uint256)"]), "borrowPrice")) as bigint;
+const coll2 = (1000n * 10n ** 18n * 10n ** 6n * 10_000n) / (5_950n * price2) + 1n;
+await bsend(CELO.usdt, erc20Abi, "approve", [dep.pool, coll2]);
+const br2 = await bsend(dep.pool, poolAbi, "borrow", [coll2, parseEther("1000"), 7, 9_000n]);
+const loan2 = parseEventLogs({ abi: poolAbi, logs: br2.logs, eventName: "Borrowed" })[0].args.loanId;
+while ((await ltv(loan2)) <= 8_000n) await warp(15 * 86_400);
+const now2 = (await pub.getBlock()).timestamp;
+await bsend(dep.guard, guardAbi, "setLimits" as any, [{ ...limits, expiry: now2 + 30n * 86_400n, maxTopUpUsdtPerDay: parseUnits("2", 6), autoRepay: false }, "0x" + "22".repeat(32)]);
+await bsend(CELO.usdt, erc20Abi, "approve", [dep.guard, parseUnits("10", 6)]);
+await mine(3);
+const ltv2 = await ltv(loan2);
+const liqBefore = actions().filter((a) => a.job === "A5_liquidate" && a.status === "landed").length;
+await agent("live").tick();
+const a1b = actions().filter((a) => a.job === "A1_protect" && a.status === "landed" && a.tx);
+assert.equal(actions().filter((a) => a.job === "A5_liquidate" && a.status === "landed").length, liqBefore, "no sale while the borrower's dollars can protect it");
+assert.ok((await ltv(loan2)) < ltv2, "protection lowered it");
+console.log(`   loan ${loan2}: ltv ${ltv2} -> ${await ltv(loan2)} with the borrower's dollars (tx ${a1b[a1b.length - 1].tx}); no liquidation`);
+
+// ---------------------------------------------------------------- a stuck transaction is replaced, never re-sent
+step("N4: a signed transaction stuck over 10 minutes is replaced at its nonce, so the old decision can never land");
+const stuck = await keeper.prepare(CELO.wars, encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [dep.pool, 7n] }));
+db.prepare("INSERT INTO agent_actions (job, trigger_json, inputs_json, decision, mode, status, tx, at) VALUES ('approve', '{}', '{}', '{}', 'live', 'signed', ?, ?)").run(stuck.hash, Date.now());
+const sid = Number((db.prepare("SELECT MAX(id) AS id FROM agent_actions").get() as any).id);
+db.prepare("INSERT INTO pending_tx (hash, action_id, from_addr, nonce, to_addr, data, raw, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'signed', ?)").run(stuck.hash, sid, stuck.from, stuck.nonce, stuck.to, stuck.data, stuck.raw, Date.now() - 11 * 60_000);
+await agent("live").tick();
+assert.equal((db.prepare("SELECT status FROM pending_tx WHERE hash = ?").get(stuck.hash) as any).status, "replaced");
+const replacement = db.prepare("SELECT hash, status FROM pending_tx WHERE nonce = ? AND hash <> ?").get(stuck.nonce, stuck.hash) as any;
+assert.equal(replacement.status, "landed");
+const late = await pub.sendRawTransaction({ serializedTransaction: stuck.raw }).then(() => "accepted", (e: any) => String(e?.details ?? e?.shortMessage ?? e));
+assert.match(late, /nonce/i, "the old bytes can no longer land");
+console.log(`   ${stuck.hash} replaced by ${replacement.hash} at nonce ${stuck.nonce}; the old bytes are refused (${late.slice(0, 40)})`);
 
 // ---------------------------------------------------------------- every agent transaction tagged
 step("every agent transaction on the fork carries the attribution code");
 const { carriesCode } = await import("@adelanto/chain");
-for (const a of actions().filter((a) => a.tx && a.status === "landed")) {
-  const t = await pub.getTransaction({ hash: a.tx });
-  assert.ok(carriesCode(t.input, code), `untagged ${a.tx}`);
+for (const r of db.prepare("SELECT hash FROM pending_tx WHERE status = 'landed'").all() as any[]) {
+  const t = await pub.getTransaction({ hash: r.hash });
+  assert.ok(carriesCode(t.input, code), `untagged ${r.hash}`);
 }
 console.log(`   ${actions().filter((a) => a.status === "landed").length} landed, all tagged`);
 console.log("\nREHEARSAL PASSED");

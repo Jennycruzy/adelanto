@@ -1,5 +1,5 @@
-import { closeSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import type { DatabaseSync as DatabaseSyncType } from "node:sqlite";
 
@@ -49,34 +49,20 @@ CREATE TABLE IF NOT EXISTS notices (
 export type Db = DatabaseSyncType;
 
 /**
- * One agent process per database: a lock file holding the pid. A stale lock (its process is gone) is taken over.
- * Returns a release function.
+ * Holds an exclusive lock named `name` in `dir` for as long as this process runs: an SQLite database opened with
+ * locking_mode=EXCLUSIVE keeps an OS file lock after its first write, and the OS drops it when the process dies, so a
+ * crashed agent never leaves a stale lock and two agents can never both hold it. Throws if another process holds it.
  */
-export function lockDb(path: string): () => void {
-  const lock = `${path}.lock`;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const fd = openSync(lock, "wx");
-      writeFileSync(fd, String(process.pid));
-      closeSync(fd);
-      return () => {
-        try {
-          if (readFileSync(lock, "utf8") === String(process.pid)) unlinkSync(lock);
-        } catch {}
-      };
-    } catch (e: any) {
-      if (e.code !== "EEXIST") throw e;
-      const pid = Number(readFileSync(lock, "utf8"));
-      let alive = false;
-      try {
-        process.kill(pid, 0);
-        alive = true;
-      } catch {}
-      if (alive) throw new Error(`another agent (pid ${pid}) is running on ${path}`);
-      unlinkSync(lock); // stale: its process is gone
-    }
+export function holdLock(dir: string, name: string): () => void {
+  mkdirSync(dir, { recursive: true });
+  const lock = new DatabaseSync(join(dir, `${name}.lock.sqlite`), { timeout: 0 } as any);
+  try {
+    lock.exec("PRAGMA locking_mode = EXCLUSIVE; BEGIN EXCLUSIVE; CREATE TABLE IF NOT EXISTS held (pid INTEGER); DELETE FROM held; INSERT INTO held VALUES (" + process.pid + "); COMMIT;");
+  } catch (e: any) {
+    lock.close();
+    throw new Error(`another agent holds the lock ${name} in ${dir}: ${e?.message ?? e}`);
   }
-  throw new Error(`could not lock ${path}`);
+  return () => lock.close();
 }
 
 export function openDb(path: string): Db {

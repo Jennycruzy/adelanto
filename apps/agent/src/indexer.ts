@@ -61,13 +61,13 @@ export function followedBorrowers(db: Db): Address[] {
   return (db.prepare("SELECT DISTINCT json_extract(args, '$.borrower') AS b FROM events WHERE name = 'LimitsSet'").all() as any[]).map((r) => getAddress(r.b));
 }
 
-/** The safe head, or 64 blocks behind the tip on a node that does not serve it. */
+/** The safe head, or 10 minutes (600 blocks) behind the tip on a node that does not serve it. */
 async function safeHead(pub: PublicClient): Promise<bigint> {
   try {
     const b = await pub.getBlock({ blockTag: "safe" });
     if (b.number !== null) return b.number;
   } catch {}
-  return (await pub.getBlockNumber({ cacheTime: 0 })) - 64n;
+  return (await pub.getBlockNumber({ cacheTime: 0 })) - 600n;
 }
 
 /** If the last indexed block's hash no longer matches the chain, drop everything after a safe distance and redo it. */
