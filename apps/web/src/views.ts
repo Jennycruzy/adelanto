@@ -110,7 +110,7 @@ function footer(lang: Lang) {
     <li><a href="${addrUrl(dep.pool)}">PesoPool</a></li>
     <li><a href="${addrUrl(AGENT)}">${es ? "Agente" : "Agent"} · ERC-8004 #10043</a></li>
   </ul></div>
-  <div class="credits">${es ? "Fotos" : "Photos"}: ${es ? "kiosco en Buenos Aires" : "kiosk in Buenos Aires"}, Just a Man, CC BY 4.0 · Barrio Inglés, Caballito, OneEuropeanHeart, CC BY 4.0 · Mercado de San Telmo, Josefito123, CC BY-SA 4.0 · ${es ? "vía Wikimedia Commons" : "via Wikimedia Commons"}. ${es ? "Tasas de referencia" : "Reference rates"}: ${REFS.bankLoan.source}; ${REFS.inflation.source}.</div>
+  <div class="credits">${es ? "Fotos" : "Photos"}: ${es ? "kiosco en Buenos Aires" : "kiosk in Buenos Aires"}, Just a Man, CC BY 4.0 · Mercado de San Telmo, Josefito123, CC BY-SA 4.0 · ${es ? "vía Wikimedia Commons" : "via Wikimedia Commons"}. ${es ? "Tasas de referencia" : "Reference rates"}: ${REFS.bankLoan.source}; ${REFS.inflation.source}.</div>
 </div></footer>`;
 }
 
