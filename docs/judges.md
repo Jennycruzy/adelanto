@@ -34,7 +34,8 @@ CELO for gas.
 Then:
 
 1. On `/probar`, press **Pedir $ 1.000** (Borrow ARS 1,000). The wallet asks for one free signature (a USDT permit)
-   and then one transaction. 1,000 wARS arrive in your wallet; about US$ 1 of USDT is held as guarantee.
+   and then one transaction. 997.50 wARS arrive in your wallet (1,000 minus the 0.25% fee); about US$ 1 of USDT is
+   held as guarantee.
 2. You land on your loan's page. Press **Cuidar mi préstamo** (Look after my loan): pick a preset or write your
    limits, read the rule back in plain words, and press **Firmar** (Sign). The wallet approves exactly a week of
    the daily limits to `LoanGuard` and sends one `setLimits` transaction with the hash of the rule's words. The page
