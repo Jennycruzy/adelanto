@@ -7,7 +7,7 @@ import { availableToBorrow, dollars, pesos, percent } from "@adelanto/core";
 import { CELO } from "@adelanto/chain";
 import { REFS, adminEvents, agentActions, attributionAudit, balancesOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, quoteFor } from "./data.ts";
 import { langOf, t, type Lang } from "./i18n.ts";
-import { addrUrl, borrowPage, guardPage, home, href, lendPage, loanPage, plain, txUrl } from "./views.ts";
+import { addrUrl, borrowPage, guardPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
 import { ruleText, saveRule } from "./rules.ts";
 
 const app = new Hono();
@@ -161,6 +161,40 @@ app.post("/api/rule", async (c) => {
   if (!body || !isAddress(body.borrower) || typeof body.text !== "string") return json(c, { error: "bad request" }, 400);
   const r = await saveRule(getAddress(body.borrower), body.text);
   return json(c, { result: r }, r === "saved" ? 200 : 400);
+});
+
+app.get("/probar", async (c) => {
+  const l = lang(c);
+  const es = l === "es";
+  const v = await poolView();
+  const q = quoteFor(v, 1_000n, 7);
+  const closed = loanRows().find((r) => !r.open);
+  return c.html(
+    layout(
+      l,
+      t(l, "tryIt"),
+      html`<h1>${t(l, "tryIt")}</h1>
+<p class="muted">${es ? "Cinco minutos, con plata real y chica. Todo queda en la cadena y en esta página." : "Five minutes, with real and small money. Everything stays on chain and on this site."}</p>
+<div class="card"><ol>
+  <li>${es ? "Sin billetera: mirá un préstamo real cerrado, con cada transacción." : "No wallet: look at a real closed loan, with every transaction."} ${closed ? html`<a href="${href(l, `/prestamo/${closed.id}`)}">#${closed.id}</a>` : ""}</li>
+  <li>${es ? "Mirá la transparencia: lo nuestro, lo del jurado y lo de otras personas, por separado." : "See the transparency page: ours, the judges' and other people's, apart."} <a href="${href(l, "/transparencia")}">${t(l, "transparency")}</a></li>
+  <li>${es ? "Con MiniPay (Ajustes → Acerca de → tocá la versión hasta activar el modo desarrollador → Developer settings → Load test page → esta dirección) o cualquier billetera de Celo con unos US$ 1,25 en USDT: pedí $ 1.000 abajo." : "With MiniPay (Settings → About → tap the version until developer mode is on → Developer settings → Load test page → this address) or any Celo wallet with about US$1.25 in USDT: borrow ARS 1,000 below."}</li>
+  <li>${es ? "En la página del préstamo, activá «Cuidar mi préstamo» y después «Pagar todo»: tus dólares vuelven en la misma transacción." : "On the loan page, turn on “Look after my loan”, then “Repay all”: your dollars come back in the same transaction."}</li>
+  <li>${es ? "Agentes: GET /api/public/rates y /llms.txt. Código: github.com/Jennycruzy/adelanto." : "Agents: GET /api/public/rates and /llms.txt. Code: github.com/Jennycruzy/adelanto."}</li>
+</ol></div>
+${q.ok
+  ? html`<div class="card">
+  <div class="row"><span>${t(l, "youGet")}</span><span class="v">${pesos(q.received, l)}</span></div>
+  <div class="row"><span>${t(l, "youLeave")}</span><span class="v">${dollars(q.collateral, l)}</span></div>
+  <div class="row"><span>${t(l, "rateNow")}</span><span class="v">${percent(q.rateBps, l)}</span></div>
+  <div class="row"><span>${t(l, "owedAtEnd")} (7 ${t(l, "days")})</span><span class="v">${pesos(q.owedAtTerm, l)}</span></div>
+  <div id="status"></div>
+  <button class="btn" data-action="borrow" data-pesos="${q.pesos.toString()}" data-days="7" data-collateral="${q.collateral.toString()}" data-maxrate="${q.maxRateBps.toString()}" data-lang="${l}">${es ? "Pedir $ 1.000" : "Borrow ARS 1,000"}</button>
+</div>`
+  : html`<div class="card notice">${es ? "Ahora no hay lugar para un préstamo de prueba; volvé en un rato." : "There is no room for a test loan right now; try again shortly."}</div>`}`,
+      { path: "/probar", wallet: true },
+    ),
+  );
 });
 
 app.get("/api/public/rates", async (c) => {
