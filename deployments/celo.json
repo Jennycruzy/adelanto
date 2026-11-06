@@ -1,0 +1,42 @@
+{
+  "network": "celo",
+  "chainId": 42220,
+  "attributionCode": "celo_0e96c1ff3fa8",
+  "deployer": "0xF689c0620b9a9D7A1a0312e1F0778bAa440989BE",
+  "steps": {
+    "PriceModule": {
+      "tx": "0xb61c2b6d8b09bf95550fdd947778bc8b03939eb9c662cd148dbc59b5c0130678",
+      "block": "82051679",
+      "gasUsed": "2188255",
+      "tagged": true,
+      "address": "0xBC6aa0BC458E01A7A32955DC106F9775569A6355"
+    },
+    "CreditBook": {
+      "tx": "0x4d6f734947024707c03486d6afb006079cecda3ead83cdb696304924c72e297a",
+      "block": "82051681",
+      "gasUsed": "569871",
+      "tagged": true,
+      "address": "0x7dF4182c3a7D7b25aE2D79a801D9502B2568fee1"
+    },
+    "PesoPool": {
+      "tx": "0xc78058d8c4623ef4b2457f1f260f2589e090e820153b20c794503d7b9ee0a1b7",
+      "block": "82051683",
+      "gasUsed": "4828582",
+      "tagged": true,
+      "address": "0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60"
+    },
+    "CreditBook.bindPool": {
+      "tx": "0xec8b973a358cb99b122af80a3024a5b3b1245dc8a3e1cdea4a46f0885b910307",
+      "block": "82051685",
+      "gasUsed": "45672",
+      "tagged": true
+    },
+    "LoanGuard": {
+      "tx": "0xe091e0c93d6e7eb1c8d72ef8a8a2f328845002e2247c7fa4fd25dd867e07cf0b",
+      "block": "82051687",
+      "gasUsed": "1222684",
+      "tagged": true,
+      "address": "0x26c9f3D79f3C835ee74c95A94a701e93f24bEbD3"
+    }
+  }
+}

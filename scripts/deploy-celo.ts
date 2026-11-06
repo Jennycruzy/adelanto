@@ -131,6 +131,17 @@ if (!record.steps["CreditBook.bindPool"]) {
 
 const guard = await deploy("LoanGuard", encodeAbiParameters([{ type: "address" }, { type: "address" }], [pool, agent]));
 
+// Public RPCs are load-balanced: a node can answer before it has the newest block. Wait until every
+// contract's code is visible before reading anything back.
+for (const address of [price, book, pool, guard]) {
+  for (let i = 0; ; i++) {
+    const code = await pub.getCode({ address });
+    if (code && code !== "0x") break;
+    if (i === 20) throw new Error(`no code visible at ${address} after waiting`);
+    await new Promise((r) => setTimeout(r, 3_000));
+  }
+}
+
 // Read back what the chain now holds.
 const poolAbi = parseAbi([
   "function priceModule() view returns (address)",
