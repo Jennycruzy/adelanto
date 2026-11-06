@@ -235,6 +235,27 @@ ${q.ok
   );
 });
 
+// The calculator on the home page. A real quote when the pool can lend it now; above that, the same formulas at
+// today's rate, marked as an estimate with what the pool can lend today.
+app.get("/api/quote", async (c) => {
+  const pesosWhole = BigInt((c.req.query("pesos") ?? "0").replace(/[^0-9]/g, "").slice(0, 10) || "0");
+  const d = Number(c.req.query("dias") ?? 30);
+  const days = [7, 30, 60, 90].includes(d) ? d : 30;
+  const v = await poolView();
+  const q = quoteFor(v, pesosWhole, days);
+  const W = 10n ** 18n;
+  if (q.ok) return json(c, { kind: "quote", pesos: q.pesos, days, collateral: q.collateral, rateBps: q.rateBps, fee: q.fee, received: q.received, interest: q.interest, bankInterest: q.bankInterest, saving: q.saving, block: v.block });
+  if ((q.reason === "POOL_TOO_THIN" || q.reason === "CAP_REACHED") && v.borrowPrice && pesosWhole >= 1000n) {
+    const pesos = pesosWhole * W, D = BigInt(days);
+    const interest = (pesos * v.borrowRateBps * D) / (10_000n * 365n);
+    const bankInterest = (pesos * REFS.bankLoan.bps * D) / (10_000n * 365n);
+    const fee = (pesos * 25n + 9_999n) / 10_000n;
+    const collateral = (pesos * 10_000n * 1_000_000n) / (5_000n * v.borrowPrice) + 1n;
+    return json(c, { kind: "estimate", limit: (q as any).limit ?? 0n, pesos, days, collateral, rateBps: v.borrowRateBps, fee, received: pesos - fee, interest, bankInterest, saving: bankInterest > interest + fee ? bankInterest - interest - fee : 0n, block: v.block });
+  }
+  return json(c, { kind: "refused", reason: q.reason, limit: (q as any).limit ?? null, block: v.block });
+});
+
 app.get("/api/public/rates", async (c) => {
   const v = await poolView();
   return json(c, {
