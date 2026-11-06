@@ -103,6 +103,13 @@ export const priceAbi = parseAbi([
   "function warsDepth() view returns (uint256)",
 ]);
 
+export const creditBookAbi = parseAbi([
+  "function recordOf(address borrower) view returns ((uint32 opened,uint32 repaidOnTime,uint32 repaidLate,uint32 liquidated,uint32 onTimeSinceLiquidation,uint64 firstLoanAt,uint64 lastLoanAt,uint128 pesosBorrowed,uint128 pesosRepaid,uint64 lastCountedAt))",
+  "function tier(address borrower) view returns (uint8)",
+  "function MIN_HELD() view returns (uint256)",
+  "event LoanClosed(address indexed borrower, bool onTime, uint8 newTier)",
+]);
+
 export const gentleKeeperAbi = parseAbi([
   "function liquidateGently(uint256 loanId, uint256 maxPesos) returns (uint256 repaid, uint256 seized)",
   "function wanted(uint256 loanId) view returns (uint256)",

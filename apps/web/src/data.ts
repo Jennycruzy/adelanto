@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { erc20Abi, getAddress, parseAbi, type Address, type PublicClient } from "viem";
-import { CELO, celoDeployment, celoPublicClient, guardAbi, poolAbi, priceAbi } from "@adelanto/chain";
+import { CELO, celoDeployment, celoPublicClient, creditBookAbi, guardAbi, poolAbi, priceAbi } from "@adelanto/chain";
 import { band, ltvBps, priceAtLtv, quote, type PoolState, type Quote } from "@adelanto/core";
 
 const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
@@ -265,4 +265,13 @@ export function priceHistory(points = 96): { t: number; pool: number; binance: n
     }
   }
   return [];
+}
+
+/** A wallet's public credit record from CreditBook, and the step it is on. */
+export async function creditOf(who: Address) {
+  const [r, tier] = await Promise.all([
+    pub.readContract({ address: dep.creditBook, abi: creditBookAbi, functionName: "recordOf", args: [who] }),
+    pub.readContract({ address: dep.creditBook, abi: creditBookAbi, functionName: "tier", args: [who] }),
+  ]);
+  return { ...r, tier: Number(tier) };
 }

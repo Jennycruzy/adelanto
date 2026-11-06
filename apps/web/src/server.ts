@@ -5,7 +5,7 @@ import { html } from "hono/html";
 import { getAddress, isAddress } from "viem";
 import { availableToBorrow, dollars, pesos, percent } from "@adelanto/core";
 import { CELO } from "@adelanto/chain";
-import { REFS, adminEvents, agentActions, attributionAudit, balancesOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, quoteFor } from "./data.ts";
+import { REFS, adminEvents, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, quoteFor } from "./data.ts";
 import { langOf, t, type Lang } from "./i18n.ts";
 import { addrUrl, borrowPage, guardPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
 import { ruleText, saveRule } from "./rules.ts";
@@ -286,7 +286,8 @@ app.get("/api/me/:addr", async (c) => {
   if (!isAddress(a)) return json(c, { error: "bad address" }, 400);
   const who = getAddress(a);
   const loans = loanRows().filter((r) => getAddress(r.borrower) === who).map((r) => ({ id: r.id, open: !!r.open }));
-  return json(c, { address: who, ...(await balancesOf(who)), loans });
+  const [bal, credit] = await Promise.all([balancesOf(who), creditOf(who)]);
+  return json(c, { address: who, ...bal, credit, loans });
 });
 
 app.get("/health", (c) => {

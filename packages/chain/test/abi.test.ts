@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { formatAbiItem } from "viem/utils";
-import { gentleKeeperAbi, guardAbi, poolAbi, priceAbi } from "../src/contracts.ts";
+import { creditBookAbi, gentleKeeperAbi, guardAbi, poolAbi, priceAbi } from "../src/contracts.ts";
 
 const compiled = (name: string) =>
   JSON.parse(readFileSync(join(__dirname, "..", "..", "..", "contracts", "out", `${name}.sol`, `${name}.json`), "utf8")).abi as any[];
@@ -18,7 +18,7 @@ const shape = (item: any) => {
   };
 };
 
-for (const [name, ours] of [["PesoPool", poolAbi], ["LoanGuard", guardAbi], ["PriceModule", priceAbi], ["GentleKeeper", gentleKeeperAbi]] as const) {
+for (const [name, ours] of [["PesoPool", poolAbi], ["LoanGuard", guardAbi], ["PriceModule", priceAbi], ["GentleKeeper", gentleKeeperAbi], ["CreditBook", creditBookAbi]] as const) {
   describe(`${name} ABI matches the compiler`, () => {
     const theirs = compiled(name);
     for (const item of ours as readonly any[]) {
