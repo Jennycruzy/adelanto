@@ -66,48 +66,69 @@ app.get("/transparencia", async (c) => {
   const count = (lab: string) => loans.filter((r) => labelOf(r.borrower) === lab).length;
   const lenders = new Set(deps.filter((d) => d.name === "Deposit").map((d) => getAddress(d.args.owner)));
   const lenderCount = (lab: string) => [...lenders].filter((a) => labelOf(a) === lab).length;
+  const pill = (lab: string) => html`<span class="pill ${lab === "USER" ? "ok" : lab === "JUDGE" ? "celeste" : ""}">${lab === "OURS" ? t(l, "ours") : lab === "JUDGE" ? t(l, "judge") : t(l, "user")}</span>`;
+  const admin = adminEvents();
   return c.html(
     plain(
       l,
       t(l, "transparency"),
-      html`<h1>${t(l, "transparency")}</h1>
-<p class="muted">${es ? "Todo lo que mostramos sale de la cadena. Separamos lo nuestro de lo de cualquier otra persona." : "Everything shown comes from the chain. Our own activity is kept apart from everyone else's."}</p>
-<div class="card">
-  <div class="row"><span>${es ? "Préstamos de nuestras billeteras" : "Loans from our wallets"}</span><span class="v">${count("OURS")}</span></div>
-  <div class="row"><span>${es ? "Préstamos del jurado" : "Judge loans"}</span><span class="v">${count("JUDGE")}</span></div>
-  <div class="row"><span>${es ? "Préstamos de otras personas" : "Loans from other people"}</span><span class="v">${count("USER")}</span></div>
-  <div class="row"><span>${es ? "Quienes prestan (nuestros / otros)" : "Lenders (ours / others)"}</span><span class="v">${lenderCount("OURS")} / ${lenderCount("USER")}</span></div>
+      html`<div class="kpis">
+  <div class="card"><div class="card-label">${es ? "Préstamos de otras personas" : "Loans from other people"}</div><div class="figure sm num">${count("USER")}</div></div>
+  <div class="card"><div class="card-label">${es ? "Préstamos del jurado" : "Judge loans"}</div><div class="figure sm num">${count("JUDGE")}</div></div>
+  <div class="card"><div class="card-label">${es ? "Préstamos nuestros" : "Our own loans"}</div><div class="figure sm num">${count("OURS")}</div></div>
+  <div class="card"><div class="card-label">${es ? "Quienes prestan · nuestros / otros" : "Lenders · ours / others"}</div><div class="figure sm num">${lenderCount("OURS")} / ${lenderCount("USER")}</div></div>
 </div>
-<h2>${es ? "Salud del fondo" : "Pool health"}</h2>
+<div class="split" style="margin-top:20px">
+<div>
 <div class="card">
+  <div class="card-label">${es ? "Salud del fondo" : "Pool health"}</div>
   <div class="row"><span>${es ? "Depositado" : "Deposited"}</span><span class="v">${pesos(v.totalAssets, l)}</span></div>
   <div class="row"><span>${es ? "Prestado" : "Lent"}</span><span class="v">${pesos(v.pool.totalDebt, l)}</span></div>
+  <div class="row"><span>${es ? "Libre" : "Free"}</span><span class="v">${pesos(v.pool.cash, l)}</span></div>
   <div class="row"><span>${es ? "Reserva" : "Reserve"}</span><span class="v">${pesos(v.pool.reserve, l)}</span></div>
-  <div class="row"><span>${es ? "Deuda sin cubrir" : "Uncovered debt"}</span><span class="v">${adminEvents().filter((e: any) => e.name === "BadDebt").length === 0 ? pesos(0n, l) : es ? "ver abajo" : "see below"}</span></div>
+  <div class="row"><span>${es ? "Deuda sin cubrir" : "Uncovered debt"}</span><span class="v">${admin.filter((e: any) => e.name === "BadDebt").length === 0 ? pesos(0n, l) : es ? "ver cambios" : "see changes"}</span></div>
+  <p class="small muted" style="margin:14px 0 0">${t(l, "updated")} <a href="https://celoscan.io/block/${v.block}">${v.block.toString()}</a></p>
 </div>
-<h2>${es ? "Cada transacción lleva nuestra etiqueta" : "Every transaction carries our tag"}</h2>
-<div class="card">${audit
-  ? html`<div class="row"><span>${es ? "Etiquetadas desde el código del evento" : "Tagged since the event code"}</span><span class="v">${audit.totals.tagged}</span></div>
-  <div class="row"><span>${es ? "Sin etiqueta después del código" : "Untagged after the code"}</span><span class="v">${audit.totals.untaggedAfterCodeIssued}</span></div>
-  <div class="row"><span>${es ? "Pruebas de ruta anteriores al código (no cuentan)" : "Route tests before the code (not counted)"}</span><span class="v">${audit.totals.sentBeforeCodeIssued}</span></div>
-  <p class="small muted">${es ? "Revisado" : "Checked"} ${audit.checkedAt} · <a href="https://github.com/Jennycruzy/adelanto/blob/main/evidence/attribution-audit.json">evidence/attribution-audit.json</a></p>`
-  : ""}</div>
-<h2>${es ? "Préstamos" : "Loans"}</h2>
-<div class="card"><ul class="log">${loans.map((r) => html`<li><a href="${href(l, `/prestamo/${r.id}`)}">#${r.id}</a> · ${r.open ? t(l, "open") : t(l, "closed")} · <span class="pill">${labelOf(r.borrower)}</span></li>`)}</ul></div>
-<h2>${es ? "Depósitos y retiros" : "Deposits and withdrawals"}</h2>
-<div class="card"><ul class="log">${deps.map((d) => html`<li>${d.name === "Deposit" ? (es ? "Depositó" : "Deposited") : es ? "Retiró" : "Withdrew"} ${pesos(BigInt(d.args.assets), l)} <span class="pill">${labelOf(d.args.owner)}</span> · <a class="tx" href="${txUrl(d.tx)}">${d.tx.slice(0, 10)}…</a></li>`)}</ul></div>
-<h2>${es ? "Cambios de administración" : "Admin changes"}</h2>
-<div class="card">${adminEvents().length === 0 ? html`<p class="small muted">${es ? "Ninguno desde el despliegue." : "None since deployment."}</p>` : html`<ul class="log">${adminEvents().map((e: any) => html`<li>${e.name} · <a class="tx" href="${txUrl(e.tx)}">${e.tx.slice(0, 10)}…</a></li>`)}</ul>`}</div>
-<h2>${es ? "Contratos" : "Contracts"}</h2>
-<div class="card small">
-  <div class="row"><span>PesoPool</span><a class="tx" href="${addrUrl(dep.pool)}">${dep.pool}</a></div>
-  <div class="row"><span>LoanGuard</span><a class="tx" href="${addrUrl(dep.guard)}">${dep.guard}</a></div>
-  <div class="row"><span>CreditBook</span><a class="tx" href="${addrUrl(dep.creditBook)}">${dep.creditBook}</a></div>
-  <div class="row"><span>PriceModule</span><a class="tx" href="${addrUrl(dep.priceModule)}">${dep.priceModule}</a></div>
-  ${dep.gentleKeeper ? html`<div class="row"><span>GentleKeeper</span><a class="tx" href="${addrUrl(dep.gentleKeeper)}">${dep.gentleKeeper}</a></div>` : ""}
-  <div class="row"><span>${es ? "Agente (ERC-8004 #10043)" : "Agent (ERC-8004 #10043)"}</span><a class="tx" href="${addrUrl("0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1")}">0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1</a></div>
+<div class="card" style="background:var(--ink);color:var(--paper);border-color:transparent">
+  <div class="card-label" style="color:rgba(244,239,228,.6)">${es ? "Cada transacción lleva nuestra etiqueta" : "Every transaction carries our tag"}</div>
+  ${audit
+    ? html`<div style="display:flex;gap:28px;flex-wrap:wrap;margin:8px 0 14px">
+    <div><div class="figure" style="color:var(--sol)">${audit.totals.tagged}</div><div class="small" style="color:rgba(244,239,228,.7)">${es ? "etiquetadas" : "tagged"}</div></div>
+    <div><div class="figure">${audit.totals.untaggedAfterCodeIssued}</div><div class="small" style="color:rgba(244,239,228,.7)">${es ? "sin etiqueta después del código" : "untagged after the code"}</div></div>
+    <div><div class="figure" style="color:rgba(244,239,228,.5)">${audit.totals.sentBeforeCodeIssued}</div><div class="small" style="color:rgba(244,239,228,.7)">${es ? "pruebas anteriores al código" : "tests before the code"}</div></div>
+  </div>
+  <p class="small" style="color:rgba(244,239,228,.7);margin:0">${dep.attributionCode} · ${es ? "revisado" : "checked"} ${audit.checkedAt} · <a style="color:var(--sol)" href="https://github.com/Jennycruzy/adelanto/blob/main/evidence/attribution-audit.json">attribution-audit.json</a></p>`
+    : ""}
+</div>
+<div class="card">
+  <div class="card-label">${es ? "Contratos" : "Contracts"}</div>
+  <div class="addr-list">
+    <a href="${addrUrl(dep.pool)}"><span>PesoPool</span><span>${dep.pool.slice(0, 10)}…</span></a>
+    <a href="${addrUrl(dep.guard)}"><span>LoanGuard</span><span>${dep.guard.slice(0, 10)}…</span></a>
+    <a href="${addrUrl(dep.creditBook)}"><span>CreditBook</span><span>${dep.creditBook.slice(0, 10)}…</span></a>
+    <a href="${addrUrl(dep.priceModule)}"><span>PriceModule</span><span>${dep.priceModule.slice(0, 10)}…</span></a>
+    ${dep.gentleKeeper ? html`<a href="${addrUrl(dep.gentleKeeper)}"><span>GentleKeeper</span><span>${dep.gentleKeeper.slice(0, 10)}…</span></a>` : ""}
+    <a href="${addrUrl("0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1")}"><span>${es ? "Agente · ERC-8004 #10043" : "Agent · ERC-8004 #10043"}</span><span>0xB93A6B8f…</span></a>
+  </div>
+</div>
+</div>
+<div>
+<div class="card">
+  <div class="card-label">${es ? "Préstamos" : "Loans"}</div>
+  ${loans.length === 0 ? html`<p class="small muted" style="margin:0">${es ? "Ninguno todavía." : "None yet."}</p>` : html`<ul class="log">${loans.map((r) => html`<li><a href="${href(l, `/prestamo/${r.id}`)}">#${r.id}</a> · ${r.open ? t(l, "open") : t(l, "closed")} · ${pill(labelOf(r.borrower))}</li>`)}</ul>`}
+</div>
+<div class="card">
+  <div class="card-label">${es ? "Depósitos y retiros" : "Deposits and withdrawals"}</div>
+  <ul class="log">${deps.map((d) => html`<li>${d.name === "Deposit" ? (es ? "Depositó" : "Deposited") : es ? "Retiró" : "Withdrew"} ${pesos(BigInt(d.args.assets), l)} ${pill(labelOf(d.args.owner))}<br><a class="tx" href="${txUrl(d.tx)}">${d.tx.slice(0, 10)}…</a></li>`)}</ul>
+</div>
+<div class="card">
+  <div class="card-label">${es ? "Cambios de administración" : "Admin changes"}</div>
+  ${admin.length === 0 ? html`<p class="small muted" style="margin:0">${es ? "Ninguno desde el despliegue." : "None since deployment."}</p>` : html`<ul class="log">${admin.map((e: any) => html`<li>${e.name}<br><a class="tx" href="${txUrl(e.tx)}">${e.tx.slice(0, 10)}…</a></li>`)}</ul>`}
+</div>
+</div>
 </div>`,
       "/transparencia",
+      { eyebrow: t(l, "transparency"), heading: es ? html`Todo, <em>a la vista.</em>` : html`Everything, <em>in the open.</em>`, lede: es ? "Todo lo que mostramos sale de la cadena. Separamos lo nuestro de lo del jurado y de lo de cualquier otra persona." : "Everything shown comes from the chain. Our own activity is kept apart from the judges' and everyone else's.", wide: true },
     ),
   );
 });
@@ -115,33 +136,36 @@ app.get("/transparencia", async (c) => {
 app.get("/como-funciona", (c) => {
   const l = lang(c);
   const es = l === "es";
+  const steps = es
+    ? [
+        ["Dejás dólares, recibís pesos", "Dejás USDT en garantía y recibís pesos digitales de Ripio (wARS) en el mismo minuto, hasta el 60% de lo que dejás. Te sugerimos 50%."],
+        ["Pagás una tasa justa", `La tasa anual sigue el uso del fondo: 22% con el fondo libre, 36% con el 80% prestado, más 0,25% de comisión de apertura. Hoy el banco cobra ${percent(REFS.bankLoan.bps, l)} (${REFS.bankLoan.source}).`],
+        ["El agente cuida tu préstamo", "Si querés, firmás una regla una vez y el agente agrega tus dólares o paga con tus pesos cuando llega a riesgo, sin pasarse de tus límites. El contrato hace cumplir los límites, no nosotros."],
+        ["Pagás y recuperás", "Cuando pagás todo, tus dólares vuelven en la misma transacción. Cada préstamo pagado a tiempo baja tu tasa y sube tu límite la próxima vez."],
+        ["Si el dólar baja mucho", "Si tu préstamo pasa el 80% de lo que dejaste, se vende solo la parte de tu garantía necesaria para volver al 78%, más 5%. El resto sigue siendo tuyo."],
+      ]
+    : [
+        ["Leave dollars, get pesos", "Leave USDT as a guarantee and receive Ripio digital pesos (wARS) in the same minute, up to 60% of what you leave. We suggest 50%."],
+        ["Pay a fair rate", `The yearly rate follows pool use: 22% when idle, 36% at 80% lent, plus a 0.25% opening fee. The bank charges ${percent(REFS.bankLoan.bps, l)} today (${REFS.bankLoan.source}).`],
+        ["The agent looks after it", "If you want, sign a rule once and the agent adds your dollars or repays with your pesos when the loan reaches risk, never beyond your limits. The contract enforces the limits, not us."],
+        ["Repay and get it back", "When you repay in full, your dollars come back in the same transaction. Each loan repaid on time lowers your rate and raises your limit next time."],
+        ["If the dollar falls a lot", "If your loan passes 80% of what you left, only the part of the guarantee needed to get back to 78% is sold, plus 5%. The rest stays yours."],
+      ];
   return c.html(
     plain(
       l,
       t(l, "how"),
-      html`<h1>${t(l, "how")}</h1>
-<div class="card"><ol>
-${es
-  ? html`<li>Dejás dólares (USDT) en garantía. Recibís pesos digitales de Ripio (wARS) en el mismo minuto, hasta el 60% de lo que dejás (te sugerimos 50%).</li>
-<li>Pagás una tasa anual que depende del uso del fondo: 22% con el fondo libre, 36% con el 80% prestado. Hoy el banco cobra ${percent(REFS.bankLoan.bps, l)} (${REFS.bankLoan.source}).</li>
-<li>Si querés, firmás una regla una vez y el agente cuida el préstamo: agrega tus dólares o paga con tus pesos cuando llega a riesgo, sin pasarse de tus límites. El contrato hace cumplir los límites, no nosotros.</li>
-<li>Cuando pagás todo, tus dólares vuelven en la misma transacción. Cada préstamo pagado a tiempo baja tu tasa y sube tu límite la próxima vez.</li>
-<li>Si el dólar baja mucho (tu préstamo pasa el 80% de lo que dejaste), se vende sólo la parte de tu garantía necesaria para volver al 78%, más 5%. El resto sigue siendo tuyo.</li>`
-  : html`<li>You leave dollars (USDT) as a guarantee and receive Ripio digital pesos (wARS) in the same minute, up to 60% of what you leave (we suggest 50%).</li>
-<li>You pay a yearly rate that follows pool use: 22% when idle, 36% at 80% lent. The bank charges ${percent(REFS.bankLoan.bps, l)} today (${REFS.bankLoan.source}).</li>
-<li>If you want, you sign a rule once and the agent looks after the loan: it adds your dollars or repays with your pesos when the loan reaches risk, never beyond your limits. The contract enforces the limits, not us.</li>
-<li>When you repay in full, your dollars come back in the same transaction. Each loan repaid on time lowers your rate and raises your limit next time.</li>
-<li>If the dollar falls a lot (your loan passes 80% of what you left), only the part of the guarantee needed to get back to 78% is sold, plus 5%. The rest stays yours.</li>`}
-</ol></div>
-<h2>${es ? "Riesgos, en una línea cada uno" : "Risks, one line each"}</h2>
-<div class="card small"><ul>
-<li>${t(l, "borrowRisk")}</li>
-<li>${t(l, "lendRisk")}</li>
-<li>${es ? "Ripio puede pausar los pesos digitales; si pasa, tus dólares siguen siendo tuyos y el contrato tiene una salida para recuperarlos." : "Ripio can pause the digital pesos; if it does, your dollars stay yours and the contract has an exit to get them back."}</li>
-<li>${es ? "El precio sale del fondo wARS/USDT de Uniswap en Celo (promedio de 30 minutos); el agente lo compara con Binance y dolarapi y pausa préstamos nuevos si no coinciden." : "The price comes from the Uniswap wARS/USDT pool on Celo (30-minute average); the agent compares it with Binance and dolarapi and pauses new loans if they disagree."}</li>
-</ul></div>
-<p><a href="${href(l, "/transparencia")}">${t(l, "transparency")}</a> · <a href="https://github.com/Jennycruzy/adelanto">GitHub</a></p>`,
+      html`<ol class="log" style="margin-bottom:40px">${steps.map(([h, p]) => html`<li style="padding-bottom:28px"><h3 style="margin-bottom:8px">${h}</h3><p class="muted" style="margin:0">${p}</p></li>`)}</ol>
+<div class="card">
+  <div class="card-label">${es ? "Riesgos, en una línea cada uno" : "Risks, one line each"}</div>
+  <div class="row"><span>${t(l, "borrowRisk")}</span></div>
+  <div class="row"><span>${t(l, "lendRisk")}</span></div>
+  <div class="row"><span>${es ? "Ripio puede pausar los pesos digitales; si pasa, tus dólares siguen siendo tuyos y el contrato tiene una salida para recuperarlos." : "Ripio can pause the digital pesos; if it does, your dollars stay yours and the contract has an exit to get them back."}</span></div>
+  <div class="row"><span>${es ? "El precio sale del fondo wARS/USDT de Uniswap en Celo (promedio de 30 minutos); el agente lo compara con Binance y dolarapi y pausa préstamos nuevos si no coinciden." : "The price comes from the Uniswap wARS/USDT pool on Celo (30-minute average); the agent compares it with Binance and dolarapi and pauses new loans if they disagree."}</span></div>
+</div>
+<div class="cta-row" style="margin-top:28px"><a class="btn sol" href="${href(l, "/pedir")}">${t(l, "borrow")} <span class="arrow">→</span></a><a class="btn ghost" href="${href(l, "/transparencia")}">${t(l, "transparency")}</a></div>`,
       "/como-funciona",
+      { eyebrow: t(l, "how"), heading: es ? html`Cinco cosas <em>y listo.</em>` : html`Five things, <em>that's all.</em>`, lede: es ? "Sin letra chica: todo esto está escrito en contratos públicos en Celo." : "No small print: all of this is written in public contracts on Celo." },
     ),
   );
 });
@@ -169,30 +193,44 @@ app.get("/probar", async (c) => {
   const v = await poolView();
   const q = quoteFor(v, 1_000n, 7);
   const closed = loanRows().find((r) => !r.open);
+  const steps = es
+    ? [
+        html`<b>Sin billetera.</b> Mirá un préstamo real cerrado, con cada transacción. ${closed ? html`<a href="${href(l, `/prestamo/${closed.id}`)}">Préstamo #${closed.id} →</a>` : ""}`,
+        html`<b>Transparencia.</b> Lo nuestro, lo del jurado y lo de otras personas, por separado. <a href="${href(l, "/transparencia")}">Ver →</a>`,
+        html`<b>Pedí $ 1.000.</b> En MiniPay (Ajustes → Acerca de → tocá la versión hasta activar el modo desarrollador → Developer settings → Load test page → esta dirección) o cualquier billetera de Celo con unos US$ 1,25 en USDT.`,
+        html`<b>Cuidalo y pagalo.</b> En la página del préstamo, «Cuidar mi préstamo» y después «Pagar todo»: tus dólares vuelven en la misma transacción.`,
+        html`<b>Agentes.</b> <code class="tx">GET /api/public/rates</code> y <a href="/llms.txt">/llms.txt</a>. Código: <a href="https://github.com/Jennycruzy/adelanto">GitHub</a>.`,
+      ]
+    : [
+        html`<b>No wallet.</b> Look at a real closed loan, with every transaction. ${closed ? html`<a href="${href(l, `/prestamo/${closed.id}`)}">Loan #${closed.id} →</a>` : ""}`,
+        html`<b>Transparency.</b> Ours, the judges' and other people's, apart. <a href="${href(l, "/transparencia")}">See →</a>`,
+        html`<b>Borrow ARS 1,000.</b> In MiniPay (Settings → About → tap the version until developer mode is on → Developer settings → Load test page → this address) or any Celo wallet with about US$1.25 in USDT.`,
+        html`<b>Protect it, repay it.</b> On the loan page, “Look after my loan”, then “Repay all”: your dollars come back in the same transaction.`,
+        html`<b>Agents.</b> <code class="tx">GET /api/public/rates</code> and <a href="/llms.txt">/llms.txt</a>. Code: <a href="https://github.com/Jennycruzy/adelanto">GitHub</a>.`,
+      ];
   return c.html(
-    layout(
+    plain(
       l,
       t(l, "tryIt"),
-      html`<h1>${t(l, "tryIt")}</h1>
-<p class="muted">${es ? "Cinco minutos, con plata real y chica. Todo queda en la cadena y en esta página." : "Five minutes, with real and small money. Everything stays on chain and on this site."}</p>
-<div class="card"><ol>
-  <li>${es ? "Sin billetera: mirá un préstamo real cerrado, con cada transacción." : "No wallet: look at a real closed loan, with every transaction."} ${closed ? html`<a href="${href(l, `/prestamo/${closed.id}`)}">#${closed.id}</a>` : ""}</li>
-  <li>${es ? "Mirá la transparencia: lo nuestro, lo del jurado y lo de otras personas, por separado." : "See the transparency page: ours, the judges' and other people's, apart."} <a href="${href(l, "/transparencia")}">${t(l, "transparency")}</a></li>
-  <li>${es ? "Con MiniPay (Ajustes → Acerca de → tocá la versión hasta activar el modo desarrollador → Developer settings → Load test page → esta dirección) o cualquier billetera de Celo con unos US$ 1,25 en USDT: pedí $ 1.000 abajo." : "With MiniPay (Settings → About → tap the version until developer mode is on → Developer settings → Load test page → this address) or any Celo wallet with about US$1.25 in USDT: borrow ARS 1,000 below."}</li>
-  <li>${es ? "En la página del préstamo, activá «Cuidar mi préstamo» y después «Pagar todo»: tus dólares vuelven en la misma transacción." : "On the loan page, turn on “Look after my loan”, then “Repay all”: your dollars come back in the same transaction."}</li>
-  <li>${es ? "Agentes: GET /api/public/rates y /llms.txt. Código: github.com/Jennycruzy/adelanto." : "Agents: GET /api/public/rates and /llms.txt. Code: github.com/Jennycruzy/adelanto."}</li>
-</ol></div>
+      html`<div class="split">
+<div class="card"><div class="card-label">${es ? "Cinco minutos" : "Five minutes"}</div><ul class="log">${steps.map((s) => html`<li style="padding-bottom:22px">${s}</li>`)}</ul></div>
+<div>
 ${q.ok
-  ? html`<div class="card">
-  <div class="row"><span>${t(l, "youGet")}</span><span class="v">${pesos(q.received, l)}</span></div>
-  <div class="row"><span>${t(l, "youLeave")}</span><span class="v">${dollars(q.collateral, l)}</span></div>
+  ? html`<div class="card" style="background:var(--sol-wash);border-color:transparent">
+  <div class="card-label">${t(l, "youGet")}</div>
+  <div class="figure">${pesos(q.received, l)}</div>
+  <div class="row" style="margin-top:12px"><span>${t(l, "youLeave")}</span><span class="v">${dollars(q.collateral, l)}</span></div>
   <div class="row"><span>${t(l, "rateNow")}</span><span class="v">${percent(q.rateBps, l)}</span></div>
   <div class="row"><span>${t(l, "owedAtEnd")} (7 ${t(l, "days")})</span><span class="v">${pesos(q.owedAtTerm, l)}</span></div>
   <div id="status"></div>
-  <button class="btn" data-action="borrow" data-pesos="${q.pesos.toString()}" data-days="7" data-collateral="${q.collateral.toString()}" data-maxrate="${q.maxRateBps.toString()}" data-lang="${l}">${es ? "Pedir $ 1.000" : "Borrow ARS 1,000"}</button>
+  <button class="btn block" style="margin-top:18px" data-action="borrow" data-pesos="${q.pesos.toString()}" data-days="7" data-collateral="${q.collateral.toString()}" data-maxrate="${q.maxRateBps.toString()}" data-lang="${l}">${es ? "Pedir $ 1.000" : "Borrow ARS 1,000"} <span class="arrow">→</span></button>
+  <p class="small muted" style="text-align:center;margin:12px 0 0">${es ? "Una firma gratis y una confirmación." : "One free signature and one confirmation."}</p>
 </div>`
-  : html`<div class="card notice">${es ? "Ahora no hay lugar para un préstamo de prueba; volvé en un rato." : "There is no room for a test loan right now; try again shortly."}</div>`}`,
-      { path: "/probar", wallet: true },
+  : html`<div class="notice">${es ? "Ahora no hay lugar para un préstamo de prueba; volvé en un rato." : "There is no room for a test loan right now; try again shortly."}</div>`}
+</div>
+</div>`,
+      "/probar",
+      { eyebrow: t(l, "tryIt"), heading: es ? html`Probalo con <em>plata real y chica.</em>` : html`Try it with <em>small, real money.</em>`, lede: es ? "Todo queda en la cadena y en esta página." : "Everything stays on chain and on this site.", wide: true, wallet: true },
     ),
   );
 });
