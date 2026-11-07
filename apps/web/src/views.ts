@@ -11,7 +11,7 @@ import { REFS, dep, labelOf, networkCostUsd, type LoanView, type PoolView } from
 type H = HtmlEscapedString | Promise<HtmlEscapedString>;
 
 // What the wallet code may talk to: the deployed contracts and the two tokens, nothing else.
-const walletCfg = JSON.stringify({ code: dep.attributionCode, pool: dep.pool, guard: dep.guard, usdt: CELO.usdt, wars: CELO.wars, rpc: "https://forno.celo.org" });
+const walletCfg = JSON.stringify({ code: dep.attributionCode, pool: dep.pool, guard: dep.guard, usdt: CELO.usdt, wars: CELO.wars, rpc: process.env.WEB_CLIENT_RPC ?? "https://forno.celo.org" });
 const AGENT = "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1";
 const REPO = "https://github.com/Jennycruzy/adelanto";
 
@@ -403,6 +403,8 @@ ${loan.open
   <div class="row"><span>${t(lang, "due")}</span><span class="v">${date(loan.dueAt, lang)}</span></div>
   <div id="status"></div>
   <button class="btn sol block" style="margin-top:18px" data-action="repayAll" data-loan="${loan.id.toString()}" data-lang="${lang}">${t(lang, "payAll")} <span class="arrow">→</span></button>
+  <label class="small" for="loan-amount" style="display:block;margin-top:14px">${es ? "Para pagar una parte (pesos) o agregar dólares, escribí el monto:" : "To repay part (pesos) or add dollars, enter the amount:"}</label>
+  <input id="loan-amount" inputmode="decimal" autocomplete="off" style="width:100%;margin-top:6px">
   <div class="btns">
     <button class="btn ghost" data-action="repayPart" data-loan="${loan.id.toString()}" data-lang="${lang}">${t(lang, "payPart")}</button>
     <button class="btn ghost" data-action="addCollateral" data-loan="${loan.id.toString()}" data-lang="${lang}">${t(lang, "addDollars")}</button>

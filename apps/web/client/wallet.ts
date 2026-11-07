@@ -32,6 +32,7 @@ const poolAbi = parseAbi([
   "function borrowWithPermit(uint256 collateral, uint256 pesos, uint16 termDays, uint256 maxRateBps, uint256 deadline, uint8 v, bytes32 r, bytes32 s) returns (uint256)",
   "function repayWithPermit(uint256 loanId, uint256 pesos, uint256 deadline, uint8 v, bytes32 r, bytes32 s) returns (uint256)",
   "function repay(uint256 loanId, uint256 pesos) returns (uint256)",
+  "function repayWithSwap(uint256 loanId, uint256 usdtIn, uint256 minPesosOut) returns (uint256)",
   "function addCollateral(uint256 loanId, uint256 amount)",
   "function deposit(uint256 assets, address receiver) returns (uint256)",
   "function withdraw(uint256 assets, address receiver, address holder) returns (uint256)",
@@ -61,6 +62,9 @@ const W = {
     howMuchPesos: "¿Cuántos pesos querés pagar?",
     howMuchDollars: "¿Cuántos dólares querés agregar?",
     amount: "Escribí un monto.",
+    amountAbove: "Escribí el monto arriba de los botones.",
+    orDollars: (usd: string) => `Tampoco alcanzan tus dólares sueltos para cubrir la diferencia (hacen falta ${usd}).`,
+    gap: (pesos: string, usd: string) => `Te faltan ${pesos}: los cubrimos con ${usd} de tus dólares sueltos…`,
     none: "No tenés pesos depositados.",
     mine: (dep: string, wars: string) => `Tu depósito: ${dep}. Pesos en tu billetera: ${wars} (MiniPay no los muestra en su saldo).`,
   },
@@ -80,6 +84,9 @@ const W = {
     howMuchPesos: "How many pesos do you want to repay?",
     howMuchDollars: "How many dollars do you want to add?",
     amount: "Enter an amount.",
+    amountAbove: "Enter the amount above the buttons.",
+    orDollars: (usd: string) => `Your spare dollars do not cover the gap either (${usd} needed).`,
+    gap: (pesos: string, usd: string) => `You are ${pesos} short: covering it with ${usd} of your spare dollars…`,
     none: "You have no pesos deposited.",
     mine: (dep: string, wars: string) => `Your deposit: ${dep}. Pesos in your wallet: ${wars} (MiniPay does not show them in its balance).`,
   },
@@ -126,8 +133,15 @@ const ALLOWED = () => new Set([cfg.pool, cfg.guard, cfg.usdt, cfg.wars].map((a) 
 async function send(to: Address, data: Hex) {
   if (!ALLOWED().has(to.toLowerCase())) throw new Error("unexpected destination");
   const from = await connect();
+  const input = tagged(data);
+  // Our own gas limit, with room: a wallet's estimate runs against the last block, where the pool's interest is
+  // already brought up to date, but the transaction lands in the next one and pays for that update again (seen as
+  // an out-of-gas close right after a swap). The extra 80k also covers paying the network fee in a stablecoin
+  // (MiniPay). Only the gas actually used is charged. An estimate that reverts stops here, before any signature.
+  const est = await pub.estimateGas({ account: from, to, data: input });
+  const gas = (est * 125n) / 100n + 80_000n;
   status(w.confirm);
-  const hash: Hex = await eth.request({ method: "eth_sendTransaction", params: [{ from, to, data: tagged(data) }] });
+  const hash: Hex = await eth.request({ method: "eth_sendTransaction", params: [{ from, to, data: input, gas: `0x${gas.toString(16)}` }] });
   status(w.waiting);
   const receipt = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 });
   if (receipt.status !== "success") throw new Error(`reverted ${hash}`);
@@ -203,23 +217,47 @@ async function repay(loanId: bigint, pesos: bigint) {
 }
 
 async function repayAll(el: HTMLElement) {
+  const me = await connect();
   const loanId = BigInt(el.dataset.loan!);
   const debt = await pub.readContract({ address: cfg.pool, abi: poolAbi, functionName: "debtOf", args: [loanId] });
   // Interest grows by the second; allow 0.1% more. The pool takes only what is owed.
-  await repay(loanId, debt + debt / 1000n + 1n);
+  const need = debt + debt / 1000n + 1n;
+  const have = await balance(cfg.wars, me);
+  if (have >= need) return repay(loanId, need);
+  // The loan pays out pesos minus the opening fee and owes pesos plus interest, so a borrower who only holds the
+  // borrowed pesos is a few pesos short. Cover the gap from the wallet's spare dollars: the pool swaps them for pesos
+  // in the same transaction it repays, and sends back any pesos beyond the debt.
+  const gap = need - have;
+  const rates = await fetch("/api/public/rates").then((x) => x.json());
+  const spot = BigInt(rates.pesosPerDollar.spot); // pesos (18 decimals) per 1 USDT
+  const usdtIn = (gap * 10n ** 6n * 103n) / (spot * 100n) + 1n; // 3% for price movement and the pool fee
+  const usdt = await balance(cfg.usdt, me);
+  if (usdt < usdtIn) throw new Error(w.lowWars(fmtPesos(need), fmtPesos(have)) + " " + w.orDollars(fmtUsd(usdtIn)));
+  status(w.gap(fmtPesos(gap), fmtUsd(usdtIn)));
+  await approveExact(cfg.usdt, cfg.pool, usdtIn);
+  await send(cfg.pool, encodeFunctionData({ abi: poolAbi, functionName: "repayWithSwap", args: [loanId, usdtIn, gap] }));
+  if (have === 0n) {
+    status(w.done, "ok");
+    setTimeout(() => location.reload(), 1200);
+    return;
+  }
+  await repay(loanId, have);
+}
+
+function loanAmount(): string {
+  const v = (document.getElementById("loan-amount") as HTMLInputElement | null)?.value ?? "";
+  if (!v.trim()) throw new Error(w.amountAbove);
+  return v;
 }
 
 async function repayPart(el: HTMLElement) {
-  const v = prompt(w.howMuchPesos);
-  if (!v) return;
-  const n = v.replace(/[^0-9]/g, "");
+  const n = loanAmount().replace(/[^0-9]/g, "");
   if (!n) throw new Error(w.amount);
   await repay(BigInt(el.dataset.loan!), BigInt(n) * 10n ** 18n);
 }
 
 async function addCollateral(el: HTMLElement) {
-  const v = prompt(w.howMuchDollars);
-  if (!v) return;
+  const v = loanAmount();
   const amount = parseUnits(v.replace(",", ".").replace(/[^0-9.]/g, "") || "0", 6);
   if (amount === 0n) throw new Error(w.amount);
   const me = await connect();

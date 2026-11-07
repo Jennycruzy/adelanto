@@ -56,7 +56,10 @@ Then:
    another one: within a few minutes the agent repays that much of your loan (inside your daily cap), and its
    message on the loan page quotes your rule.
 3. Press **Pagar todo** (Repay all): one free signature (a wARS permit) and one transaction repay the loan, and your
-   dollars come back in the same transaction.
+   dollars come back in the same transaction. The loan pays out pesos minus the opening fee and owes pesos plus
+   interest, so if your wallet holds only the borrowed pesos it is a few pesos short: the page then covers that gap
+   with a few cents of your spare USD₮ (one approval and one swap-and-repay transaction through the pool) before the
+   rest, and sends back any pesos beyond the debt.
 4. Open [**Mi historial**](https://adelanto-99-80-93-71.sslip.io/historial) (in MiniPay it opens on your wallet; elsewhere press **Usar mi
    billetera** or paste an address). It reads your record from `CreditBook`: your step (0 to 3), what each step
    unlocks, how many on-time loans the next one needs, and your loans with what the agent did on them. A loan held
