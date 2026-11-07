@@ -11,7 +11,9 @@
 Live on Celo mainnet: **[adelanto-99-80-93-71.sslip.io](https://adelanto-99-80-93-71.sslip.io)** ·
 [Try it in five minutes](https://adelanto-99-80-93-71.sslip.io/probar) ·
 [Transparency](https://adelanto-99-80-93-71.sslip.io/transparencia) ·
-[llms.txt](https://adelanto-99-80-93-71.sslip.io/llms.txt) · ERC-8004 agent **#10043** ·
+[Mi historial](https://adelanto-99-80-93-71.sslip.io/historial) ·
+[llms.txt](https://adelanto-99-80-93-71.sslip.io/llms.txt) · [x402](https://adelanto-99-80-93-71.sslip.io/x402) ·
+ERC-8004 agent **#10043** ·
 [Judges' guide](docs/judges.md)
 
 ## Check it yourself
@@ -58,15 +60,21 @@ ADELANTO is the fourth choice:
    at 80% use, plus a 0.25% opening fee. Every quote shows the bank's rate next to ours, in pesos.
 3. **Keep your dollars.** What you owe is in pesos. If the peso keeps falling, your debt shrinks in dollars while
    your dollars stay dollars.
-4. **Let the agent look after it.** Sign one rule ("never let my loan reach risk; use up to US$ 20 more a week").
-   The agent adds your own dollars or repays with your own pesos before the loan gets near a sale, repays when
-   pesos arrive, and quotes your rule in every action it takes. The `LoanGuard` contract enforces the limits, not
-   our server.
+4. **Tell the agent what to do, in your own words.** Write or dictate a rule in Spanish (*"Cuando me entren pesos
+   de ventas, pagá el préstamo con eso. Nunca vendas mis dólares."*). ADELANTO turns it into daily caps and reads
+   every number back before you sign; if an amount is missing it asks one question, and it never invents a number.
+   The caps go on chain in `LoanGuard`, with the hash of your exact words. From then on the agent adds your own
+   dollars or repays with your own pesos before the loan nears a sale, repays when pesos arrive, and quotes your
+   rule in every action it takes. The contract enforces the limits, not our server.
 5. **Lend pesos and earn.** Anyone with wARS can lend into the pool and withdraw any time there are free pesos.
    At 80% use lenders earn about 25.9% a year, above the banks' BADLAR deposit rate (22.3%).
 6. **Build a credit record you own.** Every loan repaid on time is written on Celo by `CreditBook`. After one,
-   three and six on-time loans, the rate drops by one to three points and the limit rises. Any app or agent can
-   read it.
+   three and six on-time loans, the rate drops by one to three points and the limit rises.
+   [Mi historial](https://adelanto-99-80-93-71.sslip.io/historial) shows any wallet's step, what the next step
+   unlocks and how many loans it needs; MiniPay opens it on your own wallet.
+7. **Other agents pay for what ADELANTO knows.** The peso rate checked against two outside sources, a firm borrow
+   quote, and a wallet's credit record are sold over **x402**, settled by Celo's own facilitator in wARS or USD₮,
+   straight into the agent's wallet.
 
 ### An example: Lucía
 
@@ -91,12 +99,15 @@ can lend today is on the [home page](https://adelanto-99-80-93-71.sslip.io) and 
 | **Any Celo wallet** | The same site in a browser with MetaMask, Valora or Rabby. |
 | **Lenders** | [`/prestar`](https://adelanto-99-80-93-71.sslip.io/prestar): deposit wARS, see the rate, withdraw. |
 | **Judges** | [`/probar`](https://adelanto-99-80-93-71.sslip.io/probar): a real 1,000-peso loan against about US$ 1, then repay it. [Guide](docs/judges.md). |
-| **Agents and scripts** | [`llms.txt`](https://adelanto-99-80-93-71.sslip.io/llms.txt), `/api/public/rates`, `/api/loan/:id`, `/api/me/:address`, and the contracts directly. |
+| **Borrowers checking their record** | [`/historial`](https://adelanto-99-80-93-71.sslip.io/historial): credit step, what it unlocks, the wallet's loans and what the agent did on them. |
+| **Agents and scripts** | [`llms.txt`](https://adelanto-99-80-93-71.sslip.io/llms.txt), `/api/public/rates`, `/api/loan/:id`, `/api/me/:address`, and the contracts directly. Paid over x402: `/x402/peso-rate`, `/x402/quote`, `/x402/credit/:address` ([catalog](https://adelanto-99-80-93-71.sslip.io/x402)). |
 
 ## What the agent does on its own
 
-The agent is one Node service with its own wallet (`0xB93A…B2d1`, ERC-8004 #10043). It reads every loan from the
-chain at the safe head, checks block-hash continuity, and decides every 60 seconds.
+The agent is one Node service with its own wallet (`0xB93A…B2d1`, ERC-8004 #10043), running live on Celo mainnet.
+It reads every loan from the chain at the safe head (or at most 600 blocks, about ten minutes, behind the tip when
+Celo's `safe` tag stalls), checks block-hash continuity, and decides every 60 seconds. The home page shows when it
+last checked and what it did last, with the transactions.
 
 | Job | When | What it does | What binds it |
 |---|---|---|---|
@@ -108,7 +119,14 @@ chain at the safe head, checks block-hash continuity, and decides every 60 secon
 | **Keep people told** | Risk, due in 3 days, due, late, the pool running low on free pesos | One Spanish sentence per change, with hysteresis so it never nags | — |
 
 Every action records its trigger, the inputs (price, health, limits), the decision, the transaction and one
-sentence in Spanish: *"Tu regla: «…». Agregué US$ 3 porque tu préstamo llegó al 71%."*
+sentence in Spanish: *"Tu regla: «…». Agregué US$ 3 porque tu préstamo llegó al 71%."* The agent quotes the words
+only when their keccak256 equals the rule hash the borrower signed on chain, so nobody can put words in their mouth.
+
+**From words to limits.** The rule parser (`packages/core/src/rule.ts`) reads rioplatense Spanish: "lucas", "mil",
+"30 lucas por semana", "por dos meses", "hasta fin de mes", "que no me vendan los dólares", "frená todo". Every
+number in the result comes from the borrower's words or from the loan itself; amounts are clamped to the loan's
+debt and guarantee and to 180 days, and the read-back says when a cap was lowered and why. It is rules, not a
+language model, so the same words always give the same limits. Tested on 60 phrasings and 3,000 random rules.
 
 **What it can never do**, enforced by `LoanGuard` and proven by tests: send money anywhere but the borrower's own
 loan, borrow or open a loan for anyone, change limits, act after the rule expires, or act while the price module
@@ -129,9 +147,9 @@ process lock) is fixed and has a two-process test.
 | Criterion | What we show |
 |---|---|
 | **Works on mainnet with a real wFIAT token** | The loan is wARS itself: lend, borrow, add, take back, repay in pesos, repay with dollars and withdraw, all on Celo mainnet, all tagged ([audit](evidence/attribution-audit.json)). |
-| **Real use of wFIAT and the Celo stack** | wARS is what is borrowed and lent; MiniPay with USDT gas; ERC-8004 identity #10043; ERC-8021 attribution on every transaction; Ripio's bridge between Celo and Ethereum; the Celo wARS/USDT Uniswap v3 pool as the price; USDT and wARS EIP-2612 permits. |
-| **The agent is autonomous and useful** | Six jobs above, each bound by limits the borrower signed and the contract enforces; it saves the borrower money at the bank's expense and saves them from a full liquidation. |
-| **A real person can use it** | Spanish first, pesos everywhere, three taps to a first loan in MiniPay, no crypto words on screen, a US$ 1 loan to try. |
+| **Real use of wFIAT and the Celo stack** | wARS is what is borrowed and lent; MiniPay with USDT gas; ERC-8004 identity #10043; ERC-8021 attribution on every transaction; x402 through Celo's facilitator, paid in wARS by Permit2 with the permit's gas sponsored; Ripio's bridge between Celo and Ethereum; the Celo wARS/USDT Uniswap v3 pool as the price; USDT and wARS EIP-2612 permits. |
+| **The agent is autonomous and useful** | Six jobs above, each bound by limits the borrower signed and the contract enforces. On mainnet it repaid loan #2 on its own when pesos arrived, quoting the borrower's rule ([tx](https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a)). It saves the borrower money at the bank's expense and saves them from a full liquidation, and other agents pay it for answers over x402. |
+| **A real person can use it** | Spanish first, pesos everywhere, three taps to a first loan in MiniPay, no crypto words on screen, the rule in your own words or by voice, a credit record page, a US$ 1 loan to try. |
 | **Impact for LatAm** | Credit in pesos for people who save in dollars, the gap between a 64.63% bank loan and selling your savings. Lenders earn above BADLAR. The credit record belongs to the borrower. |
 
 ## Contracts (Celo mainnet, chain 42220)
@@ -179,6 +197,13 @@ Things we learned on mainnet that others building here may need. Full list: [doc
 - **Public RPC nodes behind a load balancer lag**: a read right after a write can come from an older block, and
   gas estimates from a stale state ran out of gas. We read at one fixed block per decision and pad Ethereum gas.
 - **Anvil's well-known test keys have EIP-7702 code on Celo mainnet**, so permit tests on a fork need fresh keys.
+- **Celo's `safe` block tag can stall for days.** It sat 335,519 blocks (about 3.9 days) behind the tip while the
+  chain kept moving, so an agent that only reads at `safe` never sees a payment. Ours reads at the safe head or
+  600 blocks behind the tip, whichever is newer.
+- **x402 on Celo:** wARS settles by Permit2 and needs the `eip2612GasSponsoring` extension on the route, or a
+  first-time payer gets `412 permit2_allowance_required`; with it a wARS buyer needs no CELO at all. The
+  facilitator sends the settlement from its own wallet, so the seller's attribution code goes in the
+  builder-code extension. `@x402/hono` 2.28 needs Hono 4.13 or later (`hono/route`).
 - **Fixed upstream:** Celo's MCP server returned no stablecoin balances on Sepolia and zero balances on mainnet.
   Our fix with tests is [celo-org/celo-mcp#49](https://github.com/celo-org/celo-mcp/pull/49).
 
@@ -191,11 +216,11 @@ contracts/          Solidity 0.8.28, Foundry: PesoPool, PriceModule, LoanGuard, 
                     ethereum/MorphoProxy(+Factory); unit, fork and invariant tests
 packages/chain      Tagged viem clients (refuse to start without the attribution tag), ABIs checked against the
                     compiler, TaggedSender (tag, simulate, sign, record, broadcast)
-packages/core       Loan health, guard decisions, quotes, rate watch, Spanish and English sentences
+packages/core       Loan health, guard decisions, quotes, rate watch, the Spanish rule parser, sentences
 packages/price      Binance and dolarapi readers; the pause/resume verdict
 apps/agent          The agent: indexer, decisions, sender, notices, SQLite state, OS locks
-apps/web            Hono server-rendered site (Spanish/English), wallet client with permits, public API
-scripts/            Tagged Celo deploy, ERC-8004 registration, attribution audit
+apps/web            Hono server-rendered site (Spanish/English), wallet client with permits, public API, x402
+scripts/            Tagged Celo deploy, ERC-8004 registration, attribution audit, x402 example buyer
 deployments/        Every deployed address with its tagged transaction
 evidence/           Attribution audit output
 agent/              ERC-8004 agent card
@@ -207,7 +232,7 @@ Node 24 and Foundry.
 
 ```sh
 npm ci
-npm test                                   # 137 TypeScript tests, offline
+npm test                                   # 222 TypeScript tests, offline
 cd contracts && forge test                 # 227 Solidity tests; fork tests need CELO_RPC_URL and ETH_RPC_URL
 npm run audit:attribution                  # re-checks the tag on every transaction from our wallets and contracts
 ```
@@ -234,7 +259,7 @@ FORK_RPC=http://127.0.0.1:8548 AGENT_KEY_FILE=... ATTRIBUTION_TAG=celo_0e96c1ff3
 | Solidity unit | 25 `LoanGuard`, 38 `PesoPool`, 22 `PriceModule`, plus `CreditBook`, `GentleKeeper`, `TickPrice` | Every external function, every role, each thing the agent can never do |
 | Solidity fork | Celo, Ethereum, `GentleKeeper` | The deployed tokens, the real Uniswap pool, Morpho, permits |
 | Invariants | 6 properties, 10,000 runs | Lenders' pesos and borrowers' dollars always add up; no privileged transfer |
-| TypeScript | 137 | ABIs vs the compiler, health maths (10,000 random loans), guard decisions, credit ledger, price verdict, quotes, notices, the two-process lock |
+| TypeScript | 222 | ABIs vs the compiler, health maths (10,000 random loans), guard decisions, credit ledger, price verdict, quotes, notices, the two-process lock, the rule parser (60 phrasings, 3,000 random rules, no invented numbers), the index head |
 | Fork rehearsal | 8 tagged transactions | The agent end to end against the deployed contracts |
 
 Static analysis (slither) findings and our answers are in [docs/security.md](docs/security.md#static-analysis-slither-0104).
