@@ -82,8 +82,8 @@ real processes.
 
 **Reorgs.** The indexer follows the chain's safe head, checks that each block's parent hash matches what it stored,
 and rewinds if not. Celo's `safe` tag can stall for days while the chain moves (we saw it 335,519 blocks, about 3.9
-days, behind the tip), so the head the indexer uses is the newer of the safe head and the tip minus 600 blocks
-(about ten minutes), which is still well past the few blocks a reorg would touch (`indexHead`, tested in
+days, behind the tip), so the head the indexer uses is the newer of the safe head and the tip minus 60 blocks
+(about a minute); a reorg past that is caught by the parent-hash check, which rewinds (`indexHead`, tested in
 `apps/agent/test/indexhead.test.ts`).
 
 **Watch and live.** `AGENT_MODE=watch` (the default) indexes, decides and logs every decision with its reason, and

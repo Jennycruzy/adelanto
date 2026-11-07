@@ -61,13 +61,13 @@ export function followedBorrowers(db: Db): Address[] {
   return (db.prepare("SELECT DISTINCT json_extract(args, '$.borrower') AS b FROM events WHERE name = 'LimitsSet'").all() as any[]).map((r) => getAddress(r.b));
 }
 
-/** How far behind the tip the index may stay (10 minutes of Celo blocks). */
-export const MAX_INDEX_LAG = 600n;
+/** How far behind the tip the index may stay (one minute of Celo blocks). */
+export const MAX_INDEX_LAG = 60n;
 
 /**
- * The block the index may reach: the node's safe head, but never more than 10 minutes behind the tip. On Celo the
+ * The block the index may reach: the node's safe head, but never more than a minute behind the tip. On Celo the
  * "safe" tag can stall for days (seen at 335,519 blocks behind) and the agent would then never see a payment;
- * a reorg deeper than 10 minutes is caught by checkContinuity, which rewinds and redoes the range.
+ * a reorg deeper than that is caught by checkContinuity, which rewinds and redoes the range.
  */
 export function indexHead(tip: bigint, safe: bigint | null): bigint {
   const floor = tip > MAX_INDEX_LAG ? tip - MAX_INDEX_LAG : 0n;

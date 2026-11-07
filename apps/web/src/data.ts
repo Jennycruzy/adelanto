@@ -182,7 +182,7 @@ function agentDb() {
   return db;
 }
 
-export type EventRow = { tx: string; block: number; name: string; args: any };
+export type EventRow = { tx: string; block: number; name: string; args: any; byAgent?: boolean };
 
 export function loanEvents(id: bigint): EventRow[] {
   const d = agentDb();
@@ -193,7 +193,13 @@ export function loanEvents(id: bigint): EventRow[] {
        ORDER BY block, log_index`,
     )
     .all(id.toString()) as any[];
-  return rows.map((r) => ({ tx: r.tx, block: Number(r.block), name: r.name, args: JSON.parse(r.args) }));
+  const all = rows.map((r) => ({ tx: r.tx, block: Number(r.block), name: r.name, args: JSON.parse(r.args) }) as EventRow);
+  // The agent's own events (LoanGuard) ride on the pool event of the same transaction: one line, marked as the agent's.
+  const GUARD = new Set(["AutoRepaid", "Protected", "ProtectedByRepay"]);
+  const byAgent = new Set(all.filter((e) => GUARD.has(e.name)).map((e) => e.tx));
+  return all
+    .filter((e) => !GUARD.has(e.name) || !all.some((o) => o.tx === e.tx && !GUARD.has(o.name)))
+    .map((e) => (byAgent.has(e.tx) && !GUARD.has(e.name) ? { ...e, byAgent: true } : e));
 }
 
 export function agentActions(loanId?: bigint, limit = 20) {

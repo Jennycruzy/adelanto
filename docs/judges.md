@@ -14,8 +14,8 @@ Cuando me entren pesos de ventas, pagá el préstamo con eso. Nunca vendas mis d
 reached that wallet, the agent repaid the loan on its own, through `LoanGuard`, and its second action quotes the
 rule word for word ([`0x1436a0e4…`](https://celoscan.io/tx/0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b), [`0xcd28659c…`](https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a)).
 
-Open [`/probar`](https://adelanto-99-80-93-71.sslip.io/probar). The first step links a real closed loan
-([loan #1](https://adelanto-99-80-93-71.sslip.io/prestamo/1)). Its page shows the pesos borrowed, the dollars left
+Open [`/probar`](https://adelanto-99-80-93-71.sslip.io/probar). The first step links the newest closed loan the agent
+acted on. Every loan page, [loan #1](https://adelanto-99-80-93-71.sslip.io/prestamo/1) included, shows the pesos borrowed, the dollars left
 as guarantee, the rate, every transaction with a link to the explorer, and the state read from chain.
 
 The same loan as JSON, read from chain on each request:
@@ -91,7 +91,7 @@ Repo:
 
 ```sh
 git clone https://github.com/Jennycruzy/adelanto && cd adelanto
-npm ci && npm test                          # 225 tests, offline
+npm ci && npm test                          # 226 tests, offline
 npm run audit:attribution                   # re-checks the tag on every transaction of ours
 cd contracts && forge test --no-match-path 'test/fork/*'   # Solidity tests without an RPC
 ```

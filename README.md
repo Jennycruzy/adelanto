@@ -105,7 +105,7 @@ can lend today is on the [home page](https://adelanto-99-80-93-71.sslip.io) and 
 ## What the agent does on its own
 
 The agent is one Node service with its own wallet (`0xB93A…B2d1`, ERC-8004 #10043), running live on Celo mainnet.
-It reads every loan from the chain at the safe head (or at most 600 blocks, about ten minutes, behind the tip when
+It reads every loan from the chain at the safe head (or at most 60 blocks, about a minute, behind the tip when
 Celo's `safe` tag stalls), checks block-hash continuity, and decides every 60 seconds. The home page shows when it
 last checked and what it did last, with the transactions.
 
@@ -199,7 +199,7 @@ Things we learned on mainnet that others building here may need. Full list: [doc
 - **Anvil's well-known test keys have EIP-7702 code on Celo mainnet**, so permit tests on a fork need fresh keys.
 - **Celo's `safe` block tag can stall for days.** It sat 335,519 blocks (about 3.9 days) behind the tip while the
   chain kept moving, so an agent that only reads at `safe` never sees a payment. Ours reads at the safe head or
-  600 blocks behind the tip, whichever is newer.
+  60 blocks behind the tip, whichever is newer.
 - **x402 on Celo:** wARS settles by Permit2 and needs the `eip2612GasSponsoring` extension on the route, or a
   first-time payer gets `412 permit2_allowance_required`; with it a wARS buyer needs no CELO at all. The
   facilitator sends the settlement from its own wallet, so the seller's attribution code goes in the
@@ -232,7 +232,7 @@ Node 24 and Foundry.
 
 ```sh
 npm ci
-npm test                                   # 225 TypeScript tests, offline
+npm test                                   # 226 TypeScript tests, offline
 cd contracts && forge test                 # 227 Solidity tests; fork tests need CELO_RPC_URL and ETH_RPC_URL
 npm run audit:attribution                  # re-checks the tag on every transaction from our wallets and contracts
 ```
@@ -259,7 +259,7 @@ FORK_RPC=http://127.0.0.1:8548 AGENT_KEY_FILE=... ATTRIBUTION_TAG=celo_0e96c1ff3
 | Solidity unit | 25 `LoanGuard`, 38 `PesoPool`, 22 `PriceModule`, plus `CreditBook`, `GentleKeeper`, `TickPrice` | Every external function, every role, each thing the agent can never do |
 | Solidity fork | Celo, Ethereum, `GentleKeeper` | The deployed tokens, the real Uniswap pool, Morpho, permits |
 | Invariants | 6 properties, 10,000 runs | Lenders' pesos and borrowers' dollars always add up; no privileged transfer |
-| TypeScript | 225 | ABIs vs the compiler, health maths (10,000 random loans), guard decisions, credit ledger, price verdict, quotes, notices, the two-process lock, the rule parser (63 phrasings, 3,000 random rules, no invented numbers), the index head |
+| TypeScript | 226 | ABIs vs the compiler, health maths (10,000 random loans), guard decisions, credit ledger, price verdict, quotes, notices, the two-process lock, the rule parser (63 phrasings, 3,000 random rules, no invented numbers), the index head |
 | Fork rehearsal | 8 tagged transactions | The agent end to end against the deployed contracts |
 
 Static analysis (slither) findings and our answers are in [docs/security.md](docs/security.md#static-analysis-slither-0104).

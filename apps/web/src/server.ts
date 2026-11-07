@@ -224,28 +224,32 @@ app.get("/probar", async (c) => {
   const es = l === "es";
   const v = await poolView();
   const q = quoteFor(v, 1_000n, 7);
-  const closed = loanRows().find((r) => !r.open);
+  // the example: the newest closed loan the agent acted on, else the newest closed loan
+  const closedRows = loanRows().filter((r) => !r.open);
+  const closed = closedRows.find((r) => agentActions(BigInt(r.id), 1).length > 0) ?? closedRows[0];
   const steps = es
     ? [
-        html`<b>Sin billetera.</b> Mirá un préstamo real cerrado, con cada transacción. ${closed ? html`<a href="${href(l, `/prestamo/${closed.id}`)}">Préstamo #${closed.id} →</a>` : ""}`,
+        html`<b>Sin billetera.</b> Mirá un préstamo real cerrado, con cada transacción y lo que hizo el agente solo. ${closed ? html`<a href="${href(l, `/prestamo/${closed.id}`)}">Préstamo #${closed.id} →</a>` : ""}`,
         html`<b>Transparencia.</b> Lo nuestro, lo del jurado y lo de otras personas, por separado. <a href="${href(l, "/transparencia")}">Ver →</a>`,
         html`<b>Pedí $ 1.000.</b> En MiniPay (Ajustes → Acerca de → tocá la versión hasta activar el modo desarrollador → Developer settings → Load test page → esta dirección) o cualquier billetera de Celo con unos US$ 1,25 en USDT.`,
-        html`<b>Cuidalo y pagalo.</b> En la página del préstamo, «Cuidar mi préstamo» y después «Pagar todo»: tus dólares vuelven en la misma transacción.`,
-        html`<b>Agentes.</b> <code class="tx">GET /api/public/rates</code> y <a href="/llms.txt">/llms.txt</a>. Código: <a href="https://github.com/Jennycruzy/adelanto">GitHub</a>.`,
+        html`<b>Decile qué hacer.</b> En la página del préstamo, «Cuidar mi préstamo»: escribí o dictá tu regla, por ejemplo «Cuando me entren pesos, pagá el préstamo, máximo 500 por día». Leé lo que va a hacer y firmá. Si después te mandan pesos, el agente paga solo y cita tu regla.`,
+        html`<b>Pagalo.</b> «Pagar todo»: tus dólares vuelven en la misma transacción. Tu préstamo queda en <a href="${href(l, "/historial")}">Mi historial</a>.`,
+        html`<b>Agentes.</b> <code class="tx">GET /api/public/rates</code>, <a href="/llms.txt">/llms.txt</a> y respuestas pagas por x402 en wARS o USD₮: <a href="/x402">/x402</a>. Código: <a href="https://github.com/Jennycruzy/adelanto">GitHub</a>.`,
       ]
     : [
-        html`<b>No wallet.</b> Look at a real closed loan, with every transaction. ${closed ? html`<a href="${href(l, `/prestamo/${closed.id}`)}">Loan #${closed.id} →</a>` : ""}`,
+        html`<b>No wallet.</b> Look at a real closed loan, with every transaction and what the agent did on its own. ${closed ? html`<a href="${href(l, `/prestamo/${closed.id}`)}">Loan #${closed.id} →</a>` : ""}`,
         html`<b>Transparency.</b> Ours, the judges' and other people's, apart. <a href="${href(l, "/transparencia")}">See →</a>`,
         html`<b>Borrow ARS 1,000.</b> In MiniPay (Settings → About → tap the version until developer mode is on → Developer settings → Load test page → this address) or any Celo wallet with about US$1.25 in USDT.`,
-        html`<b>Protect it, repay it.</b> On the loan page, “Look after my loan”, then “Repay all”: your dollars come back in the same transaction.`,
-        html`<b>Agents.</b> <code class="tx">GET /api/public/rates</code> and <a href="/llms.txt">/llms.txt</a>. Code: <a href="https://github.com/Jennycruzy/adelanto">GitHub</a>.`,
+        html`<b>Tell it what to do.</b> On the loan page, “Look after my loan”: write or dictate your rule in Spanish, for example “Cuando me entren pesos, pagá el préstamo, máximo 500 por día”. Read what it will do and sign. If pesos are then sent to you, the agent repays on its own and quotes your rule.`,
+        html`<b>Repay it.</b> “Repay all”: your dollars come back in the same transaction. The loan stays on <a href="${href(l, "/historial")}">My record</a>.`,
+        html`<b>Agents.</b> <code class="tx">GET /api/public/rates</code>, <a href="/llms.txt">/llms.txt</a> and paid answers over x402 in wARS or USD₮: <a href="/x402">/x402</a>. Code: <a href="https://github.com/Jennycruzy/adelanto">GitHub</a>.`,
       ];
   return c.html(
     plain(
       l,
       t(l, "tryIt"),
       html`<div class="split">
-<div class="card"><div class="card-label">${es ? "Cinco minutos" : "Five minutes"}</div><ul class="log">${steps.map((s) => html`<li style="padding-bottom:22px">${s}</li>`)}</ul></div>
+<div class="card"><div class="card-label">${es ? "Diez minutos" : "Ten minutes"}</div><ul class="log">${steps.map((s) => html`<li style="padding-bottom:22px">${s}</li>`)}</ul></div>
 <div>
 ${q.ok
   ? html`<div class="card" style="background:var(--celeste-wash);border-color:var(--ink)">

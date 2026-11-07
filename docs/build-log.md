@@ -38,7 +38,7 @@ Written for the next team building with wFIAT, MiniPay and agents on Celo.
 | Public RPC endpoints behind a load balancer can answer from an older block right after a write. | A read after our own transaction returned the state before it. | The agent reads each decision at one fixed block; the deploy script waits until every contract's code is visible before reading back. |
 | A gas estimate taken right after a state change can come from a stale node. | `withdrawCollateral` on Morpho ran out of gas at 82k; it needed 111k. | Re-read state before each step; pad Ethereum gas by 1.5×. |
 | viem caches the block number for a few seconds by default. | The indexer re-read the same block. | `cacheTime: 0` wherever the block number matters. |
-| Celo's `safe` block tag can stall for days while the chain keeps moving. | On 7 Nov the safe head was 335,519 blocks (about 3.9 days) behind the tip; the live agent never reached the block where pesos arrived, and its catch-up log query over that range failed every tick. | The index head is the newer of the safe head and the tip minus 600 blocks (about ten minutes); four tests. |
+| Celo's `safe` block tag can stall for days while the chain keeps moving. | On 7 Nov the safe head was 335,519 blocks (about 3.9 days) behind the tip; the live agent never reached the block where pesos arrived, and its catch-up log query over that range failed every tick. | The index head is the newer of the safe head and the tip minus 60 blocks (about a minute), with the parent-hash check rewinding any reorg; four tests. |
 
 ## x402 on Celo
 

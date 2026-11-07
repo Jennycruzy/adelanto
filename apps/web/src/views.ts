@@ -273,9 +273,11 @@ ${proof && b ? html`<section class="section"><div class="wrap">
   );
 }
 
-export function eventLine(e: { name: string; args: any }, lang: Lang): string {
+export function eventLine(e: { name: string; args: any; byAgent?: boolean }, lang: Lang): string {
   const a = e.args;
   const es = lang === "es";
+  if (e.byAgent && e.name === "Repaid") return es ? `El agente pagó ${pesos(BigInt(a.pesos))} con tus pesos; quedan ${pesos(BigInt(a.debtLeft))}` : `The agent repaid ${pesos(BigInt(a.pesos), "en")} with your pesos; ${pesos(BigInt(a.debtLeft), "en")} left`;
+  if (e.byAgent && e.name === "CollateralAdded") return es ? `El agente agregó ${dollars(BigInt(a.usdt))} de tus dólares` : `The agent added ${dollars(BigInt(a.usdt), "en")} of your dollars`;
   switch (e.name) {
     case "Borrowed":
       return es ? `Pidió ${pesos(BigInt(a.pesos))} dejando ${dollars(BigInt(a.collateral))} a ${percent(BigInt(a.rateBps))}` : `Borrowed ${pesos(BigInt(a.pesos), "en")} leaving ${dollars(BigInt(a.collateral), "en")} at ${percent(BigInt(a.rateBps), "en")}`;
@@ -289,6 +291,11 @@ export function eventLine(e: { name: string; args: any }, lang: Lang): string {
       return es ? `Cerrado${a.onTime ? " a tiempo" : ""}; volvieron ${dollars(BigInt(a.collateralReturned))}` : `Closed${a.onTime ? " on time" : ""}; ${dollars(BigInt(a.collateralReturned), "en")} returned`;
     case "Liquidated":
       return es ? `Venta de garantía: se pagaron ${pesos(BigInt(a.pesosRepaid))} con ${dollars(BigInt(a.usdtSeized))}` : `Guarantee sale: ${pesos(BigInt(a.pesosRepaid), "en")} paid with ${dollars(BigInt(a.usdtSeized), "en")}`;
+    case "AutoRepaid":
+      return es ? `El agente pagó ${pesos(BigInt(a.warsRepaid))} con pesos que te entraron` : `The agent repaid ${pesos(BigInt(a.warsRepaid), "en")} with pesos that arrived`;
+    case "Protected":
+    case "ProtectedByRepay":
+      return es ? "El agente protegió el préstamo" : "The agent protected the loan";
     case "PenaltyAdded":
       return es ? `Interés por atraso: ${pesos(BigInt(a.pesos))}` : `Late interest: ${pesos(BigInt(a.pesos), "en")}`;
     default:
@@ -428,11 +435,14 @@ ${loan.open
 function guardWords(lang: Lang, l: any) {
   const es = lang === "es";
   const parts: string[] = [];
-  if (l.maxTopUpUsdtPerDay > 0n) parts.push(es ? `agregar hasta ${dollars(l.maxTopUpUsdtPerDay)} por día de tus dólares si llega a riesgo` : `add up to ${dollars(l.maxTopUpUsdtPerDay, "en")} a day of your dollars if it reaches risk`);
-  if (l.maxRepayWarsPerDay > 0n) parts.push(es ? `pagar hasta ${pesos(l.maxRepayWarsPerDay)} por día con tus pesos` : `repay up to ${pesos(l.maxRepayWarsPerDay, "en")} a day from your pesos`);
-  if (l.autoRepay) parts.push(es ? "pagar cuando te entran pesos" : "repay when pesos arrive");
+  if (l.autoRepay && l.maxRepayWarsPerDay > 0n) parts.push(es ? `cuando te entran pesos, pagar el préstamo con ellos, hasta ${pesos(l.maxRepayWarsPerDay)} por día` : `when pesos arrive, repay the loan with them, up to ${pesos(l.maxRepayWarsPerDay, "en")} a day`);
+  else if (l.maxRepayWarsPerDay > 0n) parts.push(es ? `si llega a riesgo, pagar con tus pesos hasta ${pesos(l.maxRepayWarsPerDay)} por día` : `if it reaches risk, repay from your pesos, up to ${pesos(l.maxRepayWarsPerDay, "en")} a day`);
+  if (l.maxTopUpUsdtPerDay > 0n) parts.push(es ? `si llega a riesgo, agregar hasta ${dollars(l.maxTopUpUsdtPerDay)} por día de tus dólares` : `if it reaches risk, add up to ${dollars(l.maxTopUpUsdtPerDay, "en")} a day of your dollars`);
+  else parts.push(es ? "nunca tocar tus dólares" : "never touch your dollars");
   if (l.keepWarsBuffer > 0n) parts.push(es ? `dejarte siempre ${pesos(l.keepWarsBuffer)}` : `always leave you ${pesos(l.keepWarsBuffer, "en")}`);
-  return html`<p class="small">${es ? "Puede " : "It may "}${parts.join("; ")}. ${es ? "Vence el" : "Until"} ${date(l.expiry, lang)}.</p>`;
+  if (!l.autoRepay && l.maxRepayWarsPerDay === 0n && l.maxTopUpUsdtPerDay === 0n) return html`<p class="small">${es ? "No mueve plata: solo te avisa." : "It moves no money: it only tells you."} ${es ? "Vence el" : "Until"} ${date(l.expiry, lang)}.</p>`;
+  const list = parts.join("; ");
+  return html`<p class="small">${es ? "Va a " : "It will "}${list}. ${es ? "Vence el" : "Until"} ${date(l.expiry, lang)}.</p>`;
 }
 
 // ---------------------------------------------------------------- guard
@@ -444,6 +454,9 @@ export function guardPage(lang: Lang, loan: LoanView, words: string | null) {
     { id: "pesos", es: "Pagá con mis pesos cuando entren", en: "Repay with my pesos when they arrive", sub: { es: "Usa lo que te llega, nada más", en: "Uses what arrives, nothing else" } },
     { id: "avisame", es: "No hagas nada sin preguntarme", en: "Do nothing without asking me", sub: { es: "Solo te avisa", en: "Only tells you" } },
   ];
+  if (!loan.open)
+    return plain(lang, t(lang, "guard"), html`<div class="card"><p style="margin:0">${es ? "Este préstamo ya está cerrado, así que el agente no actúa más en él." : "This loan is closed, so the agent no longer acts on it."}${words ? html` ${es ? "Su regla era:" : "Its rule was:"}</p><p class="quote" style="font-size:22px;margin:10px 0 0">«${words}»</p>` : html`</p>`}</div>
+<p style="margin-top:22px"><a href="${href(lang, `/prestamo/${loan.id}`)}">← ${es ? "Volver al préstamo" : "Back to the loan"}</a> &nbsp; <a href="${href(lang, "/pedir")}">${t(lang, "borrow")}</a></p>`, `/cuidar/${loan.id}`, { eyebrow: `${t(lang, "guard")} · #${loan.id.toString()}`, heading: es ? html`Préstamo <em>cerrado.</em>` : html`Loan <em>closed.</em>` });
   return layout(
     lang,
     t(lang, "guard"),
