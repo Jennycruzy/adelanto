@@ -106,7 +106,8 @@ code { font-family: var(--mono); font-size: 0.9em; }
 .btn[disabled] { opacity: 0.45; cursor: not-allowed; transform: none; }
 .btn .arrow { transition: transform 0.2s var(--ease); }
 .btn:hover .arrow { transform: translateX(3px); }
-.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.btns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-top: 10px; }
+.btns .btn { padding: 0 12px; white-space: normal; line-height: 1.2; text-align: center; }
 .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .link-arrow { font-weight: 700; color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
 

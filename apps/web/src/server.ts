@@ -69,7 +69,16 @@ app.get("/historial", async (c) => {
   if (!isAddress(w)) return c.html(historyPage(l, null, true), 400);
   const who = getAddress(w);
   const credit = await creditOf(who);
-  const loans = loanRows().filter((r) => getAddress(r.borrower) === who);
+  // open or closed is read from chain for each loan, so the list never lags the credit record above it
+  const v = await poolView();
+  const loans = await Promise.all(
+    loanRows()
+      .filter((r) => getAddress(r.borrower) === who)
+      .map(async (r) => {
+        const lv = await loanView(BigInt(r.id), v).catch(() => null);
+        return lv ? { ...r, open: lv.open ? 1 : 0 } : r;
+      }),
+  );
   const actions = loans.flatMap((r) => agentActions(BigInt(r.id), 10)).sort((a, b) => Number(b.at) - Number(a.at)).slice(0, 10);
   return c.html(historyPage(l, { who, credit: credit as any, loans, actions }));
 });
