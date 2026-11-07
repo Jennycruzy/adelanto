@@ -179,3 +179,64 @@ describe("readback", () => {
     expect(p.readback.es).toMatch(/Vence el \d+\/\d+\/\d{4}/);
   });
 });
+
+// English: the same parser reads English rules; the person's own words are still what gets hashed and quoted.
+const english: [string, Want, typeof loan?][] = [
+  ["When pesos from my sales arrive, repay the loan. Never sell my dollars.", { autoRepay: true, topUp: 0n, protectOrder: 1, repay: loan.debt }],
+  ["When pesos come in from sales, repay the loan with them. Never sell my dollars.", { autoRepay: true, topUp: 0n, protectOrder: 1 }],
+  ["When pesos arrive, repay the loan", { autoRepay: true, repay: loan.debt }],
+  ["Repay the loan with my pesos when they arrive", { autoRepay: true }],
+  ["Whenever I get paid, pay off the loan", { autoRepay: true }],
+  ["As soon as money comes in, pay the loan", { autoRepay: true }],
+  ["Use my sales to pay the loan", { autoRepay: true }],
+  ["Every time someone pays me, repay my loan", { autoRepay: true }],
+  ["If pesos land in my wallet, pay it", { autoRepay: true }],
+  ["Never touch my dollars, pay with my pesos", { autoRepay: true, protectOrder: 1, topUp: 0n }],
+  ["When pesos arrive, repay up to 500 a day", { autoRepay: true, repay: 500n * WAD }, big],
+  ["When pesos arrive repay, at most 10,000 pesos per day", { autoRepay: true, repay: 10_000n * WAD }, big],
+  ["When money comes in, repay the loan but always leave me 5,000 pesos", { autoRepay: true, keep: 5_000n * WAD }, big],
+  ["When pesos arrive repay, keep at least 20 thousand pesos", { autoRepay: true, keep: 20_000n * WAD }, big],
+  ["When I get paid, repay no more than 70,000 pesos a week", { autoRepay: true, repay: 10_000n * WAD }, big],
+  ["Protect my loan with up to $10 a week", { topUp: usd(10 / 7), protectOrder: 0 }, big],
+  ["Protect it, add up to 1 dollar a day", { topUp: usd(1) }],
+  ["Look after my loan with up to US$ 3.50 per day", { topUp: usd(3.5) }, big],
+  ["Don't let it get liquidated, put in up to 30 dollars a month", { topUp: usd(1) }, big],
+  ["If the peso drops, add up to 2 dollars per day", { topUp: usd(2) }, big],
+  ["Keep it safe, use up to ten dollars a week", { topUp: usd(10 / 7) }, big],
+  ["Take care of my loan with 5 bucks a day", { topUp: usd(5) }, big],
+  ["Protect it for the next 2 weeks with up to five dollars a day", { topUp: usd(5), days: 14 }, big],
+  ["When pesos arrive, repay the loan for 30 days", { autoRepay: true, days: 30 }, big],
+  ["Do nothing without asking me first", { rateWatch: true, autoRepay: false, topUp: 0n, repay: 0n }],
+  ["Just tell me if the rate gets cheaper", { rateWatch: true, autoRepay: false, topUp: 0n }],
+  ["When pesos arrive, repay, and tell me if there is a cheaper rate", { autoRepay: true, rateWatch: true }],
+  ["When sales come in, repay everything", { autoRepay: true, repay: loan.debt }],
+];
+
+describe("parseRule: English", () => {
+  for (const [text, want, l] of english) {
+    it(text, () => {
+      const L = l ?? loan;
+      const got = lim(parseRule(text, L, NOW, "en"));
+      if (want.autoRepay !== undefined) expect(got.autoRepay).toBe(want.autoRepay);
+      if (want.rateWatch !== undefined) expect(got.rateWatch).toBe(want.rateWatch);
+      if (want.protectOrder !== undefined) expect(got.protectOrder).toBe(want.protectOrder);
+      if (want.topUp !== undefined) expect(got.maxTopUpUsdtPerDay).toBe(want.topUp);
+      if (want.repay !== undefined) expect(got.maxRepayWarsPerDay).toBe(want.repay);
+      if (want.keep !== undefined) expect(got.keepWarsBuffer).toBe(want.keep);
+      if (want.days !== undefined) expect(got.expiry).toBe(NOW + BigInt(want.days) * 86_400n);
+    });
+  }
+  it("asks how many dollars for 'Look after my loan', with English buttons that parse", () => {
+    const p = parseRule("Look after my loan", loan, NOW, "en");
+    expect(p.kind).toBe("question");
+    if (p.kind === "question") {
+      expect(p.question.options[0].label).toBe("US$5 / week");
+      for (const o of p.question.options) expect(parseRule("Look after my loan" + o.append, big, NOW, "en").kind).toBe("limits");
+    }
+  });
+  for (const t of ["Stop", "Stop the agent", "Cancel the rule", "Remove the agent's permission", "turn off everything"]) it(`stops: ${t}`, () => expect(parseRule(t, loan, NOW, "en").kind).toBe("revoke"));
+  for (const t of ["hello", "what a nice day", "how much do I owe"]) it(`unknown: "${t}"`, () => expect(parseRule(t, loan, NOW, "en").kind).toBe("unknown"));
+  it("never invents a dollar amount", () => {
+    for (const [text] of english) if (!/\$|dollar|bucks|usd/i.test(text)) expect(lim(parseRule(text, big, NOW, "en")).maxTopUpUsdtPerDay).toBe(0n);
+  });
+});

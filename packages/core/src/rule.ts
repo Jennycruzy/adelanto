@@ -32,7 +32,75 @@ export function normalize(text: string): string {
   s = s.replace(/(\d)\.(\d{3})(?!\d)/g, "$1$2").replace(/(\d)\.(\d{3})(?!\d)/g, "$1$2"); // 1.000.000 → 1000000
   s = s.replace(/(\d),(\d{1,2})(?!\d)/g, "$1.$2"); // 2,50 → 2.50
   s = s.replace(/\$/g, " $ ");
-  return " " + s.replace(/\s+/g, " ").trim() + " ";
+  s = " " + s.replace(/\s+/g, " ").trim() + " ";
+  return english(s);
+}
+
+// English rules: the same parser, by rewriting English phrasing into the forms it reads. Only the parse sees this;
+// the person's own words are what is hashed on chain and quoted back.
+const EN_NUM: Record<string, string> = {
+  one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9", ten: "10",
+  eleven: "11", twelve: "12", fifteen: "15", twenty: "20", "twenty five": "25", thirty: "30", forty: "40", fifty: "50",
+  sixty: "60", seventy: "70", eighty: "80", ninety: "90", hundred: "100", "a hundred": "100", "one hundred": "100",
+  "two hundred": "200", "three hundred": "300", "five hundred": "500", thousand: "1000", "a thousand": "1000", "one thousand": "1000",
+};
+const EN: [RegExp, string][] = [
+  [/(\d),(\d{3})(?!\d)/g, "$1$2"], // 1,000 → 1000 (English thousands; a Spanish decimal comma has 1–2 digits)
+  [/(\d),(\d{3})(?!\d)/g, "$1$2"],
+  [/\b(a hundred|one hundred|two hundred|three hundred|five hundred|a thousand|one thousand|twenty five|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)\b(?= (usd|\$|pesos?|ars|dollars?|bucks|days?|weeks?|months?|thousand|a |per |each |every |daily|weekly|monthly))/g, "<n>"],
+  [/(\d+(?:\.\d+)?) thousand\b/g, "$1 mil"],
+  [/\b(bucks?|dollars?)\b/g, " usd "],
+  [/\bars\b/g, " pesos "],
+  [/\$ (\d+(?:\.\d+)?)(?!\d| ?(pesos?|mil)\b)/g, " usd $1 "], // in English, $10 is ten dollars unless pesos follow
+  // stop and ask first
+  [/\b(stop|cancel|turn off|switch off|remove|revoke|delete|disable)\b.{0,25}\b(rule|everything|permission|agent|guard)\b/g, " cancela regla "],
+  [/^\s*(stop|cancel)\s*$/g, " para "],
+  [/\b(do nothing without asking( me)?|ask me (first|before)|ask (first|before)|check with me( first)?|just (tell|notify|warn) me|only (tell|notify|warn) me|tell me before|warn me before|notify me before)\b/g, " preguntame antes "],
+  // periods and durations
+  [/\b(per|a|each|every) day\b|\bdaily\b/g, " por dia "],
+  [/\b(per|a|each|every) week\b|\bweekly\b/g, " por semana "],
+  [/\b(per|a|each|every) month\b|\bmonthly\b/g, " por mes "],
+  [/\b(for|during) (the next |the coming )?(\d+(?:\.\d+)?) (days?|weeks?|months?)\b/g, " por $3 $4 "],
+  [/\b(until|till|through) (the )?end of (the )?month\b|\ball month\b/g, " hasta fin de mes "],
+  [/\bdays?\b/g, " dias "],
+  [/\bweeks?\b/g, " semanas "],
+  [/\bmonths?\b/g, " meses "],
+  // never use the dollars
+  [/\b(never|don'?t|do not|dont)( ever)? (sell|touch|use|take|spend|move)( any of)?( my)? usd\b/g, " nunca vendas usd "],
+  [/\b(without|with no) (touching|using|selling|spending)( my)? usd\b/g, " sin tocar usd "],
+  [/\b(leave|keep) my usd (alone|untouched|out of it)\b/g, " nunca toques usd "],
+  [/\bnot (with )?(my )?usd\b/g, " nunca uses usd "],
+  // pay with incoming pesos
+  [/\bif (the )?(peso|price) (drops|falls|goes down|crashes)\b|\bif (the )?usd (goes up|rises|jumps)\b/g, " si baja el peso "],
+  [/\b(use|with|using) (the |my )?sales( money| income)?\b/g, " con las ventas "],
+  [/\buse (the |my )?(incoming |new )?(pesos|money)( that (come in|arrive|arrives))?\b/g, " con los pesos que me entren "],
+  [/\b(when|whenever|as soon as|every time|each time)\b/g, " cuando "],
+  [/\bif\b/g, " si "],
+  [/\b(come|comes|coming|came) in\b|\bget in\b/g, " entran "],
+  [/\b(arrive|arrives|arriving|arrived|land|lands|show up|shows up|hit my wallet|hits my wallet)\b/g, " llegan "],
+  [/\b(get paid|i'?m paid|i am paid|paid me|pays me|pay me|receive|received|receives|get money|i earn|earn)\b/g, " cobro "],
+  [/\b(make a sale|sell something|sell anything|sell stuff)\b/g, " venda "],
+  [/\b(my|from|the|from my|from the) sales\b|\bsales income\b/g, " ventas "],
+  [/\b(with|using|from) (the |my )?(incoming |new )?(pesos|income|money)( that (come in|arrive))?\b/g, " con los pesos que me entren "],
+  [/\bincome\b/g, " ingresos "],
+  [/\b(deposit|deposits|deposited)\b/g, " deposit "],
+  [/\b(pay|repay|pay off|pay down|pay back)( it| the loan| my loan| the debt)?\b/g, " paga "],
+  // protect, top up, keep, rate
+  [/\b(protect|look after|guard|take care of|keep (it )?safe|watch over|look out for)\b/g, " cuida "],
+  [/\b(never|don'?t|do not) let (it|the loan|my loan) (get |be )?(liquidated|reach risk|hit risk|go under)\b|\bavoid liquidation\b|\bno liquidation\b|\bliquidat\w*/g, " no liquid "],
+  [/\bat risk\b|\brisk\b/g, " riesgo "],
+  [/\b(add|top up|top it up with|put in|put|throw in|use)\b/g, " agrega "],
+  [/\bup to\b|\bat most\b|\bmax(imum)?\b|\bno more than\b/g, " hasta "],
+  [/\bmore\b/g, " mas "],
+  [/\b(always leave me|leave me|always keep|keep at least|keep me|leave at least|at least|minimum of|reserve)\b/g, " dejame "],
+  [/\b(rate|interest|cheaper|better price|lower rate|better deal)\b/g, " tasa "],
+  [/\beverything\b|\ball of it\b|\bthe whole thing\b/g, " todo "],
+];
+function english(s: string): string {
+  if (!/\b(the|my|it|when|whenever|pay|repay|never|dollars?|bucks|loan|arrive|arrives|protect|add|up to|per|stop|ask|with|if|keep|sales|do|nothing|tell|just|asking|first|cancel|look|leave|put|don'?t|dont|money|get|turn|everything|remove|agent|rule|someone|wallet)\b/.test(s)) return s;
+  let out = s.replace(EN[2][0], (m) => EN_NUM[m] ?? m);
+  for (let i = 0; i < EN.length; i++) if (i !== 2) out = out.replace(EN[i][0], EN[i][1]);
+  return " " + out.replace(/\s+/g, " ").trim() + " ";
 }
 
 const WORDS: Record<string, number> = {
@@ -152,10 +220,10 @@ export function parseRule(text: string, loan: RuleLoan, nowSec: bigint, lang: "e
         es: "¿Cuántos dólares tuyos puede agregar el agente, como máximo por semana, si el préstamo llega a riesgo?",
         en: "How many of your dollars may the agent add at most per week if the loan reaches risk?",
         options: [
-          { label: "US$ 5 / semana", append: " hasta US$ 5 por semana" },
-          { label: "US$ 10 / semana", append: " hasta US$ 10 por semana" },
-          { label: "US$ 20 / semana", append: " hasta US$ 20 por semana" },
-          { label: lang === "es" ? "Con mis pesos, no dólares" : "With my pesos, not dollars", append: " pagá con mis pesos, nunca toques mis dólares" },
+          { label: lang === "es" ? "US$ 5 / semana" : "US$5 / week", append: lang === "es" ? " hasta US$ 5 por semana" : " up to 5 dollars a week" },
+          { label: lang === "es" ? "US$ 10 / semana" : "US$10 / week", append: lang === "es" ? " hasta US$ 10 por semana" : " up to 10 dollars a week" },
+          { label: lang === "es" ? "US$ 20 / semana" : "US$20 / week", append: lang === "es" ? " hasta US$ 20 por semana" : " up to 20 dollars a week" },
+          { label: lang === "es" ? "Con mis pesos, no dólares" : "With my pesos, not dollars", append: lang === "es" ? " pagá con mis pesos, nunca toques mis dólares" : " pay with my pesos, never touch my dollars" },
         ],
       },
     };
