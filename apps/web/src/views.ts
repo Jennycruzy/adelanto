@@ -436,14 +436,14 @@ ${loan.open
 function guardWords(lang: Lang, l: any) {
   const es = lang === "es";
   const parts: string[] = [];
-  if (l.autoRepay && l.maxRepayWarsPerDay > 0n) parts.push(es ? `cuando te entran pesos, pagar el préstamo con ellos, hasta ${pesos(l.maxRepayWarsPerDay)} por día` : `when pesos arrive, repay the loan with them, up to ${pesos(l.maxRepayWarsPerDay, "en")} a day`);
-  else if (l.maxRepayWarsPerDay > 0n) parts.push(es ? `si llega a riesgo, pagar con tus pesos hasta ${pesos(l.maxRepayWarsPerDay)} por día` : `if it reaches risk, repay from your pesos, up to ${pesos(l.maxRepayWarsPerDay, "en")} a day`);
-  if (l.maxTopUpUsdtPerDay > 0n) parts.push(es ? `si llega a riesgo, agregar hasta ${dollars(l.maxTopUpUsdtPerDay)} por día de tus dólares` : `if it reaches risk, add up to ${dollars(l.maxTopUpUsdtPerDay, "en")} a day of your dollars`);
-  else parts.push(es ? "nunca tocar tus dólares" : "never touch your dollars");
-  if (l.keepWarsBuffer > 0n) parts.push(es ? `dejarte siempre ${pesos(l.keepWarsBuffer)}` : `always leave you ${pesos(l.keepWarsBuffer, "en")}`);
+  if (l.autoRepay && l.maxRepayWarsPerDay > 0n) parts.push(es ? `cuando te entran pesos, paga el préstamo con ellos, hasta ${pesos(l.maxRepayWarsPerDay)} por día` : `when pesos arrive, it repays the loan with them, up to ${pesos(l.maxRepayWarsPerDay, "en")} a day`);
+  else if (l.maxRepayWarsPerDay > 0n) parts.push(es ? `si llega a riesgo, paga con tus pesos hasta ${pesos(l.maxRepayWarsPerDay)} por día` : `if it reaches risk, it repays from your pesos, up to ${pesos(l.maxRepayWarsPerDay, "en")} a day`);
+  if (l.maxTopUpUsdtPerDay > 0n) parts.push(es ? `si llega a riesgo, agrega hasta ${dollars(l.maxTopUpUsdtPerDay)} por día de tus dólares` : `if it reaches risk, it adds up to ${dollars(l.maxTopUpUsdtPerDay, "en")} a day of your dollars`);
+  else parts.push(es ? "nunca toca tus dólares" : "it never touches your dollars");
+  if (l.keepWarsBuffer > 0n) parts.push(es ? `siempre te deja ${pesos(l.keepWarsBuffer)}` : `it always leaves you ${pesos(l.keepWarsBuffer, "en")}`);
   if (!l.autoRepay && l.maxRepayWarsPerDay === 0n && l.maxTopUpUsdtPerDay === 0n) return html`<p class="small">${es ? "No mueve plata: solo te avisa." : "It moves no money: it only tells you."} ${es ? "Vence el" : "Until"} ${date(l.expiry, lang)}.</p>`;
   const list = parts.join("; ");
-  return html`<p class="small">${es ? "Va a " : "It will "}${list}. ${es ? "Vence el" : "Until"} ${date(l.expiry, lang)}.</p>`;
+  return html`<p class="small">${list.charAt(0).toUpperCase() + list.slice(1)}. ${es ? "Vence el" : "Until"} ${date(l.expiry, lang)}.</p>`;
 }
 
 // ---------------------------------------------------------------- guard
