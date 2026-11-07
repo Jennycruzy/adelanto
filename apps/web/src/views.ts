@@ -3,7 +3,7 @@
 // and the g-* inputs: keep those names when changing markup.
 import { html, raw } from "hono/html";
 import type { HtmlEscapedString } from "hono/utils/html";
-import { availableToBorrow, dollars, pesos, percent, type Quote } from "@adelanto/core";
+import { availableToBorrow, discountBps, dollars, maxLtvBpsForTier, maxPesosForTier, pesos, percent, type Quote } from "@adelanto/core";
 import { CELO } from "@adelanto/chain";
 import { t, type Lang } from "./i18n.ts";
 import { REFS, dep, labelOf, networkCostUsd, type LoanView, type PoolView } from "./data.ts";
@@ -56,7 +56,7 @@ export function layout(lang: Lang, title: string, body: H, opts: { path: string;
 <meta property="og:image" content="/static/img/kiosco-1600.webp">
 <link rel="icon" href="/static/adelanto.png">
 <link rel="preload" href="/static/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/static/app.css?v=5">
+<link rel="stylesheet" href="/static/app.css?v=6">
 </head>
 <body>
 <header class="nav"><div class="wrap">
@@ -65,6 +65,7 @@ export function layout(lang: Lang, title: string, body: H, opts: { path: string;
     ${nav("/como-funciona", "how")}
     ${nav("/prestar", "lend")}
     ${nav("/transparencia", "transparency")}
+    <a href="${href(lang, "/historial")}" ${here === "/historial" ? raw('aria-current="page"') : ""}>${es ? "Mi historial" : "My record"}</a>
   </nav>
   <a class="lang" href="${otherHref}" hreflang="${es ? "en" : "es"}">${other}</a>
   <a class="btn" href="${href(lang, "/pedir")}">${t(lang, "borrow")}</a>
@@ -92,6 +93,7 @@ function footer(lang: Lang) {
   <div><h4>${es ? "Entender" : "Understand"}</h4><ul>
     <li><a href="${href(lang, "/como-funciona")}">${t(lang, "how")}</a></li>
     <li><a href="${href(lang, "/transparencia")}">${t(lang, "transparency")}</a></li>
+    <li><a href="${href(lang, "/historial")}">${es ? "Mi historial" : "My record"}</a></li>
     <li><a href="/llms.txt">llms.txt</a></li>
   </ul></div>
   <div><h4>${es ? "Código" : "Code"}</h4><ul>
@@ -135,7 +137,7 @@ const ICON: Record<string, string> = {
 };
 const icon = (k: string) => raw(`<svg viewBox="0 0 24 24" fill="none" stroke="#0e2a47" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`);
 
-export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: any[]; actions: any[] } | null, tickAge: number | null) {
+export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: any[]; actions: any[] } | null, tickAge: number | null, feed: any[] = []) {
   const es = lang === "es";
   const loc = es ? "es-AR" : "en-US";
   const rate = Number(v.borrowRateBps) / 10_000;
@@ -183,6 +185,8 @@ export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: a
   <div><span class="ic">${icon("sliders")}</span><b>${es ? "Un agente con límites" : "An agent with limits"}</b><span>${es ? "Agente ERC-8004 #10043; actúa solo dentro de tu regla" : "ERC-8004 agent #10043; acts only inside your rule"}</span></div>
   <div><span class="ic">${icon("tag")}</span><b>${es ? "Todo a la vista" : "All in the open"}</b><span>${es ? "Cada transacción en la cadena, con la etiqueta del evento" : "Every transaction on chain, with the event's tag"}</span></div>
 </div></section>
+
+${agentSection(lang, tickAge, feed)}
 
 <section class="band"><div class="wrap">
   <h2 class="reveal">${es ? "Dejá de pagar la tasa del banco" : "Stop paying the bank's rate"}</h2>
@@ -539,6 +543,154 @@ export function plain(lang: Lang, title: string, body: H, path: string, opts: { 
 <section class="app-main"><div class="${opts.wide ? "wrap" : "narrow"}">${body}</div></section>`,
     { path, wallet: opts.wallet },
   );
+}
+
+// ---------------------------------------------------------------- the agent's own actions
+
+const JOB: Record<string, { es: string; en: string }> = {
+  A1_protect: { es: "Protegió un préstamo", en: "Protected a loan" },
+  A2_autorepay: { es: "Pagó con pesos que entraron", en: "Repaid with pesos that arrived" },
+  A3_ratewatch: { es: "Avisó de una tasa mejor", en: "Flagged a better rate" },
+  A4_pause: { es: "Frenó por el precio", en: "Paused on the price" },
+  A5_gentle: { es: "Vendió lo mínimo", en: "Sold the least" },
+};
+
+export function ago(ms: number, lang: Lang): string {
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  const es = lang === "es";
+  if (s < 90) return es ? "hace un momento" : "just now";
+  const m = Math.round(s / 60);
+  if (m < 90) return es ? `hace ${m} min` : `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 36) return es ? `hace ${h} h` : `${h} h ago`;
+  const d = Math.round(h / 24);
+  return es ? `hace ${d} días` : `${d} days ago`;
+}
+
+/** One line per thing the agent did on chain, newest first, with its sentence and its transaction. */
+export function agentFeed(lang: Lang, actions: any[]) {
+  const es = lang === "es";
+  if (actions.length === 0) return html`<p class="small muted" style="margin:0">${es ? "Todavía no actuó en ningún préstamo." : "It has not acted on a loan yet."}</p>`;
+  return html`<ul class="feed">${actions.map((a) => {
+    const j = JOB[a.job] ?? { es: a.job, en: a.job };
+    return html`<li>
+  <div class="feed-top"><b>${es ? j.es : j.en}</b><span class="small muted">${ago(Number(a.at), lang)}</span></div>
+  <p>${es ? a.sentence_es : a.sentence_en ?? a.sentence_es}</p>
+  <div class="small">${a.loan_id ? html`<a href="${href(lang, `/prestamo/${a.loan_id}`)}">${es ? "Préstamo" : "Loan"} #${a.loan_id}</a> · ` : ""}${a.tx ? html`<a class="tx" href="${txUrl(a.tx)}">${short(a.tx)} ↗</a>` : html`<span class="muted">${es ? "sin transacción" : "no transaction"}</span>`}</div>
+</li>`;
+  })}</ul>`;
+}
+
+/** The home page's agent block: is it running, the rule it last acted on, and what it did on chain. */
+function agentSection(lang: Lang, tickAge: number | null, feed: any[]) {
+  const es = lang === "es";
+  const live = tickAge !== null && tickAge < 5 * 60_000;
+  const quoted = feed.map((a) => /«([^»]+)»/.exec(a.sentence_es ?? "")?.[1]).find(Boolean);
+  const secs = tickAge === null ? null : Math.max(1, Math.round(tickAge / 1000));
+  return html`<section class="section agent-sec"><div class="wrap"><div class="agent-grid">
+  <div class="reveal">
+    <span class="live ${live ? "on" : ""}"><i></i>${live
+      ? es ? `Agente #10043 en vivo · revisó los préstamos hace ${secs} s` : `Agent #10043 live · checked the loans ${secs} s ago`
+      : es ? "Agente #10043" : "Agent #10043"}</span>
+    <h2 style="margin-top:14px">${es ? html`Decile qué hacer <em>con tus palabras</em>` : html`Tell it what to do <em>in your own words</em>`}</h2>
+    <p class="lede">${es
+      ? "Escribís o dictás una regla. El agente la convierte en topes que ves antes de firmar, y desde ahí cuida tu préstamo solo, día y noche: paga cuando te entran pesos, agrega tus dólares si se acerca al riesgo y nunca se pasa de lo que firmaste."
+      : "You write or dictate a rule. The agent turns it into caps you see before you sign, and from then on looks after your loan by itself, day and night: it repays when pesos arrive, adds your dollars if risk gets close, and never goes past what you signed."}</p>
+    ${quoted ? html`<blockquote class="rule-q"><span class="small muted">${es ? "Una regla real, firmada en Celo" : "A real rule, signed on Celo"}</span>«${quoted}»</blockquote>` : ""}
+    <div class="cta-row"><a class="btn" href="${href(lang, "/pedir")}">${t(lang, "borrow")}</a><a class="link-arrow" href="${href(lang, "/como-funciona")}">${es ? "Qué puede y qué no puede hacer" : "What it can and can't do"}</a></div>
+  </div>
+  <div class="card reveal d1">
+    <div class="card-label">${es ? "Lo último que hizo, en Celo" : "What it did last, on Celo"}</div>
+    ${agentFeed(lang, feed)}
+  </div>
+</div></div></section>`;
+}
+
+// ---------------------------------------------------------------- mi historial
+
+const STEP_NEEDS = [0, 1, 3, 6] as const;
+
+export type HistoryData = {
+  who: string;
+  credit: { opened: number; repaidOnTime: number; repaidLate: number; liquidated: number; onTimeSinceLiquidation: number; pesosBorrowed: bigint; pesosRepaid: bigint; lastCountedAt: bigint; tier: number };
+  loans: any[];
+  actions: any[];
+};
+
+export function historyPage(lang: Lang, d: HistoryData | null, error = false) {
+  const es = lang === "es";
+  const title = es ? "Mi historial" : "My record";
+  const lede = es
+    ? "Cada préstamo que pagás a tiempo queda escrito en Celo y te sube un escalón: más pesos, una garantía menor y una tasa más baja. Es público: cualquiera puede verlo, nadie puede borrarlo."
+    : "Every loan you repay on time is written on Celo and moves you up a step: more pesos, a smaller guarantee and a lower rate. It is public: anyone can read it, nobody can erase it.";
+  const lookup = html`<form class="card hist-find" method="get" action="/historial">
+  ${lang === "en" ? html`<input type="hidden" name="lang" value="en">` : ""}
+  <div class="card-label">${es ? "Ver el historial de una billetera" : "See a wallet's record"}</div>
+  <div class="hist-row">
+    <input name="w" placeholder="0x…" autocomplete="off" spellcheck="false" value="${d?.who ?? ""}" aria-label="${es ? "Dirección" : "Address"}">
+    <button class="btn" type="submit">${es ? "Ver" : "See"}</button>
+  </div>
+  <button class="btn ghost block" type="button" data-action="myRecord" data-lang="${lang}" style="margin-top:12px">${es ? "Usar mi billetera" : "Use my wallet"}</button>
+  ${error ? html`<p class="small" style="color:#b42318;margin:10px 0 0">${es ? "Esa no es una dirección válida." : "That is not a valid address."}</p>` : ""}
+  <p class="small muted" style="margin:10px 0 0" id="status"></p>
+</form>`;
+  if (!d) return plain(lang, title, lookup, "/historial", { eyebrow: title, heading: es ? html`Tu historial, <em>en la cadena</em>` : html`Your record, <em>on chain</em>`, lede, wallet: true });
+
+  const c = d.credit;
+  const step = Math.max(0, Math.min(3, c.tier));
+  const counted = c.onTimeSinceLiquidation;
+  const next = step < 3 ? STEP_NEEDS[step + 1] - counted : 0;
+  const lastCounted = Number(c.lastCountedAt);
+  const ladder = html`<ol class="ladder">${[0, 1, 2, 3].map((i) => html`<li class="${i < step ? "done" : i === step ? "here" : ""}">
+  <div class="lad-n">${i}</div>
+  <div class="lad-b">
+    <b>${i === 0 ? (es ? "Primer préstamo" : "First loan") : es ? `Después de ${STEP_NEEDS[i]} a tiempo` : `After ${STEP_NEEDS[i]} on time`}</b>
+    <span>${es ? "Hasta" : "Up to"} ${pesos(maxPesosForTier(i), lang)} · ${es ? "pedís hasta el" : "borrow up to"} ${percent(maxLtvBpsForTier(i), lang)} ${es ? "de tu garantía" : "of your guarantee"}${i > 0 ? html` · ${es ? "tasa" : "rate"} −${percent(discountBps(i), lang)}` : ""}</span>
+  </div>
+  ${i === step ? html`<span class="pill celeste">${es ? "Estás acá" : "You are here"}</span>` : ""}
+</li>`)}</ol>`;
+  const short6 = `${d.who.slice(0, 6)}…${d.who.slice(-4)}`;
+  const body = html`<div class="split">
+<div>
+<div class="card">
+  <div class="card-label">${es ? "Escalón" : "Step"} · <a class="tx" href="${addrUrl(d.who)}">${short6}</a></div>
+  <div class="figure num">${step} <span class="small muted" style="font-size:18px">/ 3</span></div>
+  <p style="margin:8px 0 0">${step === 3
+    ? es ? "Llegaste al escalón más alto." : "You are on the top step."
+    : es ? html`Te ${next === 1 ? "falta" : "faltan"} <b>${next}</b> ${next === 1 ? "préstamo pagado" : "préstamos pagados"} a tiempo para el escalón ${step + 1}.` : html`<b>${next}</b> more on-time ${next === 1 ? "loan" : "loans"} to reach step ${step + 1}.`}</p>
+  ${ladder}
+  <p class="small muted" style="margin:14px 0 0">${es
+    ? "Un préstamo cuenta para subir si lo tuviste al menos 7 días y lo abriste después del último que contó, así los escalones llevan tiempo real y no se compran abriendo y cerrando. Si te liquidan, volvés al escalón 0; nada se borra."
+    : "A loan counts towards a step if you held it at least 7 days and opened it after the last one that counted, so steps take real time and can't be bought by opening and closing. A liquidation sends you back to step 0; nothing is erased."}</p>
+</div>
+</div>
+<div>
+<div class="card">
+  <div class="card-label">${es ? "Lo que dice CreditBook" : "What CreditBook says"}</div>
+  <div class="row"><span>${es ? "Préstamos abiertos en total" : "Loans opened"}</span><span class="v">${c.opened}</span></div>
+  <div class="row"><span>${es ? "Pagados a tiempo" : "Repaid on time"}</span><span class="v">${c.repaidOnTime}</span></div>
+  <div class="row"><span>${es ? "Que cuentan para subir" : "Counting towards steps"}</span><span class="v">${counted}</span></div>
+  <div class="row"><span>${es ? "Pagados tarde" : "Repaid late"}</span><span class="v">${c.repaidLate}</span></div>
+  <div class="row"><span>${es ? "Liquidaciones" : "Liquidations"}</span><span class="v">${c.liquidated}</span></div>
+  <div class="row"><span>${es ? "Pesos pedidos" : "Pesos borrowed"}</span><span class="v">${pesos(c.pesosBorrowed, lang)}</span></div>
+  <div class="row"><span>${es ? "Pesos devueltos" : "Pesos repaid"}</span><span class="v">${pesos(c.pesosRepaid, lang)}</span></div>
+  ${lastCounted ? html`<div class="row"><span>${es ? "Último que contó" : "Last one counted"}</span><span class="v">${date(c.lastCountedAt, lang)}</span></div>` : ""}
+  <p class="small muted" style="margin:14px 0 0">${es ? "Leído ahora de" : "Read now from"} <a href="${addrUrl(dep.creditBook)}">CreditBook</a>. ${es ? "Otros agentes lo compran por x402 en" : "Other agents buy it over x402 at"} <code class="tx">/x402/credit/${short6}</code>.</p>
+</div>
+<div class="card">
+  <div class="card-label">${es ? "Tus préstamos" : "Your loans"}</div>
+  ${d.loans.length === 0
+    ? html`<p class="small muted" style="margin:0">${es ? "Ninguno todavía." : "None yet."} <a href="${href(lang, "/pedir")}">${t(lang, "borrow")}</a></p>`
+    : html`<ul class="log">${d.loans.map((r) => html`<li><a href="${href(lang, `/prestamo/${r.id}`)}">#${r.id}</a> · ${r.open ? t(lang, "open") : r.liquidated ? (es ? "liquidado" : "liquidated") : t(lang, "closed")} · ${date(BigInt(r.opened_at), lang)}${r.open ? html` · <a href="${href(lang, `/cuidar/${r.id}`)}">${es ? "regla del agente" : "agent rule"}</a>` : ""}</li>`)}</ul>`}
+</div>
+<div class="card">
+  <div class="card-label">${es ? "Lo que hizo el agente por vos" : "What the agent did for you"}</div>
+  ${agentFeed(lang, d.actions)}
+</div>
+</div>
+</div>
+<div style="margin-top:20px">${lookup}</div>`;
+  return plain(lang, title, body, `/historial?w=${d.who}`, { eyebrow: title, heading: es ? html`Tu historial, <em>en la cadena</em>` : html`Your record, <em>on chain</em>`, lede, wide: true, wallet: true });
 }
 
 export { raw, dep };

@@ -386,3 +386,29 @@ details.card[open] > summary::after { transform: rotate(45deg); }
 .btn { white-space: nowrap; }
 .btn.block { white-space: normal; line-height: 1.2; }
 @media (max-width: 480px) { .nav .wrap { gap: 10px; } .nav .btn { padding: 0 14px; font-size: 14.5px; } .brand .word { font-size: 23px; } }
+
+/* the agent: feed, live dot, rule quote */
+.feed { list-style: none; margin: 0; padding: 0; }
+.feed li { padding: 14px 0; border-top: 1px solid var(--line); }
+.feed li:first-child { border-top: 0; padding-top: 4px; }
+.feed-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.feed p { margin: 6px 0; color: var(--ink-2); overflow-wrap: anywhere; }
+.live { display: inline-flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 600; color: var(--ink-2); background: var(--paper-2); padding: 6px 12px; border-radius: 999px; }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.live.on i { background: #1f9d55; box-shadow: 0 0 0 4px rgba(31, 157, 85, 0.15); }
+.agent-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+.rule-q { margin: 22px 0 26px; padding: 16px 18px; border-left: 3px solid var(--celeste); background: var(--celeste-wash); border-radius: 0 12px 12px 0; font-size: 17px; color: var(--ink); }
+.rule-q span { display: block; margin-bottom: 6px; }
+@media (max-width: 860px) { .agent-grid { grid-template-columns: minmax(0, 1fr); gap: 24px; } }
+
+/* mi historial */
+.ladder { list-style: none; margin: 20px 0 0; padding: 0; }
+.ladder li { display: flex; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.ladder .lad-n { width: 32px; height: 32px; flex: none; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: var(--paper-2); color: var(--muted); }
+.ladder li.done .lad-n { background: var(--celeste-2); color: var(--ink); }
+.ladder li.here .lad-n { background: var(--celeste); color: var(--ink); }
+.ladder .lad-b { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ladder .lad-b span { font-size: 14.5px; color: var(--muted); }
+.ladder li.here .lad-b b { color: var(--ink); }
+.hist-row { display: flex; gap: 10px; }
+.hist-row input { flex: 1; min-width: 0; font: 400 15px var(--mono); padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--paper); color: var(--ink); }

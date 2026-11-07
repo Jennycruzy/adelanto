@@ -7,7 +7,7 @@ import { availableToBorrow, dollars, parseRule, pesos, percent } from "@adelanto
 import { CELO } from "@adelanto/chain";
 import { REFS, adminEvents, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, pub, quoteFor } from "./data.ts";
 import { langOf, t, type Lang } from "./i18n.ts";
-import { addrUrl, borrowPage, guardPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
+import { addrUrl, borrowPage, guardPage, historyPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
 import { ruleText, saveRule } from "./rules.ts";
 import { catalog, credit, pesoRate, quote as paidQuote, x402Middleware } from "./x402.ts";
 
@@ -37,7 +37,7 @@ app.get("/", async (c) => {
     if (loan) proof = { loan, events: loanEvents(loan.id), actions: agentActions(loan.id, 5) };
   }
   const tick = lastTick();
-  return c.html(home(l, v, proof, tick ? Date.now() - tick : null));
+  return c.html(home(l, v, proof, tick ? Date.now() - tick : null, agentActions(undefined, 4)));
 });
 
 app.get("/pedir", async (c) => {
@@ -60,6 +60,18 @@ app.get("/prestamo/:id", async (c) => {
   const loan = await loanView(BigInt(id), v);
   if (!loan) return c.notFound();
   return c.html(loanPage(l, v, loan, loanEvents(loan.id), agentActions(loan.id)));
+});
+
+app.get("/historial", async (c) => {
+  const l = lang(c);
+  const w = (c.req.query("w") ?? "").trim();
+  if (!w) return c.html(historyPage(l, null));
+  if (!isAddress(w)) return c.html(historyPage(l, null, true), 400);
+  const who = getAddress(w);
+  const credit = await creditOf(who);
+  const loans = loanRows().filter((r) => getAddress(r.borrower) === who);
+  const actions = loans.flatMap((r) => agentActions(BigInt(r.id), 10)).sort((a, b) => Number(b.at) - Number(a.at)).slice(0, 10);
+  return c.html(historyPage(l, { who, credit: credit as any, loans, actions }));
 });
 
 app.get("/prestar", async (c) => c.html(lendPage(lang(c), await poolView())));

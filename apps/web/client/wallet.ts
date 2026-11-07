@@ -433,7 +433,14 @@ function isRejection(e: any) {
   return e?.code === 4001 || /rejected|denied|cancel/i.test(String(e?.message ?? e));
 }
 
+// Mi historial: the record is public, so the wallet is only used to know which address to show.
+async function myRecord(el: HTMLElement) {
+  const me = await connect();
+  location.href = `/historial?w=${me}${el.dataset.lang === "en" ? "&lang=en" : ""}`;
+}
+
 const ACTIONS: Record<string, (el: HTMLElement) => Promise<void>> = {
+  myRecord,
   borrow,
   repayAll,
   repayPart,
@@ -466,5 +473,9 @@ document.addEventListener("click", async (ev) => {
 });
 
 // MiniPay connects on load, without a button.
-if (eth?.isMiniPay) connect().then(showMine).catch(() => {});
+if (eth?.isMiniPay) {
+  if (location.pathname === "/historial" && !new URLSearchParams(location.search).get("w")) {
+    connect().then((me) => (location.href = `/historial?w=${me}${location.search.includes("lang=en") ? "&lang=en" : ""}`)).catch(() => {});
+  } else connect().then(showMine).catch(() => {});
+}
 else if (eth) eth.request({ method: "eth_accounts" }).then((a: string[]) => { if (a?.[0]) { account = a[0] as Address; showMine(); } }).catch(() => {});
