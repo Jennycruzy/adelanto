@@ -9,11 +9,19 @@ import { REFS, adminEvents, agentActions, attributionAudit, balancesOf, creditOf
 import { langOf, t, type Lang } from "./i18n.ts";
 import { addrUrl, borrowPage, guardPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
 import { ruleText, saveRule } from "./rules.ts";
+import { catalog, credit, pesoRate, quote as paidQuote, x402Middleware } from "./x402.ts";
 
 const app = new Hono();
 const lang = (c: any): Lang => langOf(c.req.query("lang"));
 const json = (c: any, body: unknown, status = 200) =>
   c.body(JSON.stringify(body, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2), status, { "content-type": "application/json; charset=utf-8" });
+
+// Paid answers for other agents (x402 through Celo's facilitator); the catalogue is free.
+app.get("/x402", (c) => catalog(c));
+app.use("/x402/*", x402Middleware());
+app.get("/x402/peso-rate", (c) => pesoRate(c));
+app.get("/x402/quote", (c) => paidQuote(c));
+app.get("/x402/credit/:address", (c) => credit(c));
 
 app.use("/static/*", serveStatic({ root: "./apps/web/public", rewriteRequestPath: (p) => p.replace(/^\/static/, "") }));
 app.get("/static/adelanto.png", serveStatic({ path: "./agent/adelanto.png" }));
