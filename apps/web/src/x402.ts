@@ -2,6 +2,7 @@
 // costs a small fixed amount in USD₮ (EIP-3009) or wARS (Permit2, gas sponsored by the facilitator), paid straight
 // to the ADELANTO agent's wallet; the facilitator never holds the money. The attribution code is declared in the
 // builder-code extension, which the facilitator applies to the settlement once it supports it.
+import { readFileSync } from "node:fs";
 import type { Context } from "hono";
 import { getAddress, isAddress, type Address } from "viem";
 import { paymentMiddleware, x402ResourceServer } from "@x402/hono";
@@ -44,7 +45,11 @@ export const routes: RoutesConfig = {
 };
 
 export function x402Middleware() {
-  const key = process.env.X402_API_KEY;
+  // the key comes from X402_API_KEY or, so it never sits in a shell history, from the file X402_API_KEY_FILE names
+  let key = process.env.X402_API_KEY?.trim();
+  if (!key && process.env.X402_API_KEY_FILE) {
+    try { key = readFileSync(process.env.X402_API_KEY_FILE, "utf8").trim() || undefined; } catch { key = undefined; }
+  }
   const facilitator = new HTTPFacilitatorClient({
     url: X402_FACILITATOR,
     createAuthHeaders: async () => {

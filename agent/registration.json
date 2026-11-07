@@ -1,7 +1,7 @@
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "ADELANTO",
-  "description": "Pesos ya, sin vender tus dólares. Un agente cuida tu préstamo. — Pesos now, without selling your dollars. Argentine banks charge 64.63% a year for a personal loan (BCRA, 2 Nov 2026); ADELANTO lends Ripio wARS on Celo against USDT at 22% a year when the pool is idle and 36% at 80% use, with a 0.25% opening fee. The borrower keeps their dollars. Lenders earn the interest on their wARS. The borrower sets the agent's limits once, from a rule in their own words, and the LoanGuard contract on Celo enforces them: the agent can only add the borrower's own dollars, repay with the borrower's own pesos, and act inside the signed daily caps. Every loan writes a public credit record on chain. For bigger loans the agent quotes Morpho on Ethereum through a proxy that runs only orders the borrower signed.",
+  "description": "Pesos ya, sin vender tus dólares. Un agente cuida tu préstamo. — Pesos now, without selling your dollars. Argentine banks charge 64.63% a year for a personal loan (BCRA, 2 Nov 2026); ADELANTO lends Ripio wARS on Celo against USDT at 22% a year when the pool is idle and 36% at 80% use, with a 0.25% opening fee. The borrower keeps their dollars. Lenders earn the interest on their wARS. The borrower sets the agent's limits once, from a rule in their own words, and the LoanGuard contract on Celo enforces them: the agent can only add the borrower's own dollars, repay with the borrower's own pesos, and act inside the signed daily caps. Every loan writes a public credit record on chain. Other agents buy the peso rate, a borrow quote or a wallet's credit record over x402, paying in wARS or USD₮ through Celo's facilitator. For bigger loans the agent quotes Morpho on Ethereum through a proxy that runs only orders the borrower signed.",
   "image": "https://raw.githubusercontent.com/Jennycruzy/adelanto/main/agent/adelanto.png",
   "services": [
     {
@@ -15,6 +15,10 @@
     {
       "name": "llms.txt",
       "endpoint": "https://adelanto-99-80-93-71.sslip.io/llms.txt"
+    },
+    {
+      "name": "x402",
+      "endpoint": "https://adelanto-99-80-93-71.sslip.io/x402"
     },
     {
       "name": "peso-pool",
@@ -41,7 +45,7 @@
       "endpoint": "eip155:42220:0xcd98B9669708F0d193c975B0900169890d6Dd0fE"
     }
   ],
-  "x402Support": false,
+  "x402Support": true,
   "active": true,
   "registrations": [
     {

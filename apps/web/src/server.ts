@@ -337,6 +337,14 @@ ${dep.gentleKeeper ? `- GentleKeeper ${dep.gentleKeeper}: gentle liquidation com
 - A loan: GET /api/loan/<id>, or PesoPool.loans(id) and debtOf(id); its history is the pool's events for that id
 - Attribution: every transaction since the event code carries ERC-8021 code celo_0e96c1ff3fa8 (evidence/attribution-audit.json)
 
+## Paid answers over x402 (v2, scheme exact, eip155:42220)
+Settled by Celo's facilitator (https://api.x402.celo.org) straight into the agent wallet. Pay in USD₮ (EIP-3009)
+or wARS (Permit2; the facilitator sponsors the permit, so a wARS payer needs no CELO). GET /x402 lists them, free.
+- GET /x402/peso-rate: the pool's 30-minute price against Binance and dolarapi, with a verdict. US$0.005 or 8 wARS
+- GET /x402/quote?pesos=1000&days=30&tier=0: a firm borrow quote from the live pool. US$0.01 or 15 wARS
+- GET /x402/credit/<address>: a wallet's repayment record and the line it unlocks. US$0.01 or 15 wARS
+- Example buyer: scripts/x402-buy.ts in the source
+
 ## Source
 https://github.com/Jennycruzy/adelanto
 `);

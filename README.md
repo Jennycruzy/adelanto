@@ -16,7 +16,7 @@ Live on Celo mainnet: **[adelanto-99-80-93-71.sslip.io](https://adelanto-99-80-9
 
 ## Check it yourself
 
-Every link is a real Celo mainnet transaction. Every transaction since the event code was issued carries the
+Every link is a real Celo mainnet transaction. Every transaction our wallets send since the event code was issued carries the
 attribution tag `celo_0e96c1ff3fa8` ([audit: 24 of 24 tagged, 0 untagged](evidence/attribution-audit.json)).
 
 | What happened | When (UTC) | Check it |
@@ -25,6 +25,8 @@ attribution tag `celo_0e96c1ff3fa8` ([audit: 24 of 24 tagged, 0 untagged](eviden
 | **A lender's pesos in and out.** 5,616.86 wARS deposited into the pool; 100 wARS withdrawn. | 6 Nov 08:11–08:14 | [deposit](https://celoscan.io/tx/0xd27c79121bb11b8ec32cb492c849d37fa2744adad1544f113061cc25de466c2a) · [deposit 2](https://celoscan.io/tx/0x49046ee489059c942f38df26b58249b5c20582f6cc943084e85e4dde734f5621) · [withdraw](https://celoscan.io/tx/0x9cc2e069c6015bfec97457b4813aed8dc75a3b3b1a3deede1f074c68dda38116) |
 | **Five contracts, verified, tagged from the first byte.** The attribution tag is on the deploy transactions themselves. | 6 Nov 07:40, 10:42 | [PesoPool](https://celoscan.io/tx/0xc78058d8c4623ef4b2457f1f260f2589e090e820153b20c794503d7b9ee0a1b7) · [LoanGuard](https://celoscan.io/tx/0xe091e0c93d6e7eb1c8d72ef8a8a2f328845002e2247c7fa4fd25dd867e07cf0b) · [CreditBook](https://celoscan.io/tx/0x4d6f734947024707c03486d6afb006079cecda3ead83cdb696304924c72e297a) · [PriceModule](https://celoscan.io/tx/0xb61c2b6d8b09bf95550fdd947778bc8b03939eb9c662cd148dbc59b5c0130678) · [GentleKeeper](https://celoscan.io/tx/0xa697e3fa3b145ed4f0c7fc90071d5562703b16d27f4217520ff3cf7e9b4e9582) |
 | **An agent with an on-chain identity.** ADELANTO is agent #10043 in Celo's ERC-8004 registry; its card lists the site, the contracts and the agent wallet. | 6 Nov 08:15 | [registration](https://celoscan.io/tx/0xf0bbf26a35801ff47b3e343078cb3d97ef964166f83b458b8104bee88b533795) · [card](agent/registration.json) |
+| **The agent repaid a loan on its own, quoting the borrower's rule.** Loan #2's rule, in the borrower's words: *"Cuando me entren pesos de ventas, pagá el préstamo con eso. Nunca vendas mis dólares."* When 300 wARS from a sale reached the borrower's wallet, the agent repaid 300 wARS through `LoanGuard`; a second sale of 100 wARS was repaid the same way, and the agent's log quotes the rule word for word. | 7 Nov 12:14, 12:28 | [repay 300](https://celoscan.io/tx/0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b) · [repay 100](https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a) |
+| **Other agents pay ADELANTO over x402.** A buyer paid 8 wARS for the peso rate and US$0.01 in USD₮ for a wallet's credit record, settled by Celo's x402 facilitator straight into the agent wallet. The facilitator sends these settlements from its own wallet; ADELANTO declares its attribution code in every 402 through the builder-code extension. | 7 Nov 13:52 | [8 wARS](https://celoscan.io/tx/0x8413548ce9ed00b89f43a67a01885b9081eea1f0957e16a479c46a2fffebe335) · [US$0.01](https://celoscan.io/tx/0x7ade1408800fdd6700c94dae8ae1f05fbd734bbf775b484b12e34d4586e70344) · [catalog](https://adelanto-99-80-93-71.sslip.io/x402) |
 | **Works inside MiniPay.** On a real iPhone, MiniPay signed EIP-712 typed data on chain 42220, paid gas in USDT on its own, and sent to contracts that are on no wallet's list (wARS and the wARS/USDT Uniswap pool). | 5 Nov 17:24 | [wARS call](https://celoscan.io/tx/0x91a0c3afd4577ba6fcf880bdd8dde2b69f9d209c4e1df5dc45903286cb7db9e8) · [Uniswap pool call](https://celoscan.io/tx/0x370cb1091c2198b9b0bc05438576d18dd7732e84d7cfa3c98e6300de540df51c) |
 | **Bigger loans: Morpho on Ethereum, round trip with real money.** USDT bridged to Ethereum, 3,000 wARS borrowed on Morpho's wARS/USDT market (0.30% a year that day), pesos bridged to Celo through Ripio, then repaid and the dollars brought home. | 5 Nov 18:51–21:38 | [borrow on Morpho](https://etherscan.io/tx/0x32e03e2af5aaf27db2b9db4cdf0ce0bb84c073b75ed0a52a12358043d5cc0165) · [pesos to Celo](https://etherscan.io/tx/0x88df1ef3069e8abdcbe1ee421996677f1a38223eebbd988b410aa47d2bda463f) · [repay](https://etherscan.io/tx/0xb7f7afe9a8ca26af2c26cd1ed48f868a96c3684af96b325ce33d6eb21f9d15fa) · [dollars home](https://etherscan.io/tx/0x68b29607e347de3f7949b90f0084763c105a6d662cbded845b7fe881746e82f2) · [every step](docs/verification.md#ethereum-round-trip) |
 
@@ -37,6 +39,8 @@ From a terminal, no wallet:
 curl -s https://adelanto-99-80-93-71.sslip.io/api/public/rates   # live rates and pool, read from chain
 curl -s https://adelanto-99-80-93-71.sslip.io/api/loan/1         # the loan above, from chain
 curl -s https://adelanto-99-80-93-71.sslip.io/llms.txt           # every contract and how to check each claim
+curl -s https://adelanto-99-80-93-71.sslip.io/x402               # paid answers for agents (x402), free list
+BUYER_KEY_FILE=key node scripts/x402-buy.ts                      # pay 8 wARS for the peso rate
 ```
 
 ## What ADELANTO does
