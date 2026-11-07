@@ -21,3 +21,6 @@ TASK*
 *-private/
 g0/
 deployments/*-fork.json
+
+# local debug scripts
+*.local.ts

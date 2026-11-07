@@ -61,13 +61,26 @@ export function followedBorrowers(db: Db): Address[] {
   return (db.prepare("SELECT DISTINCT json_extract(args, '$.borrower') AS b FROM events WHERE name = 'LimitsSet'").all() as any[]).map((r) => getAddress(r.b));
 }
 
-/** The safe head, or 10 minutes (600 blocks) behind the tip on a node that does not serve it. */
+/** How far behind the tip the index may stay (10 minutes of Celo blocks). */
+export const MAX_INDEX_LAG = 600n;
+
+/**
+ * The block the index may reach: the node's safe head, but never more than 10 minutes behind the tip. On Celo the
+ * "safe" tag can stall for days (seen 7 Nov: 335,519 blocks behind) and the agent would then never see a payment;
+ * a reorg deeper than 10 minutes is caught by checkContinuity, which rewinds and redoes the range.
+ */
+export function indexHead(tip: bigint, safe: bigint | null): bigint {
+  const floor = tip > MAX_INDEX_LAG ? tip - MAX_INDEX_LAG : 0n;
+  return safe !== null && safe > floor ? safe : floor;
+}
+
 async function safeHead(pub: PublicClient): Promise<bigint> {
+  const tip = await pub.getBlockNumber({ cacheTime: 0 });
+  let safe: bigint | null = null;
   try {
-    const b = await pub.getBlock({ blockTag: "safe" });
-    if (b.number !== null) return b.number;
+    safe = (await pub.getBlock({ blockTag: "safe" })).number;
   } catch {}
-  return (await pub.getBlockNumber({ cacheTime: 0 })) - 600n;
+  return indexHead(tip, safe);
 }
 
 /** If the last indexed block's hash no longer matches the chain, drop everything after a safe distance and redo it. */
