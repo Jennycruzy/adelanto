@@ -3,9 +3,9 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { html } from "hono/html";
 import { getAddress, isAddress } from "viem";
-import { availableToBorrow, dollars, pesos, percent } from "@adelanto/core";
+import { availableToBorrow, dollars, parseRule, pesos, percent } from "@adelanto/core";
 import { CELO } from "@adelanto/chain";
-import { REFS, adminEvents, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, quoteFor } from "./data.ts";
+import { REFS, adminEvents, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, pub, quoteFor } from "./data.ts";
 import { langOf, t, type Lang } from "./i18n.ts";
 import { addrUrl, borrowPage, guardPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
 import { ruleText, saveRule } from "./rules.ts";
@@ -178,6 +178,18 @@ app.get("/cuidar/:id", async (c) => {
   const loan = await loanView(BigInt(id), v);
   if (!loan) return c.notFound();
   return c.html(guardPage(l, loan, loan.guard ? ruleText(loan.guard.ruleHash) : null));
+});
+
+// The rule in the borrower's own words → limits, a question with buttons, or a stop. Nothing is signed here.
+app.post("/api/parse-rule", async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body.text !== "string" || body.text.length > 600 || !/^\d{1,9}$/.test(String(body.loanId ?? ""))) return json(c, { error: "bad request" }, 400);
+  const v = await poolView();
+  const loan = await loanView(BigInt(body.loanId), v);
+  if (!loan || !loan.open) return json(c, { error: "no open loan" }, 404);
+  const block = await pub.getBlock();
+  const r = parseRule(body.text, { debt: loan.debt, collateral: loan.collateral, dueAt: loan.dueAt, maxRateBps: 0 }, block.timestamp, body.lang === "en" ? "en" : "es");
+  return json(c, r);
 });
 
 app.post("/api/rule", async (c) => {

@@ -121,6 +121,7 @@ function stateNotice(v: PoolView, lang: Lang) {
 // ---------------------------------------------------------------- landing
 
 const ICON: Record<string, string> = {
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
   shield: '<path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/>',
   chain: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   tag: '<path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
@@ -449,8 +450,18 @@ ${loan.guard
   <div id="status"></div><button class="btn ghost block" data-action="revokeGuard" data-lang="${lang}">${es ? "Quitarle el permiso al agente" : "Take the agent's permission away"}</button></div>`
   : ""}
 <div class="card">
+  <div class="card-label">${es ? "Decíselo con tus palabras" : "Say it in your own words"}</div>
+  <label for="rule-text" class="small">${es ? "Por ejemplo: «Cuando me entren pesos de las ventas, pagá el préstamo. Nunca vendas mis dólares.»" : "For example: \"When pesos from my sales arrive, repay the loan. Never sell my dollars.\""}</label>
+  <textarea id="rule-text" rows="3" maxlength="600" style="width:100%;font:inherit;font-size:18px;padding:12px 14px;border-radius:16px;border:1.5px solid var(--line);margin-top:8px" placeholder="${es ? "Escribí tu regla" : "Write your rule"}"></textarea>
+  <div style="display:flex;gap:10px;margin-top:12px">
+    <button class="btn ghost" data-action="dictate" data-lang="${lang}" hidden style="gap:8px"><span style="width:20px;height:20px;display:inline-flex">${icon("mic")}</span>${es ? "Dictar" : "Dictate"}</button>
+    <button class="btn" style="flex:1;min-width:0;padding:0 16px" data-action="parseWords" data-loan="${loan.id.toString()}" data-debt="${loan.debt.toString()}" data-lang="${lang}">${es ? "Ver qué va a hacer" : "See what it will do"}</button>
+  </div>
+  <div id="rule-question" hidden style="margin-top:14px"></div>
+</div>
+<div class="card">
   <div class="card-label">${es ? "Elegí una" : "Pick one"}</div>
-  <div style="display:grid;gap:10px">
+  <div style="display:grid;gap:10px;grid-template-columns:minmax(0,1fr)">
   ${presets.map((p) => html`<button class="btn ghost block" style="justify-content:space-between;text-align:left;min-height:70px;padding:12px 18px" data-action="preset" data-preset="${p.id}" data-loan="${loan.id.toString()}" data-debt="${loan.debt.toString()}" data-lang="${lang}"><span>${es ? p.es : p.en}<br><small class="muted" style="font-weight:400">${es ? p.sub.es : p.sub.en}</small></span><span class="arrow">→</span></button>`)}
   </div>
 </div>
@@ -465,6 +476,7 @@ ${loan.guard
 <div class="card" id="readback" hidden style="background:var(--celeste-wash);border-color:var(--ink)">
   <div class="card-label">${es ? "Esto es lo que vas a firmar" : "This is what you will sign"}</div>
   <p id="rule-words" class="quote" style="font-size:24px"></p>
+  <p id="rule-readback" class="small" hidden></p>
   <div id="status"></div>
   <button class="btn block" data-action="signGuard" data-loan="${loan.id.toString()}" data-lang="${lang}">${es ? "Firmar" : "Sign"} <span class="arrow">→</span></button>
 </div>

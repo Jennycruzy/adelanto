@@ -1,6 +1,7 @@
 // Entry point. Watch-only unless AGENT_MODE=live: in watch mode the agent reads, decides and logs everything and
 // sends nothing. Env: ATTRIBUTION_TAG, AGENT_KEY_FILE, GUARDIAN_KEY_FILE (optional), DB_PATH, AGENT_MODE,
 // CELO_RPC_URL(_2), TICK_SECONDS (default 60), OURS_ADDRESSES / JUDGE_ADDRESSES (comma separated).
+import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { getAddress } from "viem";
@@ -28,7 +29,22 @@ for (const a of (process.env.OURS_ADDRESSES ?? "").split(",").filter(Boolean)) l
 for (const a of (process.env.JUDGE_ADDRESSES ?? "").split(",").filter(Boolean)) labels.set(getAddress(a.trim()), "JUDGE");
 labels.set(keeper.address, "OURS");
 
+const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
+// The words behind each rule, saved by the web app (read-only; the agent checks each against its on-chain hash).
+const webDbPath = process.env.WEB_DB_PATH ?? join(homedir(), "adelanto-data", "web.sqlite");
+let webDb: any = null;
+const ruleWords = (hash: string): string | undefined => {
+  try {
+    webDb ??= new DatabaseSync(webDbPath, { readOnly: true });
+    return (webDb.prepare("SELECT text FROM rules WHERE hash = ?").get(hash) as any)?.text;
+  } catch {
+    webDb = null;
+    return undefined;
+  }
+};
+
 const agent = new Agent({
+  ruleWords,
   db,
   pub,
   addresses: { pool: deployment.pool, guard: deployment.guard, priceModule: deployment.priceModule, deployBlock: deployment.deployBlock, gentleKeeper: deployment.gentleKeeper },

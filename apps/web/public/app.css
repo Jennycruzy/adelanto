@@ -101,6 +101,8 @@ code { font-family: var(--mono); font-size: 0.9em; }
 .btn.light { background: #fff; color: var(--ink); }
 .btn.light:hover { background: var(--celeste-wash); }
 .btn.block { display: flex; width: 100%; }
+.btn { max-width: 100%; }
+.btn > span { min-width: 0; }
 .btn[disabled] { opacity: 0.45; cursor: not-allowed; transform: none; }
 .btn .arrow { transition: transform 0.2s var(--ease); }
 .btn:hover .arrow { transform: translateX(3px); }
@@ -382,4 +384,5 @@ details.card[open] > summary::after { transform: rotate(45deg); }
 .photo-card::after { background: linear-gradient(180deg, rgba(11, 36, 64, 0.15) 0%, rgba(11, 36, 64, 0.55) 40%, rgba(11, 36, 64, 0.92) 100%); }
 .photo-card h2, .photo-card .lede { text-shadow: 0 1px 12px rgba(11, 36, 64, 0.35); }
 .btn { white-space: nowrap; }
+.btn.block { white-space: normal; line-height: 1.2; }
 @media (max-width: 480px) { .nav .wrap { gap: 10px; } .nav .btn { padding: 0 14px; font-size: 14.5px; } .brand .word { font-size: 23px; } }

@@ -4,7 +4,7 @@
 //   -> A3 rate watch -> A4 price watch -> A6 notices.
 // In "watch" mode every decision is logged with its sentence and nothing is ever broadcast, not even a transaction
 // signed by an earlier live run.
-import { encodeFunctionData, erc20Abi, getAddress, type Address, type Hex, type PublicClient } from "viem";
+import { encodeFunctionData, erc20Abi, getAddress, keccak256, toBytes, type Address, type Hex, type PublicClient } from "viem";
 import { CELO, NonceConsumedError, TaggedSender, erc20TransferEvent, gentleKeeperAbi as keeperAbi, guardAbi, morphoWarsMarket, poolAbi, priceAbi, type Signed } from "@adelanto/chain";
 import {
   decideAutoRepay,
@@ -38,6 +38,7 @@ export type AgentDeps = {
   guardian?: TaggedSender; // pause / unpause
   eth?: PublicClient; // Ethereum reads for the rate watch (A3); omitted = A3 off
   labels: Map<string, string>; // address -> OURS / JUDGE
+  ruleWords?: (hash: string) => string | undefined; // the words saved for a rule hash (web app store)
   now?: () => number; // ms; injectable for tests
   log?: (s: string) => void;
 };
@@ -253,9 +254,16 @@ export class Agent {
     return { limits, usage: { repaidWars: usage.repaidWars, toppedUpUsdt: usage.toppedUpUsdt }, wallet };
   }
 
+  /**
+   * The borrower's rule in their own words, so every sentence can quote it: looked up by the rule hash they put on
+   * chain, in the words the web app saved, and used only when keccak256(words) equals that hash.
+   */
   private ruleText(borrower: Address): string | undefined {
-    const r = this.d.db.prepare("SELECT rule_text FROM guard_limits WHERE borrower = ?").get(borrower) as any;
-    return r?.rule_text ?? undefined;
+    const r = this.d.db.prepare("SELECT rule_hash, rule_text FROM guard_limits WHERE borrower = ?").get(borrower) as any;
+    if (!r) return undefined;
+    if (r.rule_text && keccak256(toBytes(r.rule_text)) === r.rule_hash) return r.rule_text;
+    const words = this.d.ruleWords?.(r.rule_hash);
+    return words && keccak256(toBytes(words)) === r.rule_hash ? words : undefined;
   }
 
   /**

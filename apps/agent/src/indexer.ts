@@ -66,7 +66,7 @@ export const MAX_INDEX_LAG = 600n;
 
 /**
  * The block the index may reach: the node's safe head, but never more than 10 minutes behind the tip. On Celo the
- * "safe" tag can stall for days (seen 7 Nov: 335,519 blocks behind) and the agent would then never see a payment;
+ * "safe" tag can stall for days (seen at 335,519 blocks behind) and the agent would then never see a payment;
  * a reorg deeper than 10 minutes is caught by checkContinuity, which rewinds and redoes the range.
  */
 export function indexHead(tip: bigint, safe: bigint | null): bigint {

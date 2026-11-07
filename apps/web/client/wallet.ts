@@ -278,11 +278,78 @@ const guardAbi = parseAbi([
   "function setLimits((bool autoRepay,bool rateWatch,uint8 protectOrder,uint64 expiry,uint128 keepWarsBuffer,uint128 maxRepayWarsPerDay,uint128 maxTopUpUsdtPerDay,uint32 maxRateBps) l, bytes32 ruleHash)",
   "function revoke()",
 ]);
-let pending: { rule: RuleInput; words: string; debt: bigint } | null = null;
+type Parsed = { autoRepay: boolean; rateWatch: boolean; protectOrder: number; expiry: bigint; keepWarsBuffer: bigint; maxRepayWarsPerDay: bigint; maxTopUpUsdtPerDay: bigint; maxRateBps: number };
+let pending: { rule?: RuleInput; parsed?: Parsed; revoke?: boolean; words: string; debt: bigint } | null = null;
+
+// The rule in the borrower's own words: the server turns it into limits (or one question); the exact words are hashed.
+async function parseWords(el: HTMLElement) {
+  const box = document.getElementById("rule-text") as HTMLTextAreaElement | null;
+  const words = (box?.value ?? "").trim();
+  const q = document.getElementById("rule-question")!;
+  q.hidden = true;
+  if (!words) return status(el.dataset.lang === "en" ? "Write your rule first." : "Escribí tu regla primero.", "bad");
+  const r = await fetch("/api/parse-rule", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ loanId: el.dataset.loan, text: words, lang: el.dataset.lang }) }).then((x) => x.json());
+  const en = el.dataset.lang === "en";
+  if (r.kind === "question") {
+    q.innerHTML = "";
+    const p = document.createElement("p");
+    p.textContent = en ? r.question.en : r.question.es;
+    q.append(p);
+    for (const o of r.question.options) {
+      const b = document.createElement("button");
+      b.className = "btn ghost";
+      b.style.margin = "4px 6px 4px 0";
+      b.textContent = o.label;
+      b.addEventListener("click", () => {
+        box!.value = (box!.value.trim() + o.append).trim();
+        void parseWords(el).catch((e) => status(String(e?.message ?? e), "bad"));
+      });
+      q.append(b);
+    }
+    q.hidden = false;
+    return;
+  }
+  if (r.kind === "unknown") return status(en ? r.en : r.es, "bad");
+  const L = r.kind === "limits" ? r.limits : null;
+  pending = {
+    words,
+    debt: BigInt(el.dataset.debt!),
+    revoke: r.kind === "revoke",
+    parsed: L ? { ...L, expiry: BigInt(L.expiry), keepWarsBuffer: BigInt(L.keepWarsBuffer), maxRepayWarsPerDay: BigInt(L.maxRepayWarsPerDay), maxTopUpUsdtPerDay: BigInt(L.maxTopUpUsdtPerDay) } : undefined,
+  };
+  const rb = document.getElementById("readback");
+  const pw = document.getElementById("rule-words");
+  const pr = document.getElementById("rule-readback");
+  if (rb && pw && pr) {
+    pw.textContent = `«${words}»`;
+    pr.textContent = en ? r.readback.en : r.readback.es;
+    pr.hidden = false;
+    rb.hidden = false;
+    rb.scrollIntoView({ behavior: "smooth" });
+  }
+}
+
+// Voice: the browser's own Spanish (Argentina) dictation, where the browser has it; the button stays hidden otherwise.
+const Speech = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+if (Speech) document.querySelectorAll<HTMLElement>('[data-action="dictate"]').forEach((b) => (b.hidden = false));
+async function dictate(el: HTMLElement) {
+  const rec = new Speech();
+  rec.lang = el.dataset.lang === "en" ? "en-US" : "es-AR";
+  rec.interimResults = false;
+  rec.onresult = (e: any) => {
+    const box = document.getElementById("rule-text") as HTMLTextAreaElement;
+    box.value = (box.value + " " + e.results[0][0].transcript).trim();
+  };
+  rec.onerror = () => status(el.dataset.lang === "en" ? "Could not hear you; type it instead." : "No te escuché; escribila.", "bad");
+  rec.start();
+  status(el.dataset.lang === "en" ? "Listening…" : "Te escucho…");
+}
 
 function showRule(rule: RuleInput, debt: bigint) {
   const words = ruleSentence(rule);
   pending = { rule, words, debt };
+  const rr = document.getElementById("rule-readback");
+  if (rr) rr.hidden = true;
   const box = document.getElementById("readback");
   const p = document.getElementById("rule-words");
   if (box && p) {
@@ -307,7 +374,10 @@ async function customGuard(el: HTMLElement) {
 async function signGuard() {
   if (!pending) return;
   const me = await connect();
-  const { rule, words, debt } = pending;
+  if (pending.revoke) return revokeGuard();
+  if (pending.parsed) return signParsed(me, pending.parsed, pending.words, pending.debt);
+  const { words, debt } = pending;
+  const rule = pending.rule!;
   const usdtPerDay = parseUnits(rule.topUpUsdPerDay.toFixed(6), 6);
   const warsPerDay = BigInt(Math.round(rule.repayPesosPerDay)) * 10n ** 18n;
   const block = await pub.getBlock();
@@ -326,6 +396,19 @@ async function signGuard() {
   if (usdtPerDay > 0n) await approveExact(cfg.usdt, cfg.guard, usdtPerDay * 7n);
   if (warsPerDay > 0n) {
     const week = warsPerDay * 7n;
+    await approveExact(cfg.wars, cfg.guard, week < debt * 2n ? week : debt * 2n);
+  }
+  await send(cfg.guard, encodeFunctionData({ abi: guardAbi, functionName: "setLimits", args: [limits, keccak256(toBytes(words))] }));
+  await fetch("/api/rule", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ borrower: me, text: words }) });
+  status(w.done, "ok");
+  setTimeout(() => location.reload(), 1200);
+}
+
+async function signParsed(me: Address, limits: Parsed, words: string, debt: bigint) {
+  // Same allowances as the form: a week of the daily limits, and never more pesos than twice what is owed.
+  if (limits.maxTopUpUsdtPerDay > 0n) await approveExact(cfg.usdt, cfg.guard, limits.maxTopUpUsdtPerDay * 7n);
+  if (limits.maxRepayWarsPerDay > 0n) {
+    const week = limits.maxRepayWarsPerDay * 7n;
     await approveExact(cfg.wars, cfg.guard, week < debt * 2n ? week : debt * 2n);
   }
   await send(cfg.guard, encodeFunctionData({ abi: guardAbi, functionName: "setLimits", args: [limits, keccak256(toBytes(words))] }));
@@ -359,6 +442,8 @@ const ACTIONS: Record<string, (el: HTMLElement) => Promise<void>> = {
   withdraw: () => withdraw(),
   preset,
   customGuard,
+  parseWords,
+  dictate,
   signGuard: () => signGuard(),
   revokeGuard: () => revokeGuard(),
 };
