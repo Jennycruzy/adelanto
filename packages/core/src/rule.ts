@@ -81,7 +81,7 @@ const toWars = (v: number) => BigInt(Math.round(v)) * WAD;
 const has = (s: string, re: RegExp) => re.test(s);
 
 const STOP = /\b(para|frena|cancela|cancelar|anula|borra|saca|sacale|quita|quitale|desactiva|apaga)\b.{0,25}\b(regla|todo|permiso|agente|guardia)\b|^\s*(para|pare|stop|basta|frena)\s*$/;
-const ASK_FIRST = /\b(no hagas nada|nada sin (preguntar|avisar)|preguntame antes|consultame|solo avisa|solo avisame|solamente avisa|nada mas avisa)/;
+const ASK_FIRST = /\b(no hagas nada|nada sin (preguntar|avisar)|preguntame antes|consultame|solo avisa|solo avisame|solamente avisa|nada mas avisa|avisame antes|avisa antes|preguntame primero|consultame primero)/;
 const AUTO_REPAY = /\b(cuando|si|apenas|ni bien|cada vez que)\b.{0,30}\b(entr|lleg|cobr|deposit|ingres|paguen|transfier|caiga|vend|venta)|\bcon (las|mis|lo de las|la plata de las) ventas\b|\bcon lo que (me )?(entre|llegue|cobre|ingrese|venda)|\bpaga(lo|melo)? (solo )?con (mis|los) pesos( que (me )?(entren|lleguen))?/;
 const NO_DOLLARS = /\bnunca\b.{0,20}\b(vendas|toques|uses|agarres|saques|pongas)\b.{0,15}\busd\b|\bno (me )?(vendas|toques|uses)\b.{0,15}\busd\b|\bsin (tocar|usar|vender) (mis )?usd\b|\bque no me (vendan|toquen|usen)\b.{0,10}\busd\b/;
 const PROTECT = /\b(cuida|cuidalo|cuidame|protege|protegelo|que no (llegue|caiga|pase)|nunca llegue a riesgo|no (me )?liquid|que no me (vendan|liquiden)|riesgo|si (baja|se cae|cae) el (peso|precio|dolar|usd))/;
@@ -125,6 +125,8 @@ export function parseRule(text: string, loan: RuleLoan, nowSec: bigint, lang: "e
     if (cur === "usd") topUpPerDay = perDay(n.v, p);
     else if (cur === "ars") repayPerDay = perDay(n.v, p);
     else if (TOPUP_VERB.test(s) && !noDollars) topUpPerDay = perDay(n.v, p);
+    // an amount with no currency in a rule that repays with incoming pesos, and never adds dollars, is pesos
+    else if (autoRepay) repayPerDay = perDay(n.v, p);
   }
   if (/\b(hasta (el )?fin de mes|todo el mes)\b/.test(s)) {
     const d = new Date(Number(nowSec) * 1000);

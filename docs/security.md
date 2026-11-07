@@ -13,6 +13,7 @@ A new version is a new deployment.
 | Reserve (10% of interest) | `PesoPool` | Covers bad debt first. The owner can send it to the fixed treasury address only after a public 48-hour wait. |
 | A borrower's wallet | The borrower's wallet | The borrower. `LoanGuard` can pull from it only within the limits the borrower signed, only into that borrower's own loan. |
 | An Ethereum loan | That person's `MorphoProxy` | Only orders that person signed. Money leaves only to that person's own address on Celo. |
+| An x402 payment | The buyer's wallet, until settled | Only the facilitator, with the buyer's own EIP-3009 or Permit2 signature for that exact amount, to the agent wallet. The facilitator never holds it; ADELANTO's server never sees the buyer's key. |
 
 There is no admin withdraw anywhere. The test `test_noPrivilegedTransfers` uses every owner and guardian power at
 once and checks that no collateral and no lender pesos move.
@@ -25,6 +26,17 @@ once and checks that no collateral and no lender pesos move.
 | Guardian | Pause and unpause new borrowing and new deposits | Pause repay, withdraw, add collateral or liquidation |
 | Agent (`LoanGuard.agent`, fixed at deploy) | Add the borrower's USDT to their loan when it is at 70% or more; repay from the borrower's wallet to protect it; repay when pesos arrive (if the borrower turned that on) | Exceed the signed daily limits; dip below the borrower's peso buffer; act after the rule expires; act while the price module refuses; send money anywhere but the borrower's own loan; borrow, open loans or change limits |
 | Anyone | Repay any loan; add collateral to any loan; liquidate past the 80% line; submit an order someone signed on Ethereum | Anything else |
+
+## Off-chain pieces
+
+- **The rule's words.** Only the hash is on chain. The site stores words only if their keccak256 equals the
+  borrower's `ruleHash`, and the agent hashes them again before quoting them. Words cannot change limits: the
+  limits are what the borrower signed.
+- **The rule parser** runs on our server and only proposes limits. The borrower's wallet signs them after the
+  read-back, and `LoanGuard` enforces what was signed, whatever the parser said. Its output is clamped to the
+  loan's debt, guarantee and 180 days, and tested on 3,000 random rules.
+- **x402.** The facilitator's API key stays on the server (read from a private file); a leaked key could spend our
+  settlement credits, never move anyone's money. Buyers sign a payment for one exact amount to one address.
 
 ## Prices
 

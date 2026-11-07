@@ -7,7 +7,7 @@ Everything here can be checked on a public explorer with no account. The address
 
 Every transaction from our wallets and contracts since the event issued our code carries the ERC-8021 suffix
 `celo_0e96c1ff3fa8`, contract creations included. [`evidence/attribution-audit.json`](../evidence/attribution-audit.json)
-lists each one with its input data read back from chain: **32 transactions, 24 tagged, 8 sent before the code was
+lists each one with its input data read back from chain: **44 transactions, 36 tagged, 8 sent before the code was
 issued, 0 untagged after it**. Re-run it:
 
 ```sh
@@ -89,6 +89,39 @@ Real money, from the agent wallet on 5 Nov: 3.5 USDT to Ethereum, 3,000 wARS bor
 | 21:38:26 | Ethereum | approve USDT to USDT0 | [`0x8d3eb81a…`](https://etherscan.io/tx/0x8d3eb81abdd789ef28f653433b876f3ca3d62322a54ca302709c10a3e3851331) |
 | 21:38:39 | Ethereum | **send the USDT home to Celo (USDT0)** | [`0x68b29607…`](https://etherscan.io/tx/0x68b29607e347de3f7949b90f0084763c105a6d662cbded845b7fe881746e82f2) |
 
+
+## The agent on mainnet
+
+Loan #2, on 7 Nov, to show the agent acting on its own on a real loan. The borrower is our deployer wallet
+(`0xF689…89BE`) and the "sales" come from the agent wallet; both are labelled ours. All tagged.
+
+| Time (UTC) | Step | Transaction |
+|---|---|---|
+| 10:58 | agent wallet funds the guardian with 1 CELO for price pauses | [`0x100abbea…`](https://celoscan.io/tx/0x100abbea8a48d8cbcb06ee922bd6af09ea09aaad326644e00e22c801d3eb54f2) |
+| 12:04 | 1.4 USDT to the borrower for the guarantee | [`0x9952b6bf…`](https://celoscan.io/tx/0x9952b6bf1579b4db2a8e1dfa6ceae202d179055f026d11839a1a84b1916bd65a) |
+| 12:04 | borrower approves 1.3 USDT to the pool | [`0xd8fbc4e0…`](https://celoscan.io/tx/0xd8fbc4e0d86d168dc72767d909ced73063313b67d1b1a9aa8e82649ec35d978f) |
+| 12:04 | **borrow 1,000 wARS against 1.3 USDT, 7 days** (loan #2, 25.17% a year) | [`0x6f343a7d…`](https://celoscan.io/tx/0x6f343a7da5b928a8a369053f5ee7317ad7ccaa970f47ca196e09998d1ea00206) |
+| 12:04 | borrower approves 2,000 wARS to `LoanGuard` (a week of the daily cap, at most twice the debt) | [`0xca7aa231…`](https://celoscan.io/tx/0xca7aa23150943d97a2afc8f0f418827dcf256cd810eae705fd1d7722ddc74d96) |
+| 12:04 | borrower approves 0.1 USDT to `LoanGuard` | [`0x19ce1461…`](https://celoscan.io/tx/0x19ce146145444227fe15e46f023a4e11b4cc805abc950143c47ac11096a0b36c) |
+| 12:04 | **the rule, `setLimits`**: auto-repay on, up to 1,000 wARS a day, protect with pesos first; `ruleHash` `0x83aa0426…` = keccak256 of the words | [`0x78cb39dd…`](https://celoscan.io/tx/0x78cb39dd3e37b5f1c61a41ec97ab072d6d5202a2e550b667d9b0d8f3fc62d3c7) |
+| 12:07 | a 300 wARS sale reaches the borrower | [`0xbfdf74ea…`](https://celoscan.io/tx/0xbfdf74ea21d1dfd6327529a616f2322c3a1ca46f21882431d898e8cd1ee926c3) |
+| 12:14 | **the agent repays 300 wARS on its own** | [`0x1436a0e4…`](https://celoscan.io/tx/0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b) |
+| 12:26 | a 100 wARS sale reaches the borrower | [`0xe1f9079e…`](https://celoscan.io/tx/0xe1f9079eb53772dcf6f4a49400e9db22ac736bd1108b92a833930a468d127726) |
+| 12:28 | **the agent repays 100 wARS, quoting the rule** | [`0xcd28659c…`](https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a) |
+
+The words are *"Uso los pesos para el kiosco. Cuando me entren pesos de ventas, pagá el préstamo con eso. Nunca
+vendas mis dólares."* Check the hash: `cast keccak "<the words>"` equals `LoanGuard.ruleHashOf(0xF689…89BE)`.
+
+## x402 settlements
+
+Paid by our deployer wallet to the agent wallet through Celo's facilitator, which submits the settlement from its
+own wallet (so these are not in the attribution audit, which covers our wallets; ADELANTO's code is declared in
+every 402 through the builder-code extension).
+
+| Time (UTC, 7 Nov) | Bought | Paid | Transaction |
+|---|---|---|---|
+| 13:52 | `/x402/peso-rate` | 8 wARS (Permit2) | [`0x8413548c…`](https://celoscan.io/tx/0x8413548ce9ed00b89f43a67a01885b9081eea1f0957e16a479c46a2fffebe335) |
+| 13:52 | `/x402/credit/0xF689…89BE` | US$0.01 in USD₮ (EIP-3009) | [`0x7ade1408…`](https://celoscan.io/tx/0x7ade1408800fdd6700c94dae8ae1f05fbd734bbf775b484b12e34d4586e70344) |
 
 ## Read a loan from chain
 

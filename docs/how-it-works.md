@@ -47,13 +47,32 @@ borrowing waits; repaying never does.
 
 ## 4. The borrower sets the agent's limits (optional)
 
-On the loan page, **Cuidar mi préstamo**. The borrower picks a preset or writes their limits:
+On the loan page, **Cuidar mi préstamo**. The borrower writes or dictates the rule in their own words, or picks a
+preset. A rule sets:
 
 - protect the loan by adding dollars, repaying with pesos, or both, and in which order,
 - up to how many dollars a day and how many pesos a day,
 - how many pesos must always stay in the wallet,
 - whether to repay automatically when pesos arrive,
 - until when.
+
+**From words to limits.** The words go to a rule parser (`packages/core/src/rule.ts`), not to a language model, so
+the same words always give the same limits. It reads rioplatense Spanish: amounts in digits, "mil", "lucas", "k" or
+words ("treinta lucas"), periods ("por día", "por semana", "por mes"), durations ("por dos meses", "hasta fin de
+mes"), and intents ("pagá con lo que me entre", "nunca vendas mis dólares", "avisame antes", "frená todo"); an amount with no currency in a rule that repays with incoming pesos is read as pesos. Three
+rules keep it honest:
+
+- **No invented numbers.** Every number in the result is one the borrower said or one read from the loan (its debt,
+  its guarantee, its due date). If a cap is needed and missing, the page asks one question with buttons, and the
+  answer is appended to the words.
+- **Clamped to the loan.** Dollar caps never exceed the guarantee, peso caps never exceed the debt, the rule never
+  runs past 180 days; without a stated end it runs to the due date plus 7 days. When a number is lowered, the
+  read-back says so and why.
+- **Read back before signing.** The page shows every limit in plain Spanish (or English), and "nunca vendas mis
+  dólares" sets the agent to protect with pesos only.
+
+The parser is tested on 63 phrasings, on questions, stops and unknown rules, on a check that no number appears that
+the user did not say, and on 3,000 random rules that must all stay inside the loan's limits.
 
 The site reads the rule back in plain Spanish with every number. The wallet approves exactly a week of the daily
 limits to `LoanGuard` and sends `setLimits(limits, ruleHash)`, where `ruleHash` is the keccak256 hash of the words.
@@ -69,7 +88,9 @@ Every 60 seconds the agent reads each open loan at one block and decides ([docs/
 - **Past 80%**, only if protection could not help, it sells the smallest part that brings the loan to 78%.
 - **If prices disagree** with Binance and dolarapi by more than 1.5% for 3 minutes, it pauses new borrowing.
 
-Each action quotes the borrower's rule and is shown on the loan page.
+Each action quotes the borrower's rule and is shown on the loan page. The agent quotes the words only when their
+keccak256 equals the rule hash on chain. This runs live on mainnet: on loan #2 the agent repaid 300 and then 100
+wARS of sales on its own ([verification](verification.md#the-agent-on-mainnet)).
 
 ## 6. The borrower repays
 
@@ -107,6 +128,11 @@ first and last loan. Only `PesoPool` writes it. Anyone can read it.
 A repayment counts toward the next step only if the loan was held at least 7 days and opened after the last loan
 that counted, so steps cannot be bought with instant or parallel loans.
 
+[**Mi historial**](https://adelanto-99-80-93-71.sslip.io/historial) shows any wallet's record, read from
+`CreditBook` on each visit: the step, the ladder below with the borrower's place on it, how many counted loans the
+next step needs, and the wallet's loans with what the agent did on each. In MiniPay it opens on the user's own
+wallet.
+
 | | First loan | After 1 on time | After 3 | After 6 |
 |---|---|---|---|---|
 | Borrow up to | 60% | 62% | 64% | 65% |
@@ -125,6 +151,22 @@ Ripio can pause wARS or block an address. If wARS has been frozen for 24 hours (
 transfer from the pool reverts), each borrower can take their dollars back down to the 70% line. The rest stays as
 the lenders' claim until wARS moves again, and stays under the 80% line so no one can liquidate it at lenders'
 expense. Tested with a mock wARS that reverts and one that only reports flags.
+
+## 11. Other agents pay for answers (x402)
+
+ADELANTO sells three answers to other agents over x402 v2 (scheme `exact`, Celo mainnet), settled by Celo's own
+facilitator at `api.x402.celo.org`:
+
+| Endpoint | Answer | Price |
+|---|---|---|
+| `GET /x402/peso-rate` | The pool's 30-minute price and spot against Binance and dolarapi, the gap to each, and a verdict (agree, disagree, refused) | US$0.005 in USD₮, or 8 wARS |
+| `GET /x402/quote?pesos=&days=&tier=` | A firm borrow quote from the live pool: rate, fee, dollars to leave, the price at which it reaches risk | US$0.01, or 15 wARS |
+| `GET /x402/credit/:address` | A wallet's `CreditBook` record and the line its step unlocks | US$0.01, or 15 wARS |
+
+A call without payment gets HTTP 402 with both ways to pay. USD₮ is paid by EIP-3009 `transferWithAuthorization`;
+wARS by Permit2, with the facilitator sponsoring the EIP-2612 permit, so a buyer paying in pesos needs no CELO. The
+money goes straight from the buyer to the agent wallet; the facilitator never holds it. `GET /x402` lists everything
+for free, and `scripts/x402-buy.ts` is a working buyer with per-payment spending caps.
 
 ## Bigger loans: Morpho on Ethereum
 

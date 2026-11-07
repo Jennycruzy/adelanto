@@ -3,7 +3,8 @@
 One Node service (`apps/agent`) with one wallet on Celo:
 [`0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1`](https://celoscan.io/address/0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1),
 ERC-8004 agent **#10043** ([registration](https://celoscan.io/tx/0xf0bbf26a35801ff47b3e343078cb3d97ef964166f83b458b8104bee88b533795),
-[card](../agent/registration.json)). It runs around the clock under systemd on our server.
+[card](../agent/registration.json)). It runs around the clock under systemd on our server, in live mode on Celo mainnet. The home page shows when it
+last checked the loans and what it did last.
 
 ## What it decides
 
@@ -19,6 +20,17 @@ functions in `packages/core` (`guard.ts`, `health.ts`, `ratewatch.ts`), tested w
 | **Rate watch** | Morpho on Ethereum would save more than twice its moving cost over the rest of the term | A notice with the saving in pesos | Moves no money |
 | **Notices** | Health changes (risk, can be sold), due in 3 days, due, late, the pool running low on free pesos | One sentence in Spanish or English | 2-point hysteresis and a 6-hour cooldown per loan, so it never nags |
 
+## What it has done on mainnet
+
+| When (UTC, 7 Nov) | What | Transaction |
+|---|---|---|
+| 12:14 | 300 wARS from a sale reached loan #2's borrower; the agent repaid 300 wARS of the loan through `LoanGuard`. *"Te entraron $ 300; pagué $ 300 de tu préstamo."* | [`0x1436a0e4…`](https://celoscan.io/tx/0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b) |
+| 12:28 | 100 more wARS arrived; the agent repaid 100. *"Tu regla: «Uso los pesos para el kiosco. Cuando me entren pesos de ventas, pagá el préstamo con eso. Nunca vendas mis dólares.». Te entraron $ 100; pagué $ 100 de tu préstamo."* | [`0xcd28659c…`](https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a) |
+
+The borrower and the sender of the sales are our own wallets, labelled ours on the transparency page; the agent
+acted on its own each time. Protecting at 70% and the gentle sale past 80% need the peso to strengthen about 17%
+against today's price, so they are proven on a mainnet fork (below) rather than waited for.
+
 **Protect always comes first**, even past 80%: the agent sells only when the borrower's own dollars or pesos could
 not save the loan.
 
@@ -28,6 +40,14 @@ The repay-on-arrival credit is rebuilt from the chain, not from memory: every wA
 borrower's wallet after the loan opened and after the latest `LimitsSet`, in block and log order. Money spent from
 the wallet lowers the credit first. Borrowed pesos never count as arrivals. A new rule resets the credit. A test
 suite (`apps/agent/test/ledger.test.ts`) covers each case.
+
+## The borrower's words
+
+Each rule's limits are on chain; its words are not. The site stores the words only if their keccak256 equals the
+`ruleHash` the borrower signed with `setLimits` (`apps/web/src/rules.ts`). The agent reads them from the site's
+database (`WEB_DB_PATH`, read-only) and quotes them only after hashing them again and matching the hash on chain, so
+no one can put words in a borrower's mouth. A rule set before its words were saved is still enforced; the agent
+just describes what it did without the quote.
 
 ## What it can never do
 
@@ -61,11 +81,22 @@ process (`apps/agent/src/db.ts`). A second copy is refused, which `apps/agent/te
 real processes.
 
 **Reorgs.** The indexer follows the chain's safe head, checks that each block's parent hash matches what it stored,
-and rewinds if not.
+and rewinds if not. Celo's `safe` tag can stall for days while the chain moves (we saw it 335,519 blocks, about 3.9
+days, behind the tip), so the head the indexer uses is the newer of the safe head and the tip minus 600 blocks
+(about ten minutes), which is still well past the few blocks a reorg would touch (`indexHead`, tested in
+`apps/agent/test/indexhead.test.ts`).
 
 **Watch and live.** `AGENT_MODE=watch` (the default) indexes, decides and logs every decision with its reason, and
-sends nothing, not even a resumed transaction. `AGENT_MODE=live` turns sending on. At startup in live mode it
-checks that `GentleKeeper.agent()` is this wallet and stops if not.
+sends nothing, not even a resumed transaction. `AGENT_MODE=live` turns sending on; the deployed agent runs live,
+with the guardian key loaded for price pauses. At startup in live mode it checks that `GentleKeeper.agent()` is
+this wallet and stops if not.
+
+## It also earns: x402
+
+Other agents pay the agent wallet for three answers over x402, through Celo's facilitator: the peso rate checked
+against two outside sources, a firm borrow quote, and a wallet's credit record, in wARS or USD₮
+([details](how-it-works.md#11-other-agents-pay-for-answers-x402)). The agent's ERC-8004 card declares
+`x402Support` and lists the catalog.
 
 ## What every action leaves behind
 
@@ -114,4 +145,5 @@ the fixes.
 | `CELO_RPC_URL`, `CELO_RPC_URL_2` | RPC endpoints; a public node and Forno are the defaults |
 | `TICK_SECONDS` | Decision interval, default 60 |
 | `DB_PATH` | SQLite database (default under `~/adelanto-data`) |
+| `WEB_DB_PATH` | The site's database, read-only, for the borrowers' rule words (default `~/adelanto-data/web.sqlite`) |
 | `OURS_ADDRESSES`, `JUDGE_ADDRESSES` | Wallets labelled ours or judges' on the transparency page |

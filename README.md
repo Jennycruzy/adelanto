@@ -19,7 +19,7 @@ ERC-8004 agent **#10043** ·
 ## Check it yourself
 
 Every link is a real Celo mainnet transaction. Every transaction our wallets send since the event code was issued carries the
-attribution tag `celo_0e96c1ff3fa8` ([audit: 24 of 24 tagged, 0 untagged](evidence/attribution-audit.json)).
+attribution tag `celo_0e96c1ff3fa8` ([audit: 36 of 36 tagged, 0 untagged](evidence/attribution-audit.json)).
 
 | What happened | When (UTC) | Check it |
 |---|---|---|
@@ -126,7 +126,7 @@ only when their keccak256 equals the rule hash the borrower signed on chain, so 
 "30 lucas por semana", "por dos meses", "hasta fin de mes", "que no me vendan los dólares", "frená todo". Every
 number in the result comes from the borrower's words or from the loan itself; amounts are clamped to the loan's
 debt and guarantee and to 180 days, and the read-back says when a cap was lowered and why. It is rules, not a
-language model, so the same words always give the same limits. Tested on 60 phrasings and 3,000 random rules.
+language model, so the same words always give the same limits. Tested on 63 phrasings and 3,000 random rules.
 
 **What it can never do**, enforced by `LoanGuard` and proven by tests: send money anywhere but the borrower's own
 loan, borrow or open a loan for anyone, change limits, act after the rule expires, or act while the price module
@@ -232,7 +232,7 @@ Node 24 and Foundry.
 
 ```sh
 npm ci
-npm test                                   # 222 TypeScript tests, offline
+npm test                                   # 225 TypeScript tests, offline
 cd contracts && forge test                 # 227 Solidity tests; fork tests need CELO_RPC_URL and ETH_RPC_URL
 npm run audit:attribution                  # re-checks the tag on every transaction from our wallets and contracts
 ```
@@ -259,7 +259,7 @@ FORK_RPC=http://127.0.0.1:8548 AGENT_KEY_FILE=... ATTRIBUTION_TAG=celo_0e96c1ff3
 | Solidity unit | 25 `LoanGuard`, 38 `PesoPool`, 22 `PriceModule`, plus `CreditBook`, `GentleKeeper`, `TickPrice` | Every external function, every role, each thing the agent can never do |
 | Solidity fork | Celo, Ethereum, `GentleKeeper` | The deployed tokens, the real Uniswap pool, Morpho, permits |
 | Invariants | 6 properties, 10,000 runs | Lenders' pesos and borrowers' dollars always add up; no privileged transfer |
-| TypeScript | 222 | ABIs vs the compiler, health maths (10,000 random loans), guard decisions, credit ledger, price verdict, quotes, notices, the two-process lock, the rule parser (60 phrasings, 3,000 random rules, no invented numbers), the index head |
+| TypeScript | 225 | ABIs vs the compiler, health maths (10,000 random loans), guard decisions, credit ledger, price verdict, quotes, notices, the two-process lock, the rule parser (63 phrasings, 3,000 random rules, no invented numbers), the index head |
 | Fork rehearsal | 8 tagged transactions | The agent end to end against the deployed contracts |
 
 Static analysis (slither) findings and our answers are in [docs/security.md](docs/security.md#static-analysis-slither-0104).

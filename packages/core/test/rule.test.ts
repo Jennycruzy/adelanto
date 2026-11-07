@@ -62,6 +62,8 @@ const cases: [string, Want, typeof loan?][] = [
   ["nunca toques mis dólares, si llega a riesgo pagá con mis pesos", { topUp: 0n, protectOrder: 1, repay: loan.debt }],
   ["no uses mis dólares, cuidalo con pesos", { topUp: 0n, protectOrder: 1 }],
   ["que no me vendan los dólares, pagá con pesos", { topUp: 0n, protectOrder: 1 }],
+  ["si me entran pesos pagá el préstamo, máximo 500 por día, y nunca vendas mis dólares", { autoRepay: true, repay: 500n * WAD, topUp: 0n, protectOrder: 1 }],
+  ["cuando me depositen pagá, hasta 200 por día", { autoRepay: true, repay: 200n * WAD }],
   ["sin tocar mis dólares cuidame el préstamo", { topUp: 0n, protectOrder: 1 }],
   ["nunca vendas mis dólares", { topUp: 0n, protectOrder: 1 }],
   // both
@@ -75,6 +77,7 @@ const cases: [string, Want, typeof loan?][] = [
   ["No hagas nada sin preguntarme", { autoRepay: false, topUp: 0n, repay: 0n, rateWatch: true }],
   ["solo avisame", { autoRepay: false, topUp: 0n, repay: 0n }],
   ["preguntame antes de mover plata", { autoRepay: false, topUp: 0n, repay: 0n }],
+  ["avisame antes de hacer algo", { autoRepay: false, topUp: 0n, repay: 0n }],
   ["consultame todo", { autoRepay: false, topUp: 0n, repay: 0n }],
   // durations
   ["cuando me entren pesos pagá, por 30 días", { autoRepay: true, days: 30 }],
@@ -95,8 +98,8 @@ const cases: [string, Want, typeof loan?][] = [
   ["que no llegue a riesgo, hasta 5 usd por semana", { topUp: usd(5 / 7) }, big],
 ];
 
-describe("parseRule: 60 phrasings", () => {
-  it("has 60 cases", () => expect(cases.length).toBe(60));
+describe("parseRule: 63 phrasings", () => {
+  it("has 63 cases", () => expect(cases.length).toBe(63));
   for (const [text, want, l] of cases) {
     it(text, () => {
       const L = l ?? loan;
