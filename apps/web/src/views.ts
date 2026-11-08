@@ -690,7 +690,30 @@ export type HistoryData = {
   credit: { opened: number; repaidOnTime: number; repaidLate: number; liquidated: number; onTimeSinceLiquidation: number; pesosBorrowed: bigint; pesosRepaid: bigint; lastCountedAt: bigint; tier: number };
   loans: any[];
   actions: any[];
+  notices?: any[];
 };
+
+const NOTICE_KIND: Record<string, { es: string; en: string }> = {
+  weekly: { es: "Tu resumen de la semana", en: "Your week" },
+  due_soon: { es: "Vence pronto", en: "Due soon" },
+  due: { es: "Venció", en: "Due" },
+  late: { es: "Atrasado", en: "Late" },
+  health: { es: "Tu préstamo", en: "Your loan" },
+  rate_watch: { es: "Tasa más barata", en: "Cheaper rate" },
+  A1_protect: { es: "Te cuidó", en: "Protected you" },
+  A2_autorepay: { es: "Pagó por vos", en: "Repaid for you" },
+};
+
+/** What the agent told this wallet: the weekly summary on top, then every notice, newest first. */
+export function noticeList(lang: Lang, notices: any[]) {
+  const es = lang === "es";
+  if (!notices.length)
+    return html`<p class="small muted" style="margin:0">${es ? "Todavía nada. Cuando tengas un préstamo, el agente te avisa acá antes del vencimiento, si cambia el riesgo y cada domingo a las 20 h con el resumen de tu semana." : "Nothing yet. Once you have a loan, the agent tells you here before it is due, if the risk changes, and every Sunday at 8 pm with your week."}</p>`;
+  return html`<ul class="notices">${notices.map((n) => {
+    const k = NOTICE_KIND[n.kind] ?? { es: "Aviso", en: "Notice" };
+    return html`<li class="${n.kind === "weekly" ? "weekly" : ""}"><div class="n-head"><b>${es ? k.es : k.en}</b><span class="muted small">${ago(Number(n.created_at), lang)}</span></div><p>${es ? n.text_es : n.text_en}</p></li>`;
+  })}</ul>`;
+}
 
 export function historyPage(lang: Lang, d: HistoryData | null, error = false) {
   const es = lang === "es";
@@ -757,6 +780,10 @@ export function historyPage(lang: Lang, d: HistoryData | null, error = false) {
   ${d.loans.length === 0
     ? html`<p class="small muted" style="margin:0">${es ? "Ninguno todavía." : "None yet."} <a href="${href(lang, "/pedir")}">${t(lang, "borrow")}</a></p>`
     : html`<ul class="log">${d.loans.map((r) => html`<li><a href="${href(lang, `/prestamo/${r.id}`)}">#${r.id}</a> · ${r.open ? t(lang, "open") : r.liquidated ? (es ? "liquidado" : "liquidated") : t(lang, "closed")} · ${date(BigInt(r.opened_at), lang)}${r.open ? html` · <a href="${href(lang, `/cuidar/${r.id}`)}">${es ? "regla del agente" : "agent rule"}</a>` : ""}</li>`)}</ul>`}
+</div>
+<div class="card">
+  <div class="card-label">${es ? "Lo que te dijo el agente" : "What the agent told you"}</div>
+  ${noticeList(lang, d.notices ?? [])}
 </div>
 <div class="card">
   <div class="card-label">${es ? "Lo que hizo el agente por vos" : "What the agent did for you"}</div>

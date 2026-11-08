@@ -1,7 +1,7 @@
 // The agent loop. Each tick, every job isolated from the others:
 //   settle signed transactions -> index (safe head) -> for each open loan, from reads pinned to one fresh block:
 //   A5 gentle liquidation (through GentleKeeper), else A1 protect, else A2 auto-repay from the chain-derived credit
-//   -> A3 rate watch -> A4 price watch -> A6 notices.
+//   -> A3 rate watch -> A4 price watch -> A6 notices -> A7 weekly summary (Sundays 20:00 Buenos Aires).
 // In "watch" mode every decision is logged with its sentence and nothing is ever broadcast, not even a transaction
 // signed by an earlier live run.
 import { encodeFunctionData, erc20Abi, getAddress, keccak256, toBytes, type Address, type Hex, type PublicClient } from "viem";
@@ -26,13 +26,14 @@ import { getMeta, json, setMeta, tx, type Db } from "./db.ts";
 import { indexOnce, openLoanIds, refreshLoan, sweepLoans, type Addresses } from "./indexer.ts";
 import { credit, type LedgerItem } from "./ledger.ts";
 import { loanNotices, poolNotices } from "./notices.ts";
+import { weeklyIfDue } from "./weekly.ts";
 
 export type Mode = "watch" | "live";
 
 export type AgentDeps = {
   db: Db;
   pub: PublicClient;
-  addresses: Addresses & { priceModule: Address; gentleKeeper?: Address };
+  addresses: Addresses & { priceModule: Address; gentleKeeper?: Address; creditBook?: Address };
   mode: Mode;
   keeper: TaggedSender; // the agent wallet: guard calls and liquidations
   guardian?: TaggedSender; // pause / unpause
@@ -552,6 +553,7 @@ export class Agent {
     await this.phase("pool notices", async () => {
       for (const n of await poolNotices(pub, a, db)) this.notice(n.key, null, n.kind, n.said);
     });
+    if (indexedOk) await this.phase("weekly", async () => void (await weeklyIfDue(db, pub, a, this.now(), this.log)));
     setMeta(db, "lastTick", String(this.now()));
   }
 }

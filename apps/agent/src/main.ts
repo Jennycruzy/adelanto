@@ -47,7 +47,7 @@ const agent = new Agent({
   ruleWords,
   db,
   pub,
-  addresses: { pool: deployment.pool, guard: deployment.guard, priceModule: deployment.priceModule, deployBlock: deployment.deployBlock, gentleKeeper: deployment.gentleKeeper },
+  addresses: { pool: deployment.pool, guard: deployment.guard, priceModule: deployment.priceModule, deployBlock: deployment.deployBlock, gentleKeeper: deployment.gentleKeeper, creditBook: deployment.creditBook },
   mode,
   keeper,
   guardian,

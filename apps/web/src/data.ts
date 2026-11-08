@@ -211,6 +211,20 @@ export function agentActions(loanId?: bigint, limit = 20) {
   return q as any[];
 }
 
+/** What the agent told one wallet (A6 notices, A7 weekly summaries), newest first. */
+export function noticesFor(who: string, limit = 12) {
+  const d = agentDb();
+  if (!d) return [];
+  return d.prepare("SELECT key, loan_id, kind, text_es, text_en, created_at FROM notices WHERE borrower = ? ORDER BY created_at DESC LIMIT ?").all(getAddress(who), limit) as any[];
+}
+
+/** The latest weekly summary of the whole pool (A7), if one has been written. */
+export function weeklyPool(): { key: string; text_es: string; text_en: string; created_at: number } | null {
+  const d = agentDb();
+  if (!d) return null;
+  return (d.prepare("SELECT key, text_es, text_en, created_at FROM notices WHERE kind = 'weekly_pool' ORDER BY created_at DESC LIMIT 1").get() as any) ?? null;
+}
+
 export function loanRows() {
   const d = agentDb();
   if (!d) return [];

@@ -5,9 +5,9 @@ import { html } from "hono/html";
 import { getAddress, isAddress } from "viem";
 import { availableToBorrow, dollars, parseRule, pesos, percent } from "@adelanto/core";
 import { CELO } from "@adelanto/chain";
-import { REFS, adminEvents, priceHistory, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, pub, quoteFor } from "./data.ts";
+import { REFS, adminEvents, noticesFor, priceHistory, weeklyPool, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, pub, quoteFor } from "./data.ts";
 import { langOf, t, type Lang } from "./i18n.ts";
-import { addrUrl, borrowPage, guardPage, historyPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
+import { addrUrl, ago, borrowPage, guardPage, historyPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
 import { ruleText, saveRule } from "./rules.ts";
 import { catalog, credit, pesoRate, quote as paidQuote, x402Middleware } from "./x402.ts";
 
@@ -80,7 +80,7 @@ app.get("/historial", async (c) => {
       }),
   );
   const actions = loans.flatMap((r) => agentActions(BigInt(r.id), 10)).sort((a, b) => Number(b.at) - Number(a.at)).slice(0, 10);
-  return c.html(historyPage(l, { who, credit: credit as any, loans, actions }));
+  return c.html(historyPage(l, { who, credit: credit as any, loans, actions, notices: noticesFor(who) }));
 });
 
 app.get("/prestar", async (c) => c.html(lendPage(lang(c), await poolView())));
@@ -97,6 +97,7 @@ app.get("/transparencia", async (c) => {
   const lenderCount = (lab: string) => [...lenders].filter((a) => labelOf(a) === lab).length;
   const pill = (lab: string) => html`<span class="pill ${lab === "USER" ? "ok" : lab === "JUDGE" ? "celeste" : ""}">${lab === "OURS" ? t(l, "ours") : lab === "JUDGE" ? t(l, "judge") : t(l, "user")}</span>`;
   const admin = adminEvents();
+  const weekly = weeklyPool();
   return c.html(
     plain(
       l,
@@ -118,6 +119,11 @@ app.get("/transparencia", async (c) => {
   <div class="row"><span>${es ? "Deuda sin cubrir" : "Uncovered debt"}</span><span class="v">${admin.filter((e: any) => e.name === "BadDebt").length === 0 ? pesos(0n, l) : es ? "ver cambios" : "see changes"}</span></div>
   <p class="small muted" style="margin:14px 0 0">${t(l, "updated")} <a href="https://celoscan.io/block/${v.block}">${v.block.toString()}</a></p>
 </div>
+${weekly ? html`<div class="card">
+  <div class="card-label">${es ? "El resumen de la semana del agente" : "The agent's weekly summary"} · ${ago(Number(weekly.created_at), l)}</div>
+  <p style="margin:0">${es ? weekly.text_es : weekly.text_en}</p>
+  <p class="small muted" style="margin:12px 0 0">${es ? "Lo escribe solo cada domingo a las 20 h (Buenos Aires) con saldos leídos de Celo; si una cifra del texto no sale de esos datos, no se publica." : "It writes this by itself every Sunday at 8 pm (Buenos Aires) from balances read on Celo; if any figure in the text does not come from that data, it is not published."}</p>
+</div>` : ""}
 <div class="card" style="background:var(--ink);color:var(--paper);border-color:transparent">
   <div class="card-label" style="color:rgba(244,239,228,.6)">${es ? "Cada transacción lleva nuestra etiqueta" : "Every transaction carries our tag"}</div>
   ${audit
@@ -342,7 +348,8 @@ app.get("/api/me/:addr", async (c) => {
   const who = getAddress(a);
   const loans = loanRows().filter((r) => getAddress(r.borrower) === who).map((r) => ({ id: r.id, open: !!r.open }));
   const [bal, credit] = await Promise.all([balancesOf(who), creditOf(who)]);
-  return json(c, { address: who, ...bal, credit, loans });
+  const notices = noticesFor(who, 20).map((n) => ({ kind: n.kind, loanId: n.loan_id, at: new Date(Number(n.created_at)).toISOString(), es: n.text_es, en: n.text_en }));
+  return json(c, { address: who, ...bal, credit, loans, notices });
 });
 
 app.get("/health", (c) => {
