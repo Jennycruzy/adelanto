@@ -131,7 +131,7 @@ every 402 through the builder-code extension).
 ## Read a loan from chain
 
 ```sh
-curl -s https://adelanto-99-80-93-71.sslip.io/api/loan/1
+curl -s https://adelanto.space/api/loan/1
 cast call 0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60 "debtOf(uint256)(uint256)" 1 --rpc-url https://forno.celo.org
 ```
 

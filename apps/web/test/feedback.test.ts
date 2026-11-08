@@ -3,7 +3,7 @@ import { decodeFunctionData, getAddress, zeroHash } from "viem";
 import { AGENT_ID, FEEDBACK_TAG, feedbackCall, reputationAbi } from "../client/feedback.ts";
 import { rateCard, repLine } from "../src/views.ts";
 
-const site = "https://adelanto-99-80-93-71.sslip.io";
+const site = "https://adelanto.space";
 const loan = (o: any) => ({ id: 4n, borrower: getAddress("0x0cff67325Ba688921C36bDf0ff59E351100e2A3d"), open: false, liquidated: false, ...o });
 
 describe("rating the agent on ERC-8004", () => {

@@ -18,8 +18,8 @@ functions in `packages/core` (`guard.ts`, `health.ts`, `ratewatch.ts`), tested w
 | **Sell gently** | Past 80%, and protection did not land | `GentleKeeper.liquidate(loanId)`: the smallest repayment that brings the loan to 78%, computed on chain at that block | Pool rules: 30-minute price, half the debt at most, 5% bonus |
 | **Stop on bad prices** | The pool's 30-minute price differs by more than 1.5% from Binance **and** dolarapi for 3 minutes | The guardian pauses new borrowing; it resumes its own pause after 10 minutes with at least 2 sources within 1% | Needs 2 outside sources; cannot pause repay, withdraw or liquidation; only lifts a pause it made |
 | **Rate watch** | Morpho on Ethereum would save more than twice its moving cost over the rest of the term | A notice with the saving in pesos | Moves no money |
-| **Notices** | Health changes (risk, can be sold), due in 3 days, due, late, the pool running low on free pesos | One sentence in Spanish or English, shown on the wallet's [Mi historial](https://adelanto-99-80-93-71.sslip.io/historial), in `/api/me/:address` and in Telegram | 2-point hysteresis and a 6-hour cooldown per loan, so it never nags |
-| **Weekly summary** | Sundays at 20:00 in Buenos Aires | For each person who borrowed, repaid, lent or has a loan open: what they borrowed and repaid, what the agent did under their rule, what they owe now and when it is due, what their pool share is worth and earned, their credit step. One for the pool on [Transparencia](https://adelanto-99-80-93-71.sslip.io/transparencia) | Debts, pool shares, steps and pool totals are read from chain at one block; the week's flows come from the indexed chain events; every number in the text must come from those facts or nothing is written (`apps/agent/src/weekly.ts`) |
+| **Notices** | Health changes (risk, can be sold), due in 3 days, due, late, the pool running low on free pesos | One sentence in Spanish or English, shown on the wallet's [Mi historial](https://adelanto.space/historial), in `/api/me/:address` and in Telegram | 2-point hysteresis and a 6-hour cooldown per loan, so it never nags |
+| **Weekly summary** | Sundays at 20:00 in Buenos Aires | For each person who borrowed, repaid, lent or has a loan open: what they borrowed and repaid, what the agent did under their rule, what they owe now and when it is due, what their pool share is worth and earned, their credit step. One for the pool on [Transparencia](https://adelanto.space/transparencia) | Debts, pool shares, steps and pool totals are read from chain at one block; the week's flows come from the indexed chain events; every number in the text must come from those facts or nothing is written (`apps/agent/src/weekly.ts`) |
 
 ## What it has done on mainnet
 
@@ -93,7 +93,7 @@ this wallet and stops if not.
 
 ## Other agents can use it: MCP
 
-`https://adelanto-99-80-93-71.sslip.io/mcp` is an MCP server (Streamable HTTP, no session, no key). Tools:
+`https://adelanto.space/mcp` is an MCP server (Streamable HTTP, no session, no key). Tools:
 `rates`, `price_history`, `quote`, `credit_record`, `loan_status`, and two builders, `build_borrow` and
 `build_repay`, that return unsigned transactions for the caller's own wallet: only to `PesoPool` or the two
 tokens, exact approvals, each with our attribution suffix. The server holds no keys; nothing moves until that

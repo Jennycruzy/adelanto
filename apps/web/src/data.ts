@@ -317,7 +317,7 @@ export async function creditOf(who: Address) {
 
 // ------------------------------------------------------------------ ERC-8004 reputation (read from chain)
 
-export const SITE = process.env.PUBLIC_URL ?? "https://adelanto-99-80-93-71.sslip.io";
+export const SITE = process.env.PUBLIC_URL ?? "https://adelanto.space";
 export type Rating = { client: Address; loanId: number; stars: number; label: string; counts: boolean };
 let repCache: { at: number; ratings: Rating[] } | null = null;
 

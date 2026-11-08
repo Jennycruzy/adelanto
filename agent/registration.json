@@ -6,7 +6,7 @@
   "services": [
     {
       "name": "web",
-      "endpoint": "https://adelanto-99-80-93-71.sslip.io"
+      "endpoint": "https://adelanto.space"
     },
     {
       "name": "source",
@@ -14,15 +14,15 @@
     },
     {
       "name": "llms.txt",
-      "endpoint": "https://adelanto-99-80-93-71.sslip.io/llms.txt"
+      "endpoint": "https://adelanto.space/llms.txt"
     },
     {
       "name": "x402",
-      "endpoint": "https://adelanto-99-80-93-71.sslip.io/x402"
+      "endpoint": "https://adelanto.space/x402"
     },
     {
       "name": "MCP",
-      "endpoint": "https://adelanto-99-80-93-71.sslip.io/mcp",
+      "endpoint": "https://adelanto.space/mcp",
       "version": "2025-11-25"
     },
     {

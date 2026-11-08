@@ -133,7 +133,7 @@ first and last loan. Only `PesoPool` writes it. Anyone can read it.
 A repayment counts toward the next step only if the loan was held at least 7 days and opened after the last loan
 that counted, so steps cannot be bought with instant or parallel loans.
 
-[**Mi historial**](https://adelanto-99-80-93-71.sslip.io/historial) shows any wallet's record, read from
+[**Mi historial**](https://adelanto.space/historial) shows any wallet's record, read from
 `CreditBook` on each visit: the step, the ladder below with the borrower's place on it, how many counted loans the
 next step needs, and the wallet's loans with what the agent did on each. In MiniPay it opens on the user's own
 wallet.

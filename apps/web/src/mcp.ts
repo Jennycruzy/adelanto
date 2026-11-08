@@ -14,7 +14,7 @@ import { REFS, balancesOf, creditOf, dep, loanView, poolView, priceHistory, pub,
 const WAD = 10n ** 18n;
 const USDT = getAddress("0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e");
 const WARS = getAddress("0x0DC4F92879B7670e5f4e4e6e3c801D229129D90D");
-const SITE = process.env.PUBLIC_URL ?? "https://adelanto-99-80-93-71.sslip.io";
+const SITE = process.env.PUBLIC_URL ?? "https://adelanto.space";
 
 export type UnsignedTx = { to: Address; data: Hex; value: "0"; chainId: 42220; does: string };
 

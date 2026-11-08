@@ -33,7 +33,7 @@ crypto dollar the same day.
 | Lines | agent protects at 70%; a part can be sold past 80%; a gentle sale stops at 78% | `PesoPool`, `GentleKeeper` |
 | Late | +5 points after the term, wholly to the reserve; marked late after 7 more days; never force-closed | `PesoPool` |
 
-Live values: [`/api/public/rates`](https://adelanto-99-80-93-71.sslip.io/api/public/rates), read from chain on each
+Live values: [`/api/public/rates`](https://adelanto.space/api/public/rates), read from chain on each
 request.
 
 ## The example in the README
@@ -59,7 +59,7 @@ Since 6 Nov 10:17 UTC the agent itself takes this reading every minute (its pric
 3,127 readings to 8 Nov 14:27 UTC: the pool's 30-minute average was a median **0.47%** from Binance (0.67% at the
 95th percentile, 1.20% at most) and a median **0.09%** from dolarapi (0.53% at most). Never once was it past 1.5%
 from both. The home page draws the last 24 hours of these readings, and anyone can fetch them:
-[`/api/public/prices?hours=24`](https://adelanto-99-80-93-71.sslip.io/api/public/prices?hours=24) (up to 168 hours).
+[`/api/public/prices?hours=24`](https://adelanto.space/api/public/prices?hours=24) (up to 168 hours).
 
 ## wARS on chain (4 Nov 2026)
 

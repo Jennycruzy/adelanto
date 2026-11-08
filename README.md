@@ -8,25 +8,25 @@
 > use**, inside MiniPay. You keep your dollars. A rule you sign once lets an agent protect the loan, and a contract
 > holds the agent to it.
 
-Live on Celo mainnet: **[adelanto-99-80-93-71.sslip.io](https://adelanto-99-80-93-71.sslip.io)** ·
-[Try it in five minutes](https://adelanto-99-80-93-71.sslip.io/probar) ·
-[Transparency](https://adelanto-99-80-93-71.sslip.io/transparencia) ·
-[Mi historial](https://adelanto-99-80-93-71.sslip.io/historial) ·
-[llms.txt](https://adelanto-99-80-93-71.sslip.io/llms.txt) · [x402](https://adelanto-99-80-93-71.sslip.io/x402) ·
-ERC-8004 agent **#10043** · [MCP](https://adelanto-99-80-93-71.sslip.io/mcp) · Telegram [@adelanto_ar_bot](https://t.me/adelanto_ar_bot) ·
+Live on Celo mainnet: **[adelanto.space](https://adelanto.space)** ·
+[Try it in five minutes](https://adelanto.space/probar) ·
+[Transparency](https://adelanto.space/transparencia) ·
+[Mi historial](https://adelanto.space/historial) ·
+[llms.txt](https://adelanto.space/llms.txt) · [x402](https://adelanto.space/x402) ·
+ERC-8004 agent **#10043** · [MCP](https://adelanto.space/mcp) · Telegram [@adelanto_ar_bot](https://t.me/adelanto_ar_bot) ·
 [Judges' guide](docs/judges.md)
 
 ## Runs on
 
 | Piece | How ADELANTO uses it | See it |
 |---|---|---|
-| **Ripio wARS** | The peso that is lent, borrowed, repaid and earned; Ripio's off-ramp sends it to a bank; Ripio's bridge moves it between Celo and Ethereum | [loan #1](https://adelanto-99-80-93-71.sslip.io/prestamo/1) |
+| **Ripio wARS** | The peso that is lent, borrowed, repaid and earned; Ripio's off-ramp sends it to a bank; Ripio's bridge moves it between Celo and Ethereum | [loan #1](https://adelanto.space/prestamo/1) |
 | **MiniPay** | The main way in: three taps to a loan, gas paid in USDT, a whole loan run on a phone | [loan #5 in MiniPay](https://celoscan.io/tx/0x1bcfc3902106a3c27621e41fce1eaf328d25100fa41e58c9e09e406bfcc2ab42) |
 | **ERC-8004** | Agent identity #10043 from the agent's own wallet; a closed loan's borrower rates the agent in the ReputationRegistry | [registration](https://celoscan.io/tx/0xf0bbf26a35801ff47b3e343078cb3d97ef964166f83b458b8104bee88b533795) · [card](agent/registration.json) |
 | **ERC-8021** | Our attribution tag on every transaction, deploys included | [58 of 58 tagged](evidence/attribution-audit.json) |
-| **x402, Celo facilitator** | Other agents pay ADELANTO in wARS or USD₮ for the peso rate, a firm quote and a credit record | [8 wARS sale](https://celoscan.io/tx/0x8413548ce9ed00b89f43a67a01885b9081eea1f0957e16a479c46a2fffebe335) · [catalog](https://adelanto-99-80-93-71.sslip.io/x402) |
+| **x402, Celo facilitator** | Other agents pay ADELANTO in wARS or USD₮ for the peso rate, a firm quote and a credit record | [8 wARS sale](https://celoscan.io/tx/0x8413548ce9ed00b89f43a67a01885b9081eea1f0957e16a479c46a2fffebe335) · [catalog](https://adelanto.space/x402) |
 | **buy** | The agent buys reads from Chainstack's Celo node, which we do not run, paid over x402 in USD₮, to confirm its own RPC before it moves money, every day for the pool and before each weekly summary | [first purchase](https://celoscan.io/tx/0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40) · [receipts](evidence/buy/purchases.json) |
-| **MCP** | Other agents read rates, quotes, credit records and loans, and get unsigned tagged borrow and repay transactions | [`/mcp`](https://adelanto-99-80-93-71.sslip.io/mcp) |
+| **MCP** | Other agents read rates, quotes, credit records and loans, and get unsigned tagged borrow and repay transactions | [`/mcp`](https://adelanto.space/mcp) |
 | **Uniswap v3 on Celo** | The wARS/USDT pool is the price: spot, 30-minute and 2-hour averages, depth checks; repay-with-dollars swaps through it | [`PriceModule`](https://celoscan.io/address/0xBC6aa0BC458E01A7A32955DC106F9775569A6355) |
 | **Morpho on Ethereum** | Bigger loans, through a proxy that only runs orders the borrower signed | [round trip](docs/verification.md#ethereum-round-trip) |
 | **Telegram** | Link a wallet with one signature; the agent's notices, quotes and rules in chat | [@adelanto_ar_bot](https://t.me/adelanto_ar_bot) |
@@ -44,21 +44,21 @@ attribution tag `celo_0e96c1ff3fa8` ([audit: 58 of 58 tagged, 0 untagged](eviden
 | **Five contracts, verified, tagged from the first byte.** The attribution tag is on the deploy transactions themselves. | 6 Nov 07:40, 10:42 | [PesoPool](https://celoscan.io/tx/0xc78058d8c4623ef4b2457f1f260f2589e090e820153b20c794503d7b9ee0a1b7) · [LoanGuard](https://celoscan.io/tx/0xe091e0c93d6e7eb1c8d72ef8a8a2f328845002e2247c7fa4fd25dd867e07cf0b) · [CreditBook](https://celoscan.io/tx/0x4d6f734947024707c03486d6afb006079cecda3ead83cdb696304924c72e297a) · [PriceModule](https://celoscan.io/tx/0xb61c2b6d8b09bf95550fdd947778bc8b03939eb9c662cd148dbc59b5c0130678) · [GentleKeeper](https://celoscan.io/tx/0xa697e3fa3b145ed4f0c7fc90071d5562703b16d27f4217520ff3cf7e9b4e9582) |
 | **An agent with an on-chain identity.** ADELANTO is agent #10043 in Celo's ERC-8004 registry; its card lists the site, the contracts and the agent wallet. | 6 Nov 08:15 | [registration](https://celoscan.io/tx/0xf0bbf26a35801ff47b3e343078cb3d97ef964166f83b458b8104bee88b533795) · [card](agent/registration.json) |
 | **The agent repaid a loan on its own, quoting the borrower's rule.** Loan #2's rule, in the borrower's words: *"Cuando me entren pesos de ventas, pagá el préstamo con eso. Nunca vendas mis dólares."* When 300 wARS from a sale reached the borrower's wallet, the agent repaid 300 wARS through `LoanGuard`; a second sale of 100 wARS was repaid the same way, and the agent's log quotes the rule word for word. | 7 Nov 12:14, 12:28 | [repay 300](https://celoscan.io/tx/0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b) · [repay 100](https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a) |
-| **Other agents pay ADELANTO over x402.** A buyer paid 8 wARS for the peso rate and US$0.01 in USD₮ for a wallet's credit record, settled by Celo's x402 facilitator straight into the agent wallet. The facilitator sends these settlements from its own wallet; ADELANTO declares its attribution code in every 402 through the builder-code extension. | 7 Nov 13:52 | [8 wARS](https://celoscan.io/tx/0x8413548ce9ed00b89f43a67a01885b9081eea1f0957e16a479c46a2fffebe335) · [US$0.01](https://celoscan.io/tx/0x7ade1408800fdd6700c94dae8ae1f05fbd734bbf775b484b12e34d4586e70344) · [catalog](https://adelanto-99-80-93-71.sslip.io/x402) |
+| **Other agents pay ADELANTO over x402.** A buyer paid 8 wARS for the peso rate and US$0.01 in USD₮ for a wallet's credit record, settled by Celo's x402 facilitator straight into the agent wallet. The facilitator sends these settlements from its own wallet; ADELANTO declares its attribution code in every 402 through the builder-code extension. | 7 Nov 13:52 | [8 wARS](https://celoscan.io/tx/0x8413548ce9ed00b89f43a67a01885b9081eea1f0957e16a479c46a2fffebe335) · [US$0.01](https://celoscan.io/tx/0x7ade1408800fdd6700c94dae8ae1f05fbd734bbf775b484b12e34d4586e70344) · [catalog](https://adelanto.space/x402) |
 | **A whole loan inside MiniPay, on a phone.** On an iPhone, MiniPay borrowed 1,000 wARS with gas paid in USDT and signed a rule written in words. When a 300 wARS sale reached the wallet, the agent repaid 300 on its own, quoting the rule; then **Repay all** closed loan #5 and returned the dollars. The attribution tag survived MiniPay's signing on every step. | 7 Nov 23:15–23:26 | [borrow](https://celoscan.io/tx/0x1bcfc3902106a3c27621e41fce1eaf328d25100fa41e58c9e09e406bfcc2ab42) · [rule](https://celoscan.io/tx/0x20a210505a98f24cd03a9e3a9f0c117006086836364dd2436811c30149e224ee) · [agent repays 300](https://celoscan.io/tx/0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0) · [repay all](https://celoscan.io/tx/0x72f5150accdd58518f0c224477cfc293d42b072a9552485d69b7e911b04caade) |
-| **The agent buys a check from a node we do not run.** Through buy, the agent paid US$0.01 in USD₮ over x402 for a batch on Chainstack's Celo RPC and read the pool's books at the same block from both nodes: they match. It does this every day and before each weekly summary. | 8 Nov 18:28 | [payment](https://celoscan.io/tx/0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40) · [receipts](evidence/buy/purchases.json) · [Transparencia](https://adelanto-99-80-93-71.sslip.io/transparencia) |
+| **The agent buys a check from a node we do not run.** Through buy, the agent paid US$0.01 in USD₮ over x402 for a batch on Chainstack's Celo RPC and read the pool's books at the same block from both nodes: they match. It does this every day and before each weekly summary. | 8 Nov 18:28 | [payment](https://celoscan.io/tx/0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40) · [receipts](evidence/buy/purchases.json) · [Transparencia](https://adelanto.space/transparencia) |
 | **Bigger loans: Morpho on Ethereum, round trip with real money.** USDT bridged to Ethereum, 3,000 wARS borrowed on Morpho's wARS/USDT market (0.30% a year that day), pesos bridged to Celo through Ripio, then repaid and the dollars brought home. | 5 Nov 18:51–21:38 | [borrow on Morpho](https://etherscan.io/tx/0x32e03e2af5aaf27db2b9db4cdf0ce0bb84c073b75ed0a52a12358043d5cc0165) · [pesos to Celo](https://etherscan.io/tx/0x88df1ef3069e8abdcbe1ee421996677f1a38223eebbd988b410aa47d2bda463f) · [repay](https://etherscan.io/tx/0xb7f7afe9a8ca26af2c26cd1ed48f868a96c3684af96b325ce33d6eb21f9d15fa) · [dollars home](https://etherscan.io/tx/0x68b29607e347de3f7949b90f0084763c105a6d662cbded845b7fe881746e82f2) · [every step](docs/verification.md#ethereum-round-trip) |
 
-The [transparency page](https://adelanto-99-80-93-71.sslip.io/transparencia) labels every wallet: ours, the
+The [transparency page](https://adelanto.space/transparencia) labels every wallet: ours, the
 judges' and everyone else's.
 
 From a terminal, no wallet:
 
 ```sh
-curl -s https://adelanto-99-80-93-71.sslip.io/api/public/rates   # live rates and pool, read from chain
-curl -s https://adelanto-99-80-93-71.sslip.io/api/loan/1         # the loan above, from chain
-curl -s https://adelanto-99-80-93-71.sslip.io/llms.txt           # every contract and how to check each claim
-curl -s https://adelanto-99-80-93-71.sslip.io/x402               # paid answers for agents (x402), free list
+curl -s https://adelanto.space/api/public/rates   # live rates and pool, read from chain
+curl -s https://adelanto.space/api/loan/1         # the loan above, from chain
+curl -s https://adelanto.space/llms.txt           # every contract and how to check each claim
+curl -s https://adelanto.space/x402               # paid answers for agents (x402), free list
 BUYER_KEY_FILE=key node scripts/x402-buy.ts                      # pay 8 wARS for the peso rate
 ```
 
@@ -88,7 +88,7 @@ ADELANTO is the fourth choice:
    At 80% use lenders earn about 25.9% a year, above the banks' BADLAR deposit rate (22.3%).
 6. **Build a credit record you own.** Every loan repaid on time is written on Celo by `CreditBook`. After one,
    three and six on-time loans, the rate drops by one to three points and the limit rises.
-   [Mi historial](https://adelanto-99-80-93-71.sslip.io/historial) shows any wallet's step, what the next step
+   [Mi historial](https://adelanto.space/historial) shows any wallet's step, what the next step
    unlocks and how many loans it needs; MiniPay opens it on your own wallet.
 7. **Other agents pay for what ADELANTO knows.** The peso rate checked against two outside sources, a firm borrow
    quote, and a wallet's credit record are sold over **x402**, settled by Celo's own facilitator in wARS or USD₮,
@@ -106,8 +106,8 @@ needs 400,000 pesos for stock this month.
 | If the loan nears the risk line | — | the agent adds her dollars or repays with her pesos, inside her rule |
 
 The first loan can borrow up to 60% of the dollars' value in pesos, at most 1,000,000 pesos. How much the pool
-can lend today is on the [home page](https://adelanto-99-80-93-71.sslip.io) and in
-[`/api/public/rates`](https://adelanto-99-80-93-71.sslip.io/api/public/rates).
+can lend today is on the [home page](https://adelanto.space) and in
+[`/api/public/rates`](https://adelanto.space/api/public/rates).
 
 ### Ways in
 
@@ -115,10 +115,10 @@ can lend today is on the [home page](https://adelanto-99-80-93-71.sslip.io) and 
 |---|---|
 | **MiniPay users** (main) | Open the site in MiniPay. Spanish first, amounts in pesos, gas paid in USDT by MiniPay, no words like "collateral" on screen. |
 | **Any Celo wallet** | The same site in a browser with MetaMask, Valora or Rabby. |
-| **Lenders** | [`/prestar`](https://adelanto-99-80-93-71.sslip.io/prestar): deposit wARS, see the rate, withdraw. |
-| **Judges** | [`/probar`](https://adelanto-99-80-93-71.sslip.io/probar): a real 1,000-peso loan against about US$ 1, then repay it. [Guide](docs/judges.md). |
-| **Borrowers checking their record** | [`/historial`](https://adelanto-99-80-93-71.sslip.io/historial): credit step, what it unlocks, the wallet's loans and what the agent did on them. |
-| **Agents and scripts** | MCP at `https://adelanto-99-80-93-71.sslip.io/mcp` (rates, price history, quote, credit record, loan status, and unsigned tagged borrow/repay transactions for your own wallet), [`llms.txt`](https://adelanto-99-80-93-71.sslip.io/llms.txt), `/api/public/rates`, `/api/public/prices`, `/api/loan/:id`, `/api/me/:address`, and the contracts directly. Paid over x402: `/x402/peso-rate`, `/x402/quote`, `/x402/credit/:address` ([catalog](https://adelanto-99-80-93-71.sslip.io/x402)). |
+| **Lenders** | [`/prestar`](https://adelanto.space/prestar): deposit wARS, see the rate, withdraw. |
+| **Judges** | [`/probar`](https://adelanto.space/probar): a real 1,000-peso loan against about US$ 1, then repay it. [Guide](docs/judges.md). |
+| **Borrowers checking their record** | [`/historial`](https://adelanto.space/historial): credit step, what it unlocks, the wallet's loans and what the agent did on them. |
+| **Agents and scripts** | MCP at `https://adelanto.space/mcp` (rates, price history, quote, credit record, loan status, and unsigned tagged borrow/repay transactions for your own wallet), [`llms.txt`](https://adelanto.space/llms.txt), `/api/public/rates`, `/api/public/prices`, `/api/loan/:id`, `/api/me/:address`, and the contracts directly. Paid over x402: `/x402/peso-rate`, `/x402/quote`, `/x402/credit/:address` ([catalog](https://adelanto.space/x402)). |
 
 ## What the agent does on its own
 
