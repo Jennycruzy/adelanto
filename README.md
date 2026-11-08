@@ -258,7 +258,7 @@ npm test                                   # 296 TypeScript tests, offline (forg
 npm run verify                             # every loan, the counts and the tags, rebuilt from Celo alone
 npm run verify -- 5                        # one loan's full history from chain
 npm run evidence                           # regenerates evidence/ (needs the agent's database for three files)
-cd contracts && forge test                 # 227 Solidity tests; fork tests need CELO_RPC_URL and ETH_RPC_URL
+cd contracts && forge test                 # 232 Solidity tests; fork tests need CELO_RPC_URL and ETH_RPC_URL
 ```
 
 Every number we quote comes from [`evidence/`](evidence/README.md): loans, deposits, agent actions, x402 sales,
