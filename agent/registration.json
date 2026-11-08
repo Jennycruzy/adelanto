@@ -21,6 +21,11 @@
       "endpoint": "https://adelanto-99-80-93-71.sslip.io/x402"
     },
     {
+      "name": "MCP",
+      "endpoint": "https://adelanto-99-80-93-71.sslip.io/mcp",
+      "version": "2025-11-25"
+    },
+    {
       "name": "peso-pool",
       "endpoint": "eip155:42220:0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60"
     },

@@ -100,7 +100,7 @@ can lend today is on the [home page](https://adelanto-99-80-93-71.sslip.io) and 
 | **Lenders** | [`/prestar`](https://adelanto-99-80-93-71.sslip.io/prestar): deposit wARS, see the rate, withdraw. |
 | **Judges** | [`/probar`](https://adelanto-99-80-93-71.sslip.io/probar): a real 1,000-peso loan against about US$ 1, then repay it. [Guide](docs/judges.md). |
 | **Borrowers checking their record** | [`/historial`](https://adelanto-99-80-93-71.sslip.io/historial): credit step, what it unlocks, the wallet's loans and what the agent did on them. |
-| **Agents and scripts** | [`llms.txt`](https://adelanto-99-80-93-71.sslip.io/llms.txt), `/api/public/rates`, `/api/public/prices`, `/api/loan/:id`, `/api/me/:address`, and the contracts directly. Paid over x402: `/x402/peso-rate`, `/x402/quote`, `/x402/credit/:address` ([catalog](https://adelanto-99-80-93-71.sslip.io/x402)). |
+| **Agents and scripts** | MCP at `https://adelanto-99-80-93-71.sslip.io/mcp` (rates, price history, quote, credit record, loan status, and unsigned tagged borrow/repay transactions for your own wallet), [`llms.txt`](https://adelanto-99-80-93-71.sslip.io/llms.txt), `/api/public/rates`, `/api/public/prices`, `/api/loan/:id`, `/api/me/:address`, and the contracts directly. Paid over x402: `/x402/peso-rate`, `/x402/quote`, `/x402/credit/:address` ([catalog](https://adelanto-99-80-93-71.sslip.io/x402)). |
 
 ## What the agent does on its own
 

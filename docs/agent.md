@@ -92,6 +92,16 @@ sends nothing, not even a resumed transaction. `AGENT_MODE=live` turns sending o
 with the guardian key loaded for price pauses. At startup in live mode it checks that `GentleKeeper.agent()` is
 this wallet and stops if not.
 
+## Other agents can use it: MCP
+
+`https://adelanto-99-80-93-71.sslip.io/mcp` is an MCP server (Streamable HTTP, no session, no key). Tools:
+`rates`, `price_history`, `quote`, `credit_record`, `loan_status`, and two builders, `build_borrow` and
+`build_repay`, that return unsigned transactions for the caller's own wallet: only to `PesoPool` or the two
+tokens, exact approvals, each with our attribution suffix. The server holds no keys; nothing moves until that
+wallet signs. On a mainnet fork, an MCP client borrowed 1,000 pesos and repaid all of it with only those
+transactions, including the case where the wallet holds just the borrowed pesos and the gap is swapped from its
+USDT (`apps/web/src/mcp.ts`). Any MCP client that speaks Streamable HTTP can connect to that URL.
+
 ## It also earns: x402
 
 Other agents pay the agent wallet for three answers over x402, through Celo's facilitator: the peso rate checked

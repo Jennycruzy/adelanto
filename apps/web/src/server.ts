@@ -10,6 +10,7 @@ import { langOf, t, type Lang } from "./i18n.ts";
 import { addrUrl, ago, borrowPage, guardPage, historyPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
 import { ruleText, saveRule } from "./rules.ts";
 import { catalog, credit, pesoRate, quote as paidQuote, x402Middleware } from "./x402.ts";
+import { handleMcp } from "./mcp.ts";
 
 const app = new Hono();
 const lang = (c: any): Lang => langOf(c.req.query("lang"));
@@ -324,6 +325,9 @@ app.get("/api/public/rates", async (c) => {
   });
 });
 
+// MCP for other agents (Streamable HTTP, stateless): read tools and unsigned transactions for the caller's wallet.
+app.all("/mcp", (c) => handleMcp(c.req.raw));
+
 app.get("/api/public/prices", (c) => {
   const hours = Math.min(168, Math.max(1, Number(c.req.query("hours") ?? 24) || 24));
   const points = priceHistory(hours, 500);
@@ -375,6 +379,7 @@ ${pesos(v.pool.cash, "en")} free to lend, ${pesos(v.pool.totalDebt, "en")} lent.
 ${dep.gentleKeeper ? `- GentleKeeper ${dep.gentleKeeper}: gentle liquidation computed on chain\n` : ""}- Agent wallet 0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1, ERC-8004 identity 10043
 
 ## Check every claim on chain
+- MCP server (Streamable HTTP): POST /mcp. Tools: rates, price_history, quote, credit_record, loan_status, build_borrow, build_repay (unsigned, tagged transactions for your own wallet)
 - Price history the agent checks: GET /api/public/prices?hours=24 (free JSON)
 - Rates and pool: GET /api/public/rates (free JSON), or read PesoPool.borrowRateBps(0), lenderRateBps(), cash(), totalDebt()
 - A loan: GET /api/loan/<id>, or PesoPool.loans(id) and debtOf(id); its history is the pool's events for that id
