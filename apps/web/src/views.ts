@@ -137,7 +137,7 @@ const ICON: Record<string, string> = {
 };
 const icon = (k: string) => raw(`<svg viewBox="0 0 24 24" fill="none" stroke="#0e2a47" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`);
 
-export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: any[]; actions: any[] } | null, tickAge: number | null, feed: any[] = [], prices: PricePoint[] = []) {
+export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: any[]; actions: any[] } | null, tickAge: number | null, feed: any[] = [], prices: PricePoint[] = [], rep: { count: number; avg: number } | null = null) {
   const es = lang === "es";
   const loc = es ? "es-AR" : "en-US";
   const rate = Number(v.borrowRateBps) / 10_000;
@@ -186,7 +186,7 @@ export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: a
   <div><span class="ic">${icon("tag")}</span><b>${es ? "Todo a la vista" : "All in the open"}</b><span>${es ? "Cada transacción en la cadena, con la etiqueta del evento" : "Every transaction on chain, with the event's tag"}</span></div>
 </div></section>
 
-${agentSection(lang, tickAge, feed, prices)}
+${agentSection(lang, tickAge, feed, prices, rep)}
 
 <section class="band"><div class="wrap">
   <h2 class="reveal">${es ? "Dejá de pagar la tasa del banco" : "Stop paying the bank's rate"}</h2>
@@ -403,7 +403,27 @@ export function cashOut(lang: Lang, events: { name: string; args: any }[]) {
 </div>`;
 }
 
-export function loanPage(lang: Lang, v: PoolView, loan: LoanView, events: any[], actions: any[]) {
+const starsText = (n: number) => "★".repeat(n) + "☆".repeat(5 - n);
+
+/**
+ * After a loan closes, its borrower can rate the agent on ERC-8004 (one transaction, their own wallet). Never offered
+ * on our own wallets' loans. `rated` is the borrower's rating of this loan if they already gave one.
+ */
+export function rateCard(lang: Lang, loan: LoanView, rated: number | null | undefined) {
+  if (loan.open || labelOf(loan.borrower) === "OURS" || rated === undefined) return "";
+  const es = lang === "es";
+  if (rated !== null)
+    return html`<div class="card"><div class="card-label">${es ? "Tu calificación del agente" : "Your rating of the agent"}</div><div class="stars-done" aria-label="${rated} / 5">${starsText(rated)}</div><p class="small muted" style="margin:8px 0 0">${es ? "Escrita en Celo, en el registro ERC-8004 del agente #10043." : "Written on Celo, in agent #10043's ERC-8004 record."}</p></div>`;
+  return html`<div class="card rate">
+  <div class="card-label">${es ? "¿Cómo te cuidó el agente?" : "How did the agent look after you?"}</div>
+  <h3>${es ? "Calificá al agente" : "Rate the agent"}</h3>
+  <p class="small" style="margin:0 0 12px">${es ? "Solo quien pidió este préstamo puede calificarlo, una vez, con su billetera. Queda en Celo, en el registro ERC-8004 del agente #10043, con este préstamo como prueba." : "Only the wallet that took this loan can rate it, once. It is written on Celo, in agent #10043's ERC-8004 record, with this loan as the evidence."}</p>
+  <div class="stars" role="group" aria-label="${es ? "Calificación" : "Rating"}">${[1, 2, 3, 4, 5].map((n) => html`<button type="button" data-action="rateAgent" data-loan="${loan.id.toString()}" data-stars="${n}" data-borrower="${loan.borrower}" data-lang="${lang}" aria-label="${n} / 5">★</button>`)}</div>
+  <div id="status"></div>
+</div>`;
+}
+
+export function loanPage(lang: Lang, v: PoolView, loan: LoanView, events: any[], actions: any[], rated?: number | null) {
   const es = lang === "es";
   const widthPct = Math.min(100, Number(loan.ltvBps) / 80);
   const bandWord = { tranquilo: es ? "Tranquilo" : "Calm", atencion: es ? "Atención" : "Watch", riesgo: es ? "Riesgo" : "At risk", liquidable: es ? "Se puede vender parte de tu garantía" : "Part of the guarantee can be sold" }[loan.band];
@@ -442,7 +462,8 @@ ${loan.open
 </div>
 ${cashOut(lang, events)}`
   : html`<div class="card"><div class="card-label">${es ? "Estado" : "Status"} · ${pillFor(loan.borrower, lang)}</div><h3>${loan.liquidated ? (es ? "Se vendió parte de la garantía." : "Part of the guarantee was sold.") : es ? "Pagado. Los dólares volvieron a su billetera." : "Repaid. The dollars went back to the wallet."}</h3>
-  <p style="margin:12px 0 0"><a class="link-arrow" href="${href(lang, `/historial?w=${loan.borrower}`)}">${es ? "Ver el historial de esta billetera" : "See this wallet's record"}</a></p></div>`}
+  <p style="margin:12px 0 0"><a class="link-arrow" href="${href(lang, `/historial?w=${loan.borrower}`)}">${es ? "Ver el historial de esta billetera" : "See this wallet's record"}</a></p></div>
+${rateCard(lang, loan, rated)}`}
 </div>
 <div>
 <div class="card">
@@ -456,7 +477,7 @@ ${cashOut(lang, events)}`
 </div>
 </div>
 </div></div></section>`,
-    { path: `/prestamo/${loan.id}`, wallet: loan.open },
+    { path: `/prestamo/${loan.id}`, wallet: loan.open || rated === null },
   );
 }
 
@@ -623,7 +644,17 @@ export function agentFeed(lang: Lang, actions: any[]) {
 }
 
 /** The home page's agent block: is it running, the rule it last acted on, and what it did on chain. */
-function agentSection(lang: Lang, tickAge: number | null, feed: any[], prices: PricePoint[] = []) {
+/** The agent's ERC-8004 rating from borrowers of closed loans, when there is one. */
+export function repLine(lang: Lang, rep: { count: number; avg: number } | null) {
+  if (!rep) return "";
+  const es = lang === "es";
+  const avg = rep.avg.toLocaleString(es ? "es-AR" : "en-US", { maximumFractionDigits: 1 });
+  return html`<p class="rep-line"><span class="stars-done" aria-hidden="true">${starsText(Math.round(rep.avg))}</span> <b>${avg}</b> / 5 · ${es
+    ? `${rep.count} ${rep.count === 1 ? "calificación" : "calificaciones"} en ERC-8004, solo de quienes cerraron un préstamo`
+    : `${rep.count} ERC-8004 ${rep.count === 1 ? "rating" : "ratings"}, only from people who closed a loan`}</p>`;
+}
+
+function agentSection(lang: Lang, tickAge: number | null, feed: any[], prices: PricePoint[] = [], rep: { count: number; avg: number } | null = null) {
   const es = lang === "es";
   const live = tickAge !== null && tickAge < 5 * 60_000;
   const quoted = feed.map((a) => /«([^»]+)»/.exec(a.sentence_es ?? "")?.[1]).find(Boolean);
@@ -643,6 +674,7 @@ function agentSection(lang: Lang, tickAge: number | null, feed: any[], prices: P
   <div class="card reveal d1">
     <div class="card-label">${es ? "Lo último que hizo, en Celo" : "What it did last, on Celo"}</div>
     ${agentFeed(lang, feed)}
+    ${repLine(lang, rep)}
   </div>
   ${priceChart(lang, prices)}
 </div></div></section>`;

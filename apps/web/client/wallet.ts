@@ -21,6 +21,7 @@ import {
 import { celo } from "viem/chains";
 import { permitTypedData } from "./permit.ts";
 import { PRESETS, ruleSentence, type RuleInput } from "./rule.ts";
+import { REPUTATION, feedbackCall } from "./feedback.ts";
 
 type Cfg = { code: string; pool: Address; guard: Address; usdt: Address; wars: Address; rpc: string };
 const cfg: Cfg = JSON.parse(document.getElementById("adelanto-cfg")!.textContent!);
@@ -66,6 +67,8 @@ const W = {
     orDollars: (usd: string) => `Tampoco alcanzan tus dólares sueltos para cubrir la diferencia (hacen falta ${usd}).`,
     gap: (pesos: string, usd: string) => `Te faltan ${pesos}: los cubrimos con ${usd} de tus dólares sueltos…`,
     none: "No tenés pesos depositados.",
+    notBorrower: "Solo la billetera que pidió este préstamo puede calificarlo.",
+    rated: "Gracias: tu calificación quedó en Celo.",
     mine: (dep: string, wars: string) => `Tu depósito: ${dep}. Pesos en tu billetera: ${wars} (MiniPay no los muestra en su saldo).`,
   },
   en: {
@@ -88,6 +91,8 @@ const W = {
     orDollars: (usd: string) => `Your spare dollars do not cover the gap either (${usd} needed).`,
     gap: (pesos: string, usd: string) => `You are ${pesos} short: covering it with ${usd} of your spare dollars…`,
     none: "You have no pesos deposited.",
+    notBorrower: "Only the wallet that took this loan can rate it.",
+    rated: "Thank you: your rating is on Celo.",
     mine: (dep: string, wars: string) => `Your deposit: ${dep}. Pesos in your wallet: ${wars} (MiniPay does not show them in its balance).`,
   },
 };
@@ -127,7 +132,7 @@ function tagged(data: Hex): Hex {
   return concatHex([data, toDataSuffix(cfg.code) as Hex]);
 }
 
-const ALLOWED = () => new Set([cfg.pool, cfg.guard, cfg.usdt, cfg.wars].map((a) => a.toLowerCase()));
+const ALLOWED = () => new Set([cfg.pool, cfg.guard, cfg.usdt, cfg.wars, REPUTATION].map((a) => a.toLowerCase()));
 
 /** One transaction: only to our published contracts, tagged, and its receipt checked. */
 async function send(to: Address, data: Hex) {
@@ -477,7 +482,17 @@ async function myRecord(el: HTMLElement) {
   location.href = `/historial?w=${me}${el.dataset.lang === "en" ? "&lang=en" : ""}`;
 }
 
+// ERC-8004: the borrower of a closed loan rates the agent, once, from their own wallet.
+async function rateAgent(el: HTMLElement) {
+  const me = await connect();
+  if (me.toLowerCase() !== el.dataset.borrower!.toLowerCase()) throw new Error(w.notBorrower);
+  await send(REPUTATION, feedbackCall(location.origin, BigInt(el.dataset.loan!), Number(el.dataset.stars)));
+  status(w.rated, "ok");
+  setTimeout(() => (location.href = `${location.pathname}?rated=1${lang === "en" ? "&lang=en" : ""}`), 1200);
+}
+
 const ACTIONS: Record<string, (el: HTMLElement) => Promise<void>> = {
+  rateAgent,
   myRecord,
   borrow,
   repayAll,

@@ -64,7 +64,13 @@ Then:
    billetera** or paste an address). It reads your record from `CreditBook`: your step (0 to 3), what each step
    unlocks, how many on-time loans the next one needs, and your loans with what the agent did on them. A loan held
    less than 7 days is repaid on time but does not count towards a step, so this one shows on the record without
-   moving you up.
+   moving you up. Under **Lo que te dijo el agente** are its messages to your wallet, and every Sunday at 20:00
+   (Buenos Aires) the summary of your week.
+5. Back on the closed loan's page, **Calificá al agente** (Rate the agent): tap 1 to 5 stars and sign one
+   transaction. It writes ERC-8004 feedback to agent #10043 on Celo's ReputationRegistry with your loan page as the
+   evidence. Only the loan's own wallet can rate it; our wallets never get the prompt, and the registry itself
+   refuses ratings from the agent's owner. The home page and Transparencia then show the average, counting only
+   ratings from wallets that closed a loan.
 
 Every transaction the site builds carries the event's attribution tag.
 
@@ -76,7 +82,12 @@ curl -s https://adelanto-99-80-93-71.sslip.io/api/public/rates    # rates, free 
 curl -s https://adelanto-99-80-93-71.sslip.io/api/me/<address>    # a wallet's loans, credit record and rule
 curl -s https://adelanto-99-80-93-71.sslip.io/x402                # what other agents can buy, and the prices
 curl -si https://adelanto-99-80-93-71.sslip.io/x402/peso-rate | head -1   # HTTP 402: pay to read
+curl -s https://adelanto-99-80-93-71.sslip.io/api/public/prices?hours=24  # the agent's once-a-minute price check
 ```
+
+**MCP**: `https://adelanto-99-80-93-71.sslip.io/mcp` (Streamable HTTP, no key). Tools: `rates`, `price_history`,
+`quote`, `credit_record`, `loan_status`, and `build_borrow` / `build_repay`, which return unsigned transactions
+with our tag for your own wallet to sign.
 
 Other agents pay ADELANTO over **x402**, settled by Celo's own facilitator into the agent wallet: 8 wARS (or
 US$0.005 in USD₮) for the peso rate checked against Binance and dolarapi, 15 wARS (or US$0.01) for a firm borrow quote
@@ -94,7 +105,7 @@ Repo:
 
 ```sh
 git clone https://github.com/Jennycruzy/adelanto && cd adelanto
-npm ci && npm test                          # 226 tests, offline
+npm ci && npm test                          # 283 tests, offline
 npm run audit:attribution                   # re-checks the tag on every transaction of ours
 cd contracts && forge test --no-match-path 'test/fork/*'   # Solidity tests without an RPC
 ```

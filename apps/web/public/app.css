@@ -454,3 +454,13 @@ details.card[open] > summary::after { transform: rotate(45deg); }
 /* Cash-out to a bank through Ripio */
 .steps-sm { margin: 10px 0 16px; padding-left: 20px; color: var(--ink-2); font-size: 15px; line-height: 1.5; }
 .steps-sm li + li { margin-top: 4px; }
+
+/* Rating the agent on ERC-8004 after a closed loan */
+.rate .stars { display: flex; gap: 6px; }
+.rate .stars button { font-size: 30px; line-height: 1; width: 48px; height: 48px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--paper); color: var(--line-2); cursor: pointer; transition: color 0.15s, background 0.15s; }
+.rate .stars:hover button { color: var(--sol); background: var(--sol-wash); }
+.rate .stars button:hover ~ button { color: var(--line-2); background: var(--paper); }
+.rate .stars button:focus-visible { outline: 2px solid var(--celeste-ink); outline-offset: 2px; }
+.stars-done { color: var(--sol); font-size: 22px; letter-spacing: 2px; }
+.rep-line { margin: 14px 0 0; font-size: 14px; color: var(--ink-2); }
+.rep-line .stars-done { font-size: 16px; letter-spacing: 1px; }

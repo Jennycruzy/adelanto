@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { erc20Abi, getAddress, parseAbi, type Address, type PublicClient } from "viem";
 import { CELO, celoDeployment, celoPublicClient, creditBookAbi, guardAbi, poolAbi, priceAbi } from "@adelanto/chain";
 import { band, ltvBps, priceAtLtv, quote, type PoolState, type Quote } from "@adelanto/core";
+import { AGENT_ID, FEEDBACK_TAG, REPUTATION, reputationAbi } from "../client/feedback.ts";
 
 const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
 
@@ -315,4 +316,40 @@ export async function creditOf(who: Address) {
     pub.readContract({ address: dep.creditBook, abi: creditBookAbi, functionName: "tier", args: [who] }),
   ]);
   return { ...r, tier: Number(tier) };
+}
+
+// ------------------------------------------------------------------ ERC-8004 reputation (read from chain)
+
+export const SITE = process.env.PUBLIC_URL ?? "https://adelanto-99-80-93-71.sslip.io";
+export type Rating = { client: Address; loanId: number; stars: number; label: string; counts: boolean };
+let repCache: { at: number; ratings: Rating[] } | null = null;
+
+/**
+ * Every rating the agent has on the ReputationRegistry, newest last. A rating counts only if it is about a closed
+ * loan, given by that loan's borrower, not one of our own wallets, and not revoked.
+ */
+export async function reputation(fresh = false): Promise<Rating[]> {
+  if (!fresh && repCache && Date.now() - repCache.at < 60_000) return repCache.ratings;
+  const clients = (await pub.readContract({ address: REPUTATION, abi: reputationAbi, functionName: "getClients", args: [AGENT_ID] })) as Address[];
+  let ratings: Rating[] = [];
+  if (clients.length) {
+    const [who, , values, decimals, tag1s, tag2s, revoked] = (await pub.readContract({ address: REPUTATION, abi: reputationAbi, functionName: "readAllFeedback", args: [AGENT_ID, clients, "", "", true] })) as unknown as any[];
+    const loans = new Map(loanRows().map((r) => [Number(r.id), r]));
+    ratings = (who as Address[]).map((client, i) => {
+      const loanId = Number(tag2s[i]);
+      const loan = loans.get(loanId);
+      const value = Number(values[i]) / 10 ** Number(decimals[i]);
+      const label = labelOf(client);
+      const counts = tag1s[i] === FEEDBACK_TAG && !revoked[i] && !!loan && !loan.open && getAddress(loan.borrower) === getAddress(client) && label !== "OURS" && value >= 0 && value <= 100;
+      return { client: getAddress(client), loanId, stars: Math.round(value / 20), label, counts };
+    });
+  }
+  repCache = { at: Date.now(), ratings };
+  return ratings;
+}
+
+/** Count and average stars of the ratings that count. */
+export async function reputationSummary(): Promise<{ count: number; avg: number } | null> {
+  const r = (await reputation().catch(() => [])).filter((x) => x.counts);
+  return r.length ? { count: r.length, avg: r.reduce((s, x) => s + x.stars, 0) / r.length } : null;
 }

@@ -5,9 +5,9 @@ import { html } from "hono/html";
 import { getAddress, isAddress } from "viem";
 import { availableToBorrow, dollars, parseRule, pesos, percent } from "@adelanto/core";
 import { CELO } from "@adelanto/chain";
-import { REFS, adminEvents, noticesFor, priceHistory, weeklyPool, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, pub, quoteFor } from "./data.ts";
+import { REFS, adminEvents, noticesFor, priceHistory, reputation, reputationSummary, weeklyPool, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, pub, quoteFor } from "./data.ts";
 import { langOf, t, type Lang } from "./i18n.ts";
-import { addrUrl, ago, borrowPage, guardPage, historyPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
+import { addrUrl, ago, repLine, borrowPage, guardPage, historyPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
 import { ruleText, saveRule } from "./rules.ts";
 import { catalog, credit, pesoRate, quote as paidQuote, x402Middleware } from "./x402.ts";
 import { handleMcp } from "./mcp.ts";
@@ -38,7 +38,7 @@ app.get("/", async (c) => {
     if (loan) proof = { loan, events: loanEvents(loan.id), actions: agentActions(loan.id, 5) };
   }
   const tick = lastTick();
-  return c.html(home(l, v, proof, tick ? Date.now() - tick : null, agentActions(undefined, 4), priceHistory(24, 144)));
+  return c.html(home(l, v, proof, tick ? Date.now() - tick : null, agentActions(undefined, 4), priceHistory(24, 144), await reputationSummary()));
 });
 
 app.get("/pedir", async (c) => {
@@ -60,7 +60,14 @@ app.get("/prestamo/:id", async (c) => {
   const v = await poolView();
   const loan = await loanView(BigInt(id), v);
   if (!loan) return c.notFound();
-  return c.html(loanPage(l, v, loan, loanEvents(loan.id), agentActions(loan.id)));
+  // The borrower's rating of this loan, read from the ReputationRegistry (fresh right after they rate); undefined hides
+  // the card when the registry cannot be read.
+  let rated: number | null | undefined;
+  if (!loan.open && labelOf(loan.borrower) !== "OURS") {
+    const all = await reputation(c.req.query("rated") === "1").catch(() => undefined);
+    rated = all === undefined ? undefined : (all.find((r) => r.loanId === Number(loan.id) && r.client === loan.borrower)?.stars ?? null);
+  }
+  return c.html(loanPage(l, v, loan, loanEvents(loan.id), agentActions(loan.id), rated));
 });
 
 app.get("/historial", async (c) => {
@@ -99,6 +106,7 @@ app.get("/transparencia", async (c) => {
   const pill = (lab: string) => html`<span class="pill ${lab === "USER" ? "ok" : lab === "JUDGE" ? "celeste" : ""}">${lab === "OURS" ? t(l, "ours") : lab === "JUDGE" ? t(l, "judge") : t(l, "user")}</span>`;
   const admin = adminEvents();
   const weekly = weeklyPool();
+  const rep = await reputationSummary();
   return c.html(
     plain(
       l,
@@ -146,6 +154,7 @@ ${weekly ? html`<div class="card">
     ${dep.gentleKeeper ? html`<a href="${addrUrl(dep.gentleKeeper)}"><span>GentleKeeper</span><span>${dep.gentleKeeper.slice(0, 10)}…</span></a>` : ""}
     <a href="${addrUrl("0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1")}"><span>${es ? "Agente · ERC-8004 #10043" : "Agent · ERC-8004 #10043"}</span><span>0xB93A6B8f…</span></a>
   </div>
+  ${repLine(l, rep)}
 </div>
 </div>
 <div>

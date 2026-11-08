@@ -102,6 +102,16 @@ wallet signs. On a mainnet fork, an MCP client borrowed 1,000 pesos and repaid a
 transactions, including the case where the wallet holds just the borrowed pesos and the gap is swapped from its
 USDT (`apps/web/src/mcp.ts`). Any MCP client that speaks Streamable HTTP can connect to that URL.
 
+## Its reputation: ERC-8004 feedback from closed loans
+
+When a loan closes, its page asks that loan's wallet to rate the agent from 1 to 5 stars: one tagged transaction to
+Celo's ReputationRegistry (`giveFeedback` for agent #10043, tag `closed-loan`, the loan id, the public loan page as
+evidence). The page never asks our own wallets, and the registry refuses ratings from the agent's owner. The site
+reads every rating from chain and counts one only if its wallet borrowed that loan and the loan is closed; the
+average appears on the home page and on Transparencia once there is one (`apps/web/client/feedback.ts`). Checked on
+a mainnet fork by clicking a star in a browser: the feedback landed tagged, the page and the average updated, and a
+rating from the agent wallet reverted with "Self-feedback not allowed".
+
 ## It also earns: x402
 
 Other agents pay the agent wallet for three answers over x402, through Celo's facilitator: the peso rate checked
