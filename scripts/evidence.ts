@@ -7,9 +7,10 @@
 //   price-study.json       the agent's once-a-minute price check: pool against Binance and dolarapi (agent database)
 //   weekly-summaries.json  the Sunday summaries the agent wrote (agent database)
 //   ratings.json           the agent's ERC-8004 feedback (chain)
+//   buy/purchases.json     every purchase through buy, what it served and its settlement (agent database)
 //   summary.json, README.md  the headline numbers, each with the file it comes from
 // Env: CELO_RPC_URL (optional), DB_PATH (default ~/adelanto-data/agent.sqlite; without it the database files are kept as they are).
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -131,6 +132,18 @@ if (existsSync(dbPath)) {
   const wk = db.prepare("SELECT key, kind, borrower, text_es, text_en, created_at FROM notices WHERE kind IN ('weekly', 'weekly_pool') ORDER BY created_at, key").all() as any[];
   weekly = { ...generated, source: "notices in the agent's database (A7, Sundays 20:00 Buenos Aires)", summaries: wk.map((r) => ({ ...r, label: r.borrower ? label(r.borrower) : "POOL", created_at: new Date(Number(r.created_at)).toISOString() })) };
   write("weekly-summaries.json", weekly);
+
+  const bought = db.prepare("SELECT capability, url, payer, token, amount, settlement_tx, served, outcome, detail, at FROM buy_purchases ORDER BY id").all() as any[];
+  mkdirSync(join(out, "buy"), { recursive: true });
+  writeFileSync(
+    join(out, "buy", "purchases.json"),
+    ser({
+      ...generated,
+      source: "buy_purchases in the agent's database: every purchase through buy (usebuy.ai), what it served and its settlement",
+      paidUsd: bought.filter((b) => b.outcome === "paid").reduce((t, b) => t + Number(b.amount) / 1e6, 0),
+      purchases: bought.map((b) => ({ ...b, served: JSON.parse(b.served), at: new Date(Number(b.at)).toISOString(), url: b.settlement_tx ? tx(b.settlement_tx) : null })),
+    }),
+  );
   db.close();
 } else {
   console.log(`No agent database at ${dbPath}: agent-actions.json, price-study.json and weekly-summaries.json are left as they are.`);

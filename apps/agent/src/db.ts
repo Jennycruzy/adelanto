@@ -44,6 +44,9 @@ CREATE INDEX IF NOT EXISTS prices_at ON prices (observed_at);
 CREATE TABLE IF NOT EXISTS notices (
   key TEXT PRIMARY KEY, borrower TEXT, loan_id INTEGER, kind TEXT NOT NULL, text_es TEXT NOT NULL, text_en TEXT NOT NULL,
   created_at INTEGER NOT NULL, delivered_at INTEGER);
+CREATE TABLE IF NOT EXISTS buy_purchases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, capability TEXT NOT NULL, url TEXT NOT NULL, payer TEXT NOT NULL, token TEXT,
+  amount TEXT, settlement_tx TEXT, served TEXT NOT NULL, outcome TEXT NOT NULL, detail TEXT, at INTEGER NOT NULL);
 `;
 
 export type Db = DatabaseSyncType;

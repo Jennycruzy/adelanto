@@ -1,6 +1,7 @@
 // Entry point. Watch-only unless AGENT_MODE=live: in watch mode the agent reads, decides and logs everything and
 // sends nothing. Env: ATTRIBUTION_TAG, AGENT_KEY_FILE, GUARDIAN_KEY_FILE (optional), DB_PATH, AGENT_MODE,
-// CELO_RPC_URL(_2), TICK_SECONDS (default 60), OURS_ADDRESSES / JUDGE_ADDRESSES (comma separated).
+// CELO_RPC_URL(_2), TICK_SECONDS (default 60), OURS_ADDRESSES / JUDGE_ADDRESSES (comma separated),
+// BUY_ENABLED=1 and BUY_DAILY_CAP_USD (a second RPC bought through buy before money moves).
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
@@ -8,6 +9,7 @@ import { getAddress } from "viem";
 import { TaggedSender, attributionCode, celoDeployment, celoPublicClient, ethPublicClient, gentleKeeperAbi } from "@adelanto/chain";
 import { Agent, type Mode } from "./agent.ts";
 import { holdLock, openDb, setMeta } from "./db.ts";
+import { PaidRpc } from "./buy.ts";
 
 const mode: Mode = process.env.AGENT_MODE === "live" ? "live" : "watch";
 const code = attributionCode();
@@ -43,7 +45,12 @@ const ruleWords = (hash: string): string | undefined => {
   }
 };
 
+// A second RPC bought through buy (Chainstack), paid from the agent wallet in USD₮, only when BUY_ENABLED=1.
+const paid = process.env.BUY_ENABLED === "1" ? new PaidRpc(db, keyFile) : undefined;
+if (paid) console.log(`buy: second RPC on, payer ${paid.payer}, cap US$${process.env.BUY_DAILY_CAP_USD ?? 0.05} a day`);
+
 const agent = new Agent({
+  paid,
   ruleWords,
   db,
   pub,

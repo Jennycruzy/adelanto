@@ -2,11 +2,12 @@
 // repaid, lent or had a loan open that week, and one for the pool. Balances and debts are read from the chain at one
 // block when the summary is written; the week's flows come from the indexed chain events. Every number in a
 // sentence must come from those facts: a sentence holding any other number is never written.
-import { getAddress, type Address, type PublicClient } from "viem";
+import { encodeFunctionData, getAddress, type Address, type Hex, type PublicClient } from "viem";
 import { creditBookAbi, poolAbi } from "@adelanto/chain";
 import { pesos, percent } from "@adelanto/core";
 import { PAUSE_GAP } from "@adelanto/price";
 import { getMeta, setMeta, tx, type Db } from "./db.ts";
+import { sameAnswers, type PaidRpc } from "./buy.ts";
 
 const HOUR = 3_600_000;
 const WEEK = 7 * 24 * HOUR;
@@ -307,14 +308,49 @@ export function writeWeek(db: Db, w: Week, now: number, log: (s: string) => void
 }
 
 /** Runs the summary once its Sunday 20:00 has passed and it has not been written yet. */
-export async function weeklyIfDue(db: Db, pub: PublicClient, a: { pool: Address; guard: Address; creditBook?: Address }, now: number, log: (s: string) => void = console.log) {
+/**
+ * Before writing, a node we do not run (Chainstack through buy) re-reads every balance, debt, step and pool total the
+ * summaries quote, at the same block. A disagreement blocks the week for an hour; if the node cannot be bought the
+ * summaries rest on our RPC alone.
+ */
+export async function crossCheckWeek(pub: PublicClient, paid: PaidRpc, a: { pool: Address; creditBook?: Address }, w: Week): Promise<"match" | "mismatch" | "unavailable"> {
+  const calls: { to: Address; data: Hex }[] = [
+    { to: a.pool, data: encodeFunctionData({ abi: poolAbi, functionName: "cash" }) },
+    { to: a.pool, data: encodeFunctionData({ abi: poolAbi, functionName: "totalDebt" }) },
+    { to: a.pool, data: encodeFunctionData({ abi: poolAbi, functionName: "borrowRateBps", args: [0] }) },
+    { to: a.pool, data: encodeFunctionData({ abi: poolAbi, functionName: "lenderRateBps" }) },
+  ];
+  for (const p of w.people) {
+    calls.push({ to: a.pool, data: encodeFunctionData({ abi: poolAbi, functionName: "balanceOf", args: [p.who] }) });
+    if (a.creditBook) calls.push({ to: a.creditBook, data: encodeFunctionData({ abi: creditBookAbi, functionName: "tier", args: [p.who] }) });
+    for (const l of p.openNow) calls.push({ to: a.pool, data: encodeFunctionData({ abi: poolAbi, functionName: "debtOf", args: [BigInt(l.id)] }) });
+  }
+  const ours = await Promise.all(calls.map(async (c) => (await pub.call({ to: c.to, data: c.data, blockNumber: w.block })).data ?? "0x"));
+  const theirs = await paid
+    .batch(calls.map((c) => ({ method: "eth_call", params: [{ to: c.to, data: c.data }, `0x${w.block.toString(16)}`] })), { action: "A7_weekly", wallets: w.people.map((p) => p.who), block: w.block.toString() })
+    .catch(() => null);
+  if (!theirs) return "unavailable";
+  return sameAnswers(ours as Hex[], theirs).ok ? "match" : "mismatch";
+}
+
+/** Runs the summary once its Sunday 20:00 has passed and it has not been written yet. */
+export async function weeklyIfDue(db: Db, pub: PublicClient, a: { pool: Address; guard: Address; creditBook?: Address }, now: number, log: (s: string) => void = console.log, paid?: PaidRpc) {
   const end = lastSummaryTime(now);
   const key = new Date(end).toISOString().slice(0, 10);
   if (getMeta(db, "weekly:last") === key) return null;
   if (now - end > 6 * 24 * HOUR) return null; // never write a week that is long gone
+  if (Number(getMeta(db, "weekly:heldUntil") ?? 0) > now) return null;
   const w = await gatherWeek(db, pub, a, end);
   const indexed = BigInt(getMeta(db, "celo.indexedTo") ?? "0");
   if (indexed < w.block) return null; // the indexer has not reached the week's last block yet: next tick
+  if (paid) {
+    const second = await crossCheckWeek(pub, paid, a, w);
+    log(`A7 weekly summary ${key}: second RPC ${second}`);
+    if (second === "mismatch") {
+      setMeta(db, "weekly:heldUntil", String(now + HOUR));
+      return null;
+    }
+  }
   const r = writeWeek(db, w, now, log);
   log(`A7 weekly summary ${key}: ${r.written} written, ${r.blocked.length} blocked (block ${w.block})`);
   return r;

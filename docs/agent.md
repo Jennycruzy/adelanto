@@ -102,6 +102,18 @@ wallet signs. On a mainnet fork, an MCP client borrowed 1,000 pesos and repaid a
 transactions, including the case where the wallet holds just the borrowed pesos and the gap is swapped from its
 USDT (`apps/web/src/mcp.ts`). Any MCP client that speaks Streamable HTTP can connect to that URL.
 
+## What it buys: a second opinion on the chain, through buy
+
+Before the agent moves anyone's money (protect, repay from pesos that arrived, a gentle sale, a pause), it asks a
+node we do not run to read the same loan and the same price at the same block: Chainstack's Celo RPC, bought per
+batch through [buy](https://usebuy.ai) (`chainstack.celo`, US$0.01 for up to 2,000 calls), paid over x402 from the
+agent wallet in USD₮. If the two disagree, it sends nothing that tick. Before the Sunday summaries it does the same
+for every balance, debt, step and pool total they quote, and a disagreement holds the summaries for an hour. One
+payment can never exceed the catalogue price and the agent spends at most US$0.05 a day; past that, or if buy is
+down, it acts on our RPC alone and says so in its log. Every purchase is a receipt with the action and wallets it
+served and its settlement transaction: [`evidence/buy/purchases.json`](../evidence/buy/purchases.json)
+(`apps/agent/src/buy.ts`).
+
 ## Its reputation: ERC-8004 feedback from closed loans
 
 When a loan closes, its page asks that loan's wallet to rate the agent from 1 to 5 stars: one tagged transaction to

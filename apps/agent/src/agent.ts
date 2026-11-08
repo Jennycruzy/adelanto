@@ -27,6 +27,7 @@ import { indexOnce, openLoanIds, refreshLoan, sweepLoans, type Addresses } from 
 import { credit, type LedgerItem } from "./ledger.ts";
 import { loanNotices, poolNotices } from "./notices.ts";
 import { weeklyIfDue } from "./weekly.ts";
+import { sameAnswers, type PaidRpc, type Served } from "./buy.ts";
 
 export type Mode = "watch" | "live";
 
@@ -40,6 +41,7 @@ export type AgentDeps = {
   eth?: PublicClient; // Ethereum reads for the rate watch (A3); omitted = A3 off
   labels: Map<string, string>; // address -> OURS / JUDGE
   ruleWords?: (hash: string) => string | undefined; // the words saved for a rule hash (web app store)
+  paid?: PaidRpc; // a second RPC bought through buy, to confirm reads before money moves; omitted = no check
   now?: () => number; // ms; injectable for tests
   log?: (s: string) => void;
 };
@@ -213,6 +215,24 @@ export class Agent {
     return { blockNumber: this.block };
   }
 
+  /** The same eth_calls at this tick's block from our RPC and from the paid one (buy → Chainstack). */
+  private async confirmed(calls: { to: Address; data: Hex }[], served: Served, block = this.block): Promise<"match" | "mismatch" | "unavailable"> {
+    const paid = this.d.paid;
+    if (!paid) return "unavailable";
+    const blockHex = `0x${block.toString(16)}`;
+    try {
+      const ours = await Promise.all(calls.map(async (c) => (await this.d.pub.call({ to: c.to, data: c.data, blockNumber: block })).data ?? "0x"));
+      const theirs = await paid.batch(calls.map((c) => ({ method: "eth_call", params: [{ to: c.to, data: c.data }, blockHex] })), { ...served, block: block.toString() });
+      if (!theirs) return "unavailable";
+      const s = sameAnswers(ours as Hex[], theirs);
+      if (!s.ok) this.log(`second RPC disagrees on call ${s.first} at block ${block} (${served.action})`);
+      return s.ok ? "match" : "mismatch";
+    } catch (e: any) {
+      this.log(`second RPC unavailable: ${String(e?.message ?? e).slice(0, 200)}`);
+      return "unavailable";
+    }
+  }
+
   private async priceState() {
     const { pub, addresses: a } = this.d;
     const [[ok, reason], liq] = await Promise.all([
@@ -326,6 +346,21 @@ export class Agent {
         this.log(`[watch] ${job} loan ${loan.id}: ${said.en}`);
       }
       return "watch";
+    }
+    // Before moving anyone's money, a node we do not run (Chainstack, bought through buy) must read the same loan and
+    // price at the same block. If it disagrees, nothing is sent this tick; if it cannot be bought, the agent goes on.
+    const { pool, priceModule } = this.d.addresses;
+    const second = await this.confirmed(
+      [
+        { to: pool, data: encodeFunctionData({ abi: poolAbi, functionName: "loans", args: [loan.id] }) },
+        { to: pool, data: encodeFunctionData({ abi: poolAbi, functionName: "debtOf", args: [loan.id] }) },
+        { to: priceModule, data: encodeFunctionData({ abi: priceAbi, functionName: "liquidationPrice" }) },
+      ],
+      { action: job, loanId: Number(loan.id), wallets: [loan.borrower] },
+    );
+    if (second === "mismatch") {
+      this.record(job, loan.id, loan.borrower, { price }, inputs, d, "held", { es: "", en: "" }, undefined, "a second RPC disagreed with ours at this block");
+      return "refused";
     }
     const id = this.record(job, loan.id, loan.borrower, { price }, inputs, d, "decided", said);
     try {
@@ -484,6 +519,15 @@ export class Agent {
       }
       return;
     }
+    const second = await this.confirmed(
+      [
+        { to: a.priceModule, data: encodeFunctionData({ abi: priceAbi, functionName: "spot" }) },
+        { to: a.priceModule, data: encodeFunctionData({ abi: priceAbi, functionName: "liquidationPrice" }) },
+      ],
+      { action: `A4_${v.action}` },
+      block,
+    );
+    if (second === "mismatch") return; // our RPC may be the one that is wrong: decide again next minute
     const id = this.record("A4_price", null, null, { why: v.why }, {}, { kind: v.action }, "decided", { es: "", en: v.why });
     try {
       await this.send(this.d.guardian, id, a.pool, encodeFunctionData({ abi: poolAbi, functionName: v.action === "pause" ? "pause" : "unpause" }));
@@ -553,7 +597,7 @@ export class Agent {
     await this.phase("pool notices", async () => {
       for (const n of await poolNotices(pub, a, db)) this.notice(n.key, null, n.kind, n.said);
     });
-    if (indexedOk) await this.phase("weekly", async () => void (await weeklyIfDue(db, pub, a, this.now(), this.log)));
+    if (indexedOk) await this.phase("weekly", async () => void (await weeklyIfDue(db, pub, a, this.now(), this.log, this.d.paid)));
     setMeta(db, "lastTick", String(this.now()));
   }
 }
