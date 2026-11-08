@@ -22,6 +22,7 @@ import { celo } from "viem/chains";
 import { permitTypedData } from "./permit.ts";
 import { PRESETS, ruleSentence, type RuleInput } from "./rule.ts";
 import { REPUTATION, feedbackCall } from "./feedback.ts";
+import { linkTypedData } from "./tglink.ts";
 
 type Cfg = { code: string; pool: Address; guard: Address; usdt: Address; wars: Address; rpc: string };
 const cfg: Cfg = JSON.parse(document.getElementById("adelanto-cfg")!.textContent!);
@@ -68,6 +69,9 @@ const W = {
     gap: (pesos: string, usd: string) => `Te faltan ${pesos}: los cubrimos con ${usd} de tus dólares sueltos…`,
     none: "No tenés pesos depositados.",
     notBorrower: "Solo la billetera que pidió este préstamo puede calificarlo.",
+    notThisWallet: "Conectá la billetera de este historial para recibir sus avisos.",
+    signLink: "Firmá el mensaje en tu billetera (gratis, no mueve plata)…",
+    openingTelegram: "Listo. Abriendo Telegram…",
     rated: "Gracias: tu calificación quedó en Celo.",
     mine: (dep: string, wars: string) => `Tu depósito: ${dep}. Pesos en tu billetera: ${wars} (MiniPay no los muestra en su saldo).`,
   },
@@ -92,6 +96,9 @@ const W = {
     gap: (pesos: string, usd: string) => `You are ${pesos} short: covering it with ${usd} of your spare dollars…`,
     none: "You have no pesos deposited.",
     notBorrower: "Only the wallet that took this loan can rate it.",
+    notThisWallet: "Connect this record's wallet to get its notices.",
+    signLink: "Sign the message in your wallet (free, moves no money)…",
+    openingTelegram: "Done. Opening Telegram…",
     rated: "Thank you: your rating is on Celo.",
     mine: (dep: string, wars: string) => `Your deposit: ${dep}. Pesos in your wallet: ${wars} (MiniPay does not show them in its balance).`,
   },
@@ -477,6 +484,22 @@ function isRejection(e: any) {
 }
 
 // Mi historial: the record is public, so the wallet is only used to know which address to show.
+// Telegram: the wallet signs a free EIP-712 message (no transaction); the server checks it and returns a one-time link.
+async function linkTelegram(el: HTMLElement) {
+  const me = await connect();
+  if (me.toLowerCase() !== el.dataset.who!.toLowerCase()) throw new Error(w.notThisWallet);
+  const nonce = crypto.getRandomValues(new Uint32Array(4)).join("-");
+  const expires = BigInt(Math.floor(Date.now() / 1000) + 10 * 60);
+  const typed = linkTypedData(me, nonce, expires);
+  status(w.signLink);
+  const signature: Hex = await eth.request({ method: "eth_signTypedData_v4", params: [me, JSON.stringify(typed, (_k, v) => (typeof v === "bigint" ? v.toString() : v))] });
+  const r = await fetch("/api/telegram/link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ wallet: me, nonce, expires: expires.toString(), signature }) });
+  const j = await r.json();
+  if (!r.ok || !j.url) throw new Error(j.error ?? "link failed");
+  status(w.openingTelegram, "ok");
+  location.href = j.url;
+}
+
 async function myRecord(el: HTMLElement) {
   const me = await connect();
   location.href = `/historial?w=${me}${el.dataset.lang === "en" ? "&lang=en" : ""}`;
@@ -492,6 +515,7 @@ async function rateAgent(el: HTMLElement) {
 }
 
 const ACTIONS: Record<string, (el: HTMLElement) => Promise<void>> = {
+  linkTelegram,
   rateAgent,
   myRecord,
   borrow,

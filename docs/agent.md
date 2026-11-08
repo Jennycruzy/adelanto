@@ -18,7 +18,7 @@ functions in `packages/core` (`guard.ts`, `health.ts`, `ratewatch.ts`), tested w
 | **Sell gently** | Past 80%, and protection did not land | `GentleKeeper.liquidate(loanId)`: the smallest repayment that brings the loan to 78%, computed on chain at that block | Pool rules: 30-minute price, half the debt at most, 5% bonus |
 | **Stop on bad prices** | The pool's 30-minute price differs by more than 1.5% from Binance **and** dolarapi for 3 minutes | The guardian pauses new borrowing; it resumes its own pause after 10 minutes with at least 2 sources within 1% | Needs 2 outside sources; cannot pause repay, withdraw or liquidation; only lifts a pause it made |
 | **Rate watch** | Morpho on Ethereum would save more than twice its moving cost over the rest of the term | A notice with the saving in pesos | Moves no money |
-| **Notices** | Health changes (risk, can be sold), due in 3 days, due, late, the pool running low on free pesos | One sentence in Spanish or English, shown on the wallet's [Mi historial](https://adelanto-99-80-93-71.sslip.io/historial) and in `/api/me/:address` | 2-point hysteresis and a 6-hour cooldown per loan, so it never nags |
+| **Notices** | Health changes (risk, can be sold), due in 3 days, due, late, the pool running low on free pesos | One sentence in Spanish or English, shown on the wallet's [Mi historial](https://adelanto-99-80-93-71.sslip.io/historial), in `/api/me/:address` and in Telegram | 2-point hysteresis and a 6-hour cooldown per loan, so it never nags |
 | **Weekly summary** | Sundays at 20:00 in Buenos Aires | For each person who borrowed, repaid, lent or has a loan open: what they borrowed and repaid, what the agent did under their rule, what they owe now and when it is due, what their pool share is worth and earned, their credit step. One for the pool on [Transparencia](https://adelanto-99-80-93-71.sslip.io/transparencia) | Debts, pool shares, steps and pool totals are read from chain at one block; the week's flows come from the indexed chain events; every number in the text must come from those facts or nothing is written (`apps/agent/src/weekly.ts`) |
 
 ## What it has done on mainnet
@@ -101,6 +101,16 @@ tokens, exact approvals, each with our attribution suffix. The server holds no k
 wallet signs. On a mainnet fork, an MCP client borrowed 1,000 pesos and repaid all of it with only those
 transactions, including the case where the wallet holds just the borrowed pesos and the gap is swapped from its
 USDT (`apps/web/src/mcp.ts`). Any MCP client that speaks Streamable HTTP can connect to that URL.
+
+## In Telegram: @adelanto_ar_bot
+
+On Mi historial, **Avisarme por Telegram** asks the wallet for a free EIP-712 signature (no transaction); the server
+checks it and opens the bot with a one-time code, so a chat can only follow a wallet its owner signed for. From
+then on the bot sends every notice the agent writes for that wallet, in the chat's language: a repayment under the
+rule, three days before the due date, risk rising, and the Sunday summary. It answers "cuánto debo", the rate and
+quotes ("cotizar 5000 30"), and reads a rule written in words against the open loan, replying with the read-back
+and a button that opens the site with the words filled in, to sign in the wallet. The bot never moves money.
+Chats linked to our own wallets also get the watchdog's alerts (`apps/web/src/telegram.ts`).
 
 ## What it buys: a second opinion on the chain, through buy
 

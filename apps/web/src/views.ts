@@ -496,7 +496,7 @@ function guardWords(lang: Lang, l: any) {
 
 // ---------------------------------------------------------------- guard
 
-export function guardPage(lang: Lang, loan: LoanView, words: string | null) {
+export function guardPage(lang: Lang, loan: LoanView, words: string | null, prefill = "") {
   const es = lang === "es";
   const presets = [
     { id: "cuidalo", es: "Cuidalo con hasta US$ 10 por semana", en: "Protect it with up to US$10 a week", sub: { es: "Agrega tus dólares si llega a riesgo", en: "Adds your dollars if it reaches risk" } },
@@ -518,7 +518,7 @@ ${loan.guard
 <div class="card">
   <div class="card-label">${es ? "Decíselo con tus palabras" : "Say it in your own words"}</div>
   <label for="rule-text" class="small">${es ? "Por ejemplo: «Cuando me entren pesos de las ventas, pagá el préstamo. Nunca vendas mis dólares.»" : "For example: \"When pesos from my sales arrive, repay the loan. Never sell my dollars.\""}</label>
-  <textarea id="rule-text" rows="3" maxlength="600" style="width:100%;font:inherit;font-size:18px;padding:12px 14px;border-radius:16px;border:1.5px solid var(--line);margin-top:8px" placeholder="${es ? "Escribí tu regla" : "Write your rule"}"></textarea>
+  <textarea id="rule-text" rows="3" maxlength="600" style="width:100%;font:inherit;font-size:18px;padding:12px 14px;border-radius:16px;border:1.5px solid var(--line);margin-top:8px" placeholder="${es ? "Escribí tu regla" : "Write your rule"}">${prefill}</textarea>
   <div style="display:flex;gap:10px;margin-top:12px">
     <button class="btn ghost" data-action="dictate" data-lang="${lang}" hidden style="gap:8px"><span style="width:20px;height:20px;display:inline-flex">${icon("mic")}</span>${es ? "Dictar" : "Dictate"}</button>
     <button class="btn" style="flex:1;min-width:0;padding:0 16px" data-action="parseWords" data-loan="${loan.id.toString()}" data-debt="${loan.debt.toString()}" data-lang="${lang}">${es ? "Ver qué va a hacer" : "See what it will do"}</button>
@@ -841,6 +841,9 @@ export function historyPage(lang: Lang, d: HistoryData | null, error = false) {
 <div class="card">
   <div class="card-label">${es ? "Lo que te dijo el agente" : "What the agent told you"}</div>
   ${noticeList(lang, d.notices ?? [])}
+  <button class="btn ghost block" type="button" style="margin-top:14px" data-action="linkTelegram" data-who="${d.who}" data-lang="${lang}">${es ? "Avisarme por Telegram" : "Notify me on Telegram"}</button>
+  <p class="small muted" style="margin:8px 0 0">${es ? "Firmás un mensaje gratis con esta billetera (no mueve plata) y se abre @adelanto_ar_bot. Desde ahí también podés preguntar cuánto debés o escribir tu regla." : "You sign a free message with this wallet (it moves no money) and @adelanto_ar_bot opens. You can also ask it what you owe or write your rule there."}</p>
+  <div id="status"></div>
 </div>
 <div class="card">
   <div class="card-label">${es ? "Lo que hizo el agente por vos" : "What the agent did for you"}</div>

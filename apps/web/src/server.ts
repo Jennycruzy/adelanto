@@ -11,6 +11,7 @@ import { addrUrl, ago, repLine, borrowPage, guardPage, historyPage, home, href, 
 import { ruleText, saveRule } from "./rules.ts";
 import { catalog, credit, pesoRate, quote as paidQuote, x402Middleware } from "./x402.ts";
 import { handleMcp } from "./mcp.ts";
+import { botUsername, linkCode, startBot } from "./telegram.ts";
 
 const app = new Hono();
 const lang = (c: any): Lang => langOf(c.req.query("lang"));
@@ -222,7 +223,8 @@ app.get("/cuidar/:id", async (c) => {
   const v = await poolView();
   const loan = await loanView(BigInt(id), v);
   if (!loan) return c.notFound();
-  return c.html(guardPage(l, loan, loan.guard ? ruleText(loan.guard.ruleHash) : null));
+  // ?w= carries words sent from the Telegram bot into the box, to read back and sign here.
+  return c.html(guardPage(l, loan, loan.guard ? ruleText(loan.guard.ruleHash) : null, (c.req.query("w") ?? "").slice(0, 600)));
 });
 
 // The rule in the borrower's own words → limits, a question with buttons, or a stop. Nothing is signed here.
@@ -235,6 +237,12 @@ app.post("/api/parse-rule", async (c) => {
   const block = await pub.getBlock();
   const r = parseRule(body.text, { debt: loan.debt, collateral: loan.collateral, dueAt: loan.dueAt, maxRateBps: 0 }, block.timestamp, body.lang === "en" ? "en" : "es");
   return json(c, r);
+});
+
+// Telegram: the wallet's EIP-712 signature (made on Mi historial) for a one-time link to the bot.
+app.post("/api/telegram/link", async (c) => {
+  const r = await linkCode(await c.req.json().catch(() => null));
+  return "code" in r ? json(c, { url: `https://t.me/${botUsername}?start=${r.code}` }) : json(c, r, 400);
 });
 
 app.post("/api/rule", async (c) => {
@@ -410,3 +418,5 @@ https://github.com/Jennycruzy/adelanto
 const port = Number(process.env.PORT ?? 8795);
 serve({ fetch: app.fetch, port, hostname: process.env.HOST ?? "127.0.0.1" });
 console.log(`web on http://${process.env.HOST ?? "127.0.0.1"}:${port}`);
+// One poller per bot: only the public service (port 8795) talks to Telegram, never a test copy.
+if (String(port) === "8795" || process.env.TELEGRAM_POLL === "1") void startBot();

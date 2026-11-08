@@ -118,7 +118,7 @@ last checked and what it did last, with the transactions.
 | **Sell gently, only if it must** | A loan crosses 80% and protection could not help | Sells the smallest slice that brings it to 78%, computed on chain by `GentleKeeper` | Pool rules: the 30-minute price, the 50% cap, a 5% bonus. On a 1,000 USDT loan the borrower loses about US$ 5.80 instead of US$ 19 under a standard liquidation back to 70% |
 | **Stop on bad prices** | The pool's price differs from Binance **and** dolarapi by more than 1.5% for 3 minutes | Pauses new borrowing; resumes after 10 minutes in line | Needs two outside sources; the guardian cannot pause repay, withdraw or liquidation |
 | **Rate watch** | Morpho on Ethereum would save more than twice its moving cost | Tells the borrower, with the saving in pesos | Moves no money |
-| **Keep people told** | Risk, due in 3 days, due, late, the pool running low on free pesos | One sentence per change, in Spanish and English, on the wallet's Mi historial; hysteresis so it never nags | — |
+| **Keep people told** | Risk, due in 3 days, due, late, the pool running low on free pesos | One sentence per change, in Spanish and English, on the wallet's Mi historial and in Telegram ([@adelanto_ar_bot](https://t.me/adelanto_ar_bot)); hysteresis so it never nags | — |
 | **Weekly summary** | Sundays 20:00, Buenos Aires | Per borrower and lender: borrowed, repaid, earned, what the agent did under their rule, what is owed and when. One for the pool on Transparencia | Balances and debts read from chain at one block; any number in the text that the data did not produce blocks it |
 
 Every action records its trigger, the inputs (price, health, limits), the decision, the transaction and one
