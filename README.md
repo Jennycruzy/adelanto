@@ -19,7 +19,8 @@ ERC-8004 agent **#10043** ·
 ## Check it yourself
 
 Every link is a real Celo mainnet transaction. Every transaction our wallets send since the event code was issued carries the
-attribution tag `celo_0e96c1ff3fa8` ([audit: 36 of 36 tagged, 0 untagged](evidence/attribution-audit.json)).
+attribution tag `celo_0e96c1ff3fa8` ([audit: 58 of 58 tagged, 0 untagged](evidence/attribution-audit.json)).
+`npm run verify` rebuilds every loan below from the chain alone; every number we quote is generated in [`evidence/`](evidence/README.md).
 
 | What happened | When (UTC) | Check it |
 |---|---|---|
@@ -29,7 +30,7 @@ attribution tag `celo_0e96c1ff3fa8` ([audit: 36 of 36 tagged, 0 untagged](eviden
 | **An agent with an on-chain identity.** ADELANTO is agent #10043 in Celo's ERC-8004 registry; its card lists the site, the contracts and the agent wallet. | 6 Nov 08:15 | [registration](https://celoscan.io/tx/0xf0bbf26a35801ff47b3e343078cb3d97ef964166f83b458b8104bee88b533795) · [card](agent/registration.json) |
 | **The agent repaid a loan on its own, quoting the borrower's rule.** Loan #2's rule, in the borrower's words: *"Cuando me entren pesos de ventas, pagá el préstamo con eso. Nunca vendas mis dólares."* When 300 wARS from a sale reached the borrower's wallet, the agent repaid 300 wARS through `LoanGuard`; a second sale of 100 wARS was repaid the same way, and the agent's log quotes the rule word for word. | 7 Nov 12:14, 12:28 | [repay 300](https://celoscan.io/tx/0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b) · [repay 100](https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a) |
 | **Other agents pay ADELANTO over x402.** A buyer paid 8 wARS for the peso rate and US$0.01 in USD₮ for a wallet's credit record, settled by Celo's x402 facilitator straight into the agent wallet. The facilitator sends these settlements from its own wallet; ADELANTO declares its attribution code in every 402 through the builder-code extension. | 7 Nov 13:52 | [8 wARS](https://celoscan.io/tx/0x8413548ce9ed00b89f43a67a01885b9081eea1f0957e16a479c46a2fffebe335) · [US$0.01](https://celoscan.io/tx/0x7ade1408800fdd6700c94dae8ae1f05fbd734bbf775b484b12e34d4586e70344) · [catalog](https://adelanto-99-80-93-71.sslip.io/x402) |
-| **Works inside MiniPay.** On a real iPhone, MiniPay signed EIP-712 typed data on chain 42220, paid gas in USDT on its own, and sent to contracts that are on no wallet's list (wARS and the wARS/USDT Uniswap pool). | 5 Nov 17:24 | [wARS call](https://celoscan.io/tx/0x91a0c3afd4577ba6fcf880bdd8dde2b69f9d209c4e1df5dc45903286cb7db9e8) · [Uniswap pool call](https://celoscan.io/tx/0x370cb1091c2198b9b0bc05438576d18dd7732e84d7cfa3c98e6300de540df51c) |
+| **A whole loan inside MiniPay, on a phone.** On an iPhone, MiniPay borrowed 1,000 wARS with gas paid in USDT and signed a rule written in words. When a 300 wARS sale reached the wallet, the agent repaid 300 on its own, quoting the rule; then **Repay all** closed loan #5 and returned the dollars. The attribution tag survived MiniPay's signing on every step. | 7 Nov 23:15–23:26 | [borrow](https://celoscan.io/tx/0x1bcfc3902106a3c27621e41fce1eaf328d25100fa41e58c9e09e406bfcc2ab42) · [rule](https://celoscan.io/tx/0x20a210505a98f24cd03a9e3a9f0c117006086836364dd2436811c30149e224ee) · [agent repays 300](https://celoscan.io/tx/0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0) · [repay all](https://celoscan.io/tx/0x72f5150accdd58518f0c224477cfc293d42b072a9552485d69b7e911b04caade) |
 | **Bigger loans: Morpho on Ethereum, round trip with real money.** USDT bridged to Ethereum, 3,000 wARS borrowed on Morpho's wARS/USDT market (0.30% a year that day), pesos bridged to Celo through Ripio, then repaid and the dollars brought home. | 5 Nov 18:51–21:38 | [borrow on Morpho](https://etherscan.io/tx/0x32e03e2af5aaf27db2b9db4cdf0ce0bb84c073b75ed0a52a12358043d5cc0165) · [pesos to Celo](https://etherscan.io/tx/0x88df1ef3069e8abdcbe1ee421996677f1a38223eebbd988b410aa47d2bda463f) · [repay](https://etherscan.io/tx/0xb7f7afe9a8ca26af2c26cd1ed48f868a96c3684af96b325ce33d6eb21f9d15fa) · [dollars home](https://etherscan.io/tx/0x68b29607e347de3f7949b90f0084763c105a6d662cbded845b7fe881746e82f2) · [every step](docs/verification.md#ethereum-round-trip) |
 
 All of these came from our own wallets, and the [transparency page](https://adelanto-99-80-93-71.sslip.io/transparencia)
@@ -55,7 +56,8 @@ rate (2,041 pesos per dollar against 1,667 for the crypto dollar on 5 Nov, 22% m
 ADELANTO is the fourth choice:
 
 1. **Borrow pesos against your dollars.** Lock USDT in MiniPay; get wARS in the same minute, in three taps (a
-   gas-free permit signature, then one transaction). Ripio's app turns wARS into pesos in a bank account.
+   gas-free permit signature, then one transaction). The loan page opens Ripio's off-ramp with the amount filled in,
+   to move the pesos to a bank account.
 2. **Pay much less than the bank.** The rate moves with how much of the pool is lent: 22% a year when idle, 36%
    at 80% use, plus a 0.25% opening fee. Every quote shows the bank's rate next to ours, in pesos.
 3. **Keep your dollars.** What you owe is in pesos. If the peso keeps falling, your debt shrinks in dollars while
@@ -116,7 +118,8 @@ last checked and what it did last, with the transactions.
 | **Sell gently, only if it must** | A loan crosses 80% and protection could not help | Sells the smallest slice that brings it to 78%, computed on chain by `GentleKeeper` | Pool rules: the 30-minute price, the 50% cap, a 5% bonus. On a 1,000 USDT loan the borrower loses about US$ 5.80 instead of US$ 19 under a standard liquidation back to 70% |
 | **Stop on bad prices** | The pool's price differs from Binance **and** dolarapi by more than 1.5% for 3 minutes | Pauses new borrowing; resumes after 10 minutes in line | Needs two outside sources; the guardian cannot pause repay, withdraw or liquidation |
 | **Rate watch** | Morpho on Ethereum would save more than twice its moving cost | Tells the borrower, with the saving in pesos | Moves no money |
-| **Keep people told** | Risk, due in 3 days, due, late, the pool running low on free pesos | One Spanish sentence per change, with hysteresis so it never nags | — |
+| **Keep people told** | Risk, due in 3 days, due, late, the pool running low on free pesos | One sentence per change, in Spanish and English, on the wallet's Mi historial; hysteresis so it never nags | — |
+| **Weekly summary** | Sundays 20:00, Buenos Aires | Per borrower and lender: borrowed, repaid, earned, what the agent did under their rule, what is owed and when. One for the pool on Transparencia | Balances and debts read from chain at one block; any number in the text that the data did not produce blocks it |
 
 Every action records its trigger, the inputs (price, health, limits), the decision, the transaction and one
 sentence in Spanish: *"Tu regla: «…». Agregué US$ 3 porque tu préstamo llegó al 71%."* The agent quotes the words
@@ -126,7 +129,7 @@ only when their keccak256 equals the rule hash the borrower signed on chain, so 
 "30 lucas por semana", "por dos meses", "hasta fin de mes", "que no me vendan los dólares", "frená todo". Every
 number in the result comes from the borrower's words or from the loan itself; amounts are clamped to the loan's
 debt and guarantee and to 180 days, and the read-back says when a cap was lowered and why. It is rules, not a
-language model, so the same words always give the same limits. Tested on 63 phrasings and 3,000 random rules.
+language model, so the same words always give the same limits. Tested on 63 Spanish and 28 English phrasings and 3,000 random rules.
 
 **What it can never do**, enforced by `LoanGuard` and proven by tests: send money anywhere but the borrower's own
 loan, borrow or open a loan for anyone, change limits, act after the rule expires, or act while the price module
@@ -147,8 +150,8 @@ process lock) is fixed and has a two-process test.
 | Criterion | What we show |
 |---|---|
 | **Works on mainnet with a real wFIAT token** | The loan is wARS itself: lend, borrow, add, take back, repay in pesos, repay with dollars and withdraw, all on Celo mainnet, all tagged ([audit](evidence/attribution-audit.json)). |
-| **Real use of wFIAT and the Celo stack** | wARS is what is borrowed and lent; MiniPay with USDT gas; ERC-8004 identity #10043; ERC-8021 attribution on every transaction; x402 through Celo's facilitator, paid in wARS by Permit2 with the permit's gas sponsored; Ripio's bridge between Celo and Ethereum; the Celo wARS/USDT Uniswap v3 pool as the price; USDT and wARS EIP-2612 permits. |
-| **The agent is autonomous and useful** | Six jobs above, each bound by limits the borrower signed and the contract enforces. On mainnet it repaid loan #2 on its own when pesos arrived, quoting the borrower's rule ([tx](https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a)). It saves the borrower money at the bank's expense and saves them from a full liquidation, and other agents pay it for answers over x402. |
+| **Real use of wFIAT and the Celo stack** | wARS is what is borrowed and lent; MiniPay with USDT gas; ERC-8004 identity #10043 and reputation (a closed loan's wallet rates the agent from the loan page); ERC-8021 attribution on every transaction; an MCP server that builds tagged borrow and repay transactions for other agents' own wallets; Ripio's off-ramp; x402 through Celo's facilitator, paid in wARS by Permit2 with the permit's gas sponsored; Ripio's bridge between Celo and Ethereum; the Celo wARS/USDT Uniswap v3 pool as the price; USDT and wARS EIP-2612 permits. |
+| **The agent is autonomous and useful** | Seven jobs above, each bound by limits the borrower signed and the contract enforces. On mainnet it repaid loans #2 to #5 on its own when pesos arrived, five times, quoting each borrower's rule ([loan #5, in MiniPay](https://celoscan.io/tx/0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0)). It saves the borrower money at the bank's expense and saves them from a full liquidation, and other agents pay it for answers over x402. |
 | **A real person can use it** | Spanish first, pesos everywhere, three taps to a first loan in MiniPay, no crypto words on screen, the rule in your own words or by voice, a credit record page, a US$ 1 loan to try. |
 | **Impact for LatAm** | Credit in pesos for people who save in dollars, the gap between a 64.63% bank loan and selling your savings. Lenders earn above BADLAR. The credit record belongs to the borrower. |
 
@@ -232,7 +235,7 @@ Node 24 and Foundry.
 
 ```sh
 npm ci
-npm test                                   # 283 TypeScript tests, offline
+npm test                                   # 287 TypeScript tests, offline (forge build first for the ABI check)
 npm run verify                             # every loan, the counts and the tags, rebuilt from Celo alone
 npm run verify -- 5                        # one loan's full history from chain
 npm run evidence                           # regenerates evidence/ (needs the agent's database for three files)
@@ -264,7 +267,7 @@ FORK_RPC=http://127.0.0.1:8548 AGENT_KEY_FILE=... ATTRIBUTION_TAG=celo_0e96c1ff3
 | Solidity unit | 25 `LoanGuard`, 38 `PesoPool`, 22 `PriceModule`, plus `CreditBook`, `GentleKeeper`, `TickPrice` | Every external function, every role, each thing the agent can never do |
 | Solidity fork | Celo, Ethereum, `GentleKeeper` | The deployed tokens, the real Uniswap pool, Morpho, permits |
 | Invariants | 6 properties, 10,000 runs | Lenders' pesos and borrowers' dollars always add up; no privileged transfer |
-| TypeScript | 226 | ABIs vs the compiler, health maths (10,000 random loans), guard decisions, credit ledger, price verdict, quotes, notices, the two-process lock, the rule parser (63 phrasings, 3,000 random rules, no invented numbers), the index head |
+| TypeScript | 287 | ABIs vs the compiler, health maths (10,000 random loans), guard decisions, credit ledger, price verdict, quotes, notices, the weekly summary and its number check, the paid second RPC (price and daily caps), the MCP tools, ERC-8004 rating calls, the price chart, the two-process lock, the rule parser (63 Spanish and 28 English phrasings, 3,000 random rules, no invented numbers), the index head |
 | Fork rehearsal | 8 tagged transactions | The agent end to end against the deployed contracts |
 
 Static analysis (slither) findings and our answers are in [docs/security.md](docs/security.md#static-analysis-slither-0104).

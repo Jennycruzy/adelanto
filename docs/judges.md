@@ -105,7 +105,7 @@ Repo:
 
 ```sh
 git clone https://github.com/Jennycruzy/adelanto && cd adelanto
-npm ci && npm test                          # 283 tests, offline
+npm ci && npm test                          # 287 tests, offline (forge build first for the ABI check)
 npm run verify                              # every loan, the counts and the tags, from Celo alone
 npm run audit:attribution                   # re-checks the tag on every transaction of ours
 cd contracts && forge test --no-match-path 'test/fork/*'   # Solidity tests without an RPC

@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-11-08T15:09:15.447Z",
-  "block": "82249797",
-  "blockTime": "2026-11-08T15:09:15.000Z",
+  "generatedAt": "2026-11-08T15:42:09.579Z",
+  "block": "82251771",
+  "blockTime": "2026-11-08T15:42:09.000Z",
   "loans": {
     "total": 5,
     "ours": 3,
@@ -26,7 +26,7 @@
   "pool": {
     "freePesos": 5516.9068,
     "lentPesos": 0,
-    "from": "PesoPool 0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60 at block 82249797"
+    "from": "PesoPool 0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60 at block 82251771"
   },
   "agent": {
     "actionsOnChain": 5,
@@ -48,7 +48,7 @@
     "from": "ratings.json"
   },
   "priceCheck": {
-    "readings": 3168,
+    "readings": 3201,
     "medianGapFromBinancePct": 0.47,
     "maxGapFromBinancePct": 1.2,
     "readingsPastPauseLineFromBoth": 0,
@@ -63,7 +63,7 @@
     "tagged": 58,
     "sentBeforeCodeIssued": 8,
     "untaggedAfterCodeIssued": 0,
-    "checkedAt": "2026-11-08T15:07:56.932Z",
+    "checkedAt": "2026-11-08T15:42:07.357Z",
     "from": "attribution-audit.json (npm run audit:attribution)"
   }
 }

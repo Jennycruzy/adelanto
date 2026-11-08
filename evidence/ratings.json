@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-11-08T15:09:15.447Z",
-  "block": "82249797",
-  "blockTime": "2026-11-08T15:09:15.000Z",
+  "generatedAt": "2026-11-08T15:42:09.579Z",
+  "block": "82251771",
+  "blockTime": "2026-11-08T15:42:09.000Z",
   "source": "ReputationRegistry 0x8004BAa17C55a88189AE136b182e5fdA19dE9b63, agent #10043; a rating counts if its wallet closed that loan and is not ours",
   "ratings": []
 }

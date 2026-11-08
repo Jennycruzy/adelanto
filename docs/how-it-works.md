@@ -76,7 +76,7 @@ rules keep it honest:
 - **Read back before signing.** The page shows every limit in plain Spanish (or English), and "nunca vendas mis
   dólares" sets the agent to protect with pesos only.
 
-The parser is tested on 63 phrasings, on questions, stops and unknown rules, on a check that no number appears that
+The parser is tested on 63 Spanish and 28 English phrasings, on questions, stops and unknown rules, on a check that no number appears that
 the user did not say, and on 3,000 random rules that must all stay inside the loan's limits.
 
 The site reads the rule back in plain Spanish with every number. The wallet approves exactly a week of the daily

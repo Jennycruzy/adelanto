@@ -1,6 +1,6 @@
 {
   "code": "celo_0e96c1ff3fa8",
-  "checkedAt": "2026-11-08T15:07:56.932Z",
+  "checkedAt": "2026-11-08T15:42:07.357Z",
   "wallets": {
     "agent": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
     "deployer": "0xF689c0620b9a9D7A1a0312e1F0778bAa440989BE",
@@ -164,7 +164,7 @@
       "block": 82051930,
       "time": "2026-11-06T08:11:28.000000Z",
       "status": "ok",
-      "method": "approve",
+      "method": "0x095ea7b3",
       "tagged": true,
       "codes": [
         "celo_0e96c1ff3fa8"
