@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-11-08T18:36:08.279Z",
-  "block": "82262210",
-  "blockTime": "2026-11-08T18:36:08.000Z",
+  "generatedAt": "2026-11-08T21:43:52.671Z",
+  "block": "82273474",
+  "blockTime": "2026-11-08T21:43:52.000Z",
   "source": "prices table in the agent's database: the agent's own once-a-minute readings (A4 price check)",
-  "readings": 3375,
+  "readings": 3514,
   "from": "2026-11-06T10:17:58.598Z",
-  "to": "2026-11-08T18:35:42.550Z",
+  "to": "2026-11-08T21:43:11.058Z",
   "gapFromBinancePct": {
     "median": 0.47,
     "p95": 0.67,

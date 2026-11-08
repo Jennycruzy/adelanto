@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-11-08T18:36:08.279Z",
-  "block": "82262210",
-  "blockTime": "2026-11-08T18:36:08.000Z",
+  "generatedAt": "2026-11-08T21:43:52.671Z",
+  "block": "82273474",
+  "blockTime": "2026-11-08T21:43:52.000Z",
   "loans": {
-    "total": 5,
+    "total": 7,
     "ours": 3,
     "judge": 2,
-    "otherPeople": 0,
-    "closed": 5,
-    "closedOnTime": 5,
+    "otherPeople": 2,
+    "closed": 6,
+    "closedOnTime": 6,
     "from": "loans.json"
   },
   "pesosLent": {
-    "total": 5000,
-    "repaid": 5000.05,
+    "total": 7000,
+    "repaid": 6000.05,
     "repaidByAgent": 910,
     "from": "loans.json"
   },
@@ -24,9 +24,9 @@
     "from": "deposits.json"
   },
   "pool": {
-    "freePesos": 5516.9068,
-    "lentPesos": 0,
-    "from": "PesoPool 0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60 at block 82262210"
+    "freePesos": 4516.9088,
+    "lentPesos": 1000.0413,
+    "from": "PesoPool 0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60 at block 82273474"
   },
   "agent": {
     "actionsOnChain": 5,
@@ -43,12 +43,12 @@
     "from": "x402-sales.json"
   },
   "ratings": {
-    "counted": 0,
-    "averageStars": null,
+    "counted": 1,
+    "averageStars": 5,
     "from": "ratings.json"
   },
   "priceCheck": {
-    "readings": 3375,
+    "readings": 3514,
     "medianGapFromBinancePct": 0.47,
     "maxGapFromBinancePct": 1.2,
     "readingsPastPauseLineFromBoth": 0,
@@ -59,11 +59,11 @@
     "from": "weekly-summaries.json"
   },
   "attribution": {
-    "all": 66,
-    "tagged": 58,
+    "all": 71,
+    "tagged": 63,
     "sentBeforeCodeIssued": 8,
     "untaggedAfterCodeIssued": 0,
-    "checkedAt": "2026-11-08T18:36:06.714Z",
+    "checkedAt": "2026-11-08T21:43:51.524Z",
     "from": "attribution-audit.json (npm run audit:attribution)"
   }
 }

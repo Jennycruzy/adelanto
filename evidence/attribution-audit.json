@@ -1,6 +1,6 @@
 {
   "code": "celo_0e96c1ff3fa8",
-  "checkedAt": "2026-11-08T18:36:06.714Z",
+  "checkedAt": "2026-11-08T21:43:51.524Z",
   "wallets": {
     "agent": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
     "deployer": "0xF689c0620b9a9D7A1a0312e1F0778bAa440989BE",
@@ -20,8 +20,8 @@
     "time": "2026-11-06T08:06:57.000000Z"
   },
   "totals": {
-    "all": 66,
-    "tagged": 58,
+    "all": 71,
+    "tagged": 63,
     "sentBeforeCodeIssued": 8,
     "untaggedAfterCodeIssued": 0
   },
@@ -988,6 +988,86 @@
       "time": "2026-11-07T23:25:54.000000Z",
       "status": "ok",
       "method": "repayWithPermit",
+      "tagged": true,
+      "codes": [
+        "celo_0e96c1ff3fa8"
+      ],
+      "source": [
+        "contract:PesoPool"
+      ]
+    },
+    {
+      "hash": "0xd8363b3537e6d7343c4e37b2d2e4b1d38ca3f7093d7ec5b677db0300f8d8f132",
+      "from": "0x1a7d0CeECe31D36767f6d9cB94d2BbB08F2929d5",
+      "to": "0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60",
+      "block": 82267648,
+      "time": "2026-11-08T20:06:46.000000Z",
+      "status": "ok",
+      "method": "borrowWithPermit",
+      "tagged": true,
+      "codes": [
+        "celo_0e96c1ff3fa8"
+      ],
+      "source": [
+        "contract:PesoPool"
+      ]
+    },
+    {
+      "hash": "0x0026093292f51d03c8e3480bee68ca8af0506a649ad05d4403cbb1c440eb1ba1",
+      "from": "0x1a7d0CeECe31D36767f6d9cB94d2BbB08F2929d5",
+      "to": "0x26c9f3D79f3C835ee74c95A94a701e93f24bEbD3",
+      "block": 82267777,
+      "time": "2026-11-08T20:08:55.000000Z",
+      "status": "ok",
+      "method": "setLimits",
+      "tagged": true,
+      "codes": [
+        "celo_0e96c1ff3fa8"
+      ],
+      "source": [
+        "contract:LoanGuard"
+      ]
+    },
+    {
+      "hash": "0x44de7f193e688d6cd63ce84700cc2b317f3f112730df7e9f36efb4351e4b1d2b",
+      "from": "0x1a7d0CeECe31D36767f6d9cB94d2BbB08F2929d5",
+      "to": "0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60",
+      "block": 82267876,
+      "time": "2026-11-08T20:10:34.000000Z",
+      "status": "ok",
+      "method": "repayWithSwap",
+      "tagged": true,
+      "codes": [
+        "celo_0e96c1ff3fa8"
+      ],
+      "source": [
+        "contract:PesoPool"
+      ]
+    },
+    {
+      "hash": "0x0942f28c018e31a79d42fb6897d0f20c6e91fe3b41ece083df4367062154346e",
+      "from": "0x1a7d0CeECe31D36767f6d9cB94d2BbB08F2929d5",
+      "to": "0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60",
+      "block": 82267902,
+      "time": "2026-11-08T20:11:00.000000Z",
+      "status": "ok",
+      "method": "repayWithPermit",
+      "tagged": true,
+      "codes": [
+        "celo_0e96c1ff3fa8"
+      ],
+      "source": [
+        "contract:PesoPool"
+      ]
+    },
+    {
+      "hash": "0x6e305832171b99dbf8102d511da1c0000044eb67cb3710e3db9f8653ca65e767",
+      "from": "0x2BcE94aFf0Cf444e082e5F7071c5122Ea0E533Af",
+      "to": "0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60",
+      "block": 82268298,
+      "time": "2026-11-08T20:17:36.000000Z",
+      "status": "ok",
+      "method": "borrowWithPermit",
       "tagged": true,
       "codes": [
         "celo_0e96c1ff3fa8"

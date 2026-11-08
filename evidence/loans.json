@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-11-08T18:36:08.279Z",
-  "block": "82262210",
-  "blockTime": "2026-11-08T18:36:08.000Z",
+  "generatedAt": "2026-11-08T21:43:52.671Z",
+  "block": "82273474",
+  "blockTime": "2026-11-08T21:43:52.000Z",
   "source": "PesoPool, LoanGuard and GentleKeeper events on Celo; labels from deployments/wallets.json",
   "loans": [
     {
@@ -277,6 +277,73 @@
           "by": "wallet",
           "tx": "0x72f5150accdd58518f0c224477cfc293d42b072a9552485d69b7e911b04caade",
           "url": "https://celoscan.io/tx/0x72f5150accdd58518f0c224477cfc293d42b072a9552485d69b7e911b04caade"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "borrower": "0x1a7d0CeECe31D36767f6d9cB94d2BbB08F2929d5",
+      "label": "USER",
+      "pesos": 1000,
+      "fee": 2.5,
+      "collateralUsdt": 1.211051,
+      "termDays": 7,
+      "rateBps": 2517,
+      "repaid": 1000.0019,
+      "repaidByAgent": 0,
+      "open": false,
+      "onTime": true,
+      "events": [
+        {
+          "block": 82267648,
+          "event": "Borrowed",
+          "by": "wallet",
+          "tx": "0xd8363b3537e6d7343c4e37b2d2e4b1d38ca3f7093d7ec5b677db0300f8d8f132",
+          "url": "https://celoscan.io/tx/0xd8363b3537e6d7343c4e37b2d2e4b1d38ca3f7093d7ec5b677db0300f8d8f132"
+        },
+        {
+          "block": 82267876,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0x44de7f193e688d6cd63ce84700cc2b317f3f112730df7e9f36efb4351e4b1d2b",
+          "url": "https://celoscan.io/tx/0x44de7f193e688d6cd63ce84700cc2b317f3f112730df7e9f36efb4351e4b1d2b"
+        },
+        {
+          "block": 82267902,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0x0942f28c018e31a79d42fb6897d0f20c6e91fe3b41ece083df4367062154346e",
+          "url": "https://celoscan.io/tx/0x0942f28c018e31a79d42fb6897d0f20c6e91fe3b41ece083df4367062154346e"
+        },
+        {
+          "block": 82267902,
+          "event": "LoanClosed",
+          "by": "wallet",
+          "tx": "0x0942f28c018e31a79d42fb6897d0f20c6e91fe3b41ece083df4367062154346e",
+          "url": "https://celoscan.io/tx/0x0942f28c018e31a79d42fb6897d0f20c6e91fe3b41ece083df4367062154346e"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "borrower": "0x2BcE94aFf0Cf444e082e5F7071c5122Ea0E533Af",
+      "label": "USER",
+      "pesos": 1000,
+      "fee": 2.5,
+      "collateralUsdt": 1.211051,
+      "termDays": 7,
+      "rateBps": 2517,
+      "repaid": 0,
+      "repaidByAgent": 0,
+      "open": true,
+      "onTime": null,
+      "events": [
+        {
+          "block": 82268298,
+          "event": "Borrowed",
+          "by": "wallet",
+          "tx": "0x6e305832171b99dbf8102d511da1c0000044eb67cb3710e3db9f8653ca65e767",
+          "url": "https://celoscan.io/tx/0x6e305832171b99dbf8102d511da1c0000044eb67cb3710e3db9f8653ca65e767"
         }
       ]
     }

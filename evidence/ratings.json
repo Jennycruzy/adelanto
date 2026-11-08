@@ -1,7 +1,19 @@
 {
-  "generatedAt": "2026-11-08T18:36:08.279Z",
-  "block": "82262210",
-  "blockTime": "2026-11-08T18:36:08.000Z",
+  "generatedAt": "2026-11-08T21:43:52.671Z",
+  "block": "82273474",
+  "blockTime": "2026-11-08T21:43:52.000Z",
   "source": "ReputationRegistry 0x8004BAa17C55a88189AE136b182e5fdA19dE9b63, agent #10043; a rating counts if its wallet closed that loan and is not ours",
-  "ratings": []
+  "ratings": [
+    {
+      "client": "0x1a7d0CeECe31D36767f6d9cB94d2BbB08F2929d5",
+      "label": "USER",
+      "index": 1,
+      "value": 100,
+      "stars": 5,
+      "tag1": "closed-loan",
+      "tag2": "6",
+      "revoked": false,
+      "counts": true
+    }
+  ]
 }

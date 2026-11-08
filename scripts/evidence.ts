@@ -78,6 +78,7 @@ write("ratings.json", { ...generated, source: `ReputationRegistry ${REPUTATION},
 
 // Blockscout gives the method by name or, when it has not decoded it, by selector.
 const SETTLE = new Set(["settleWithPermit", "transferWithAuthorization", "receiveWithAuthorization", "permitTransferFrom", "0xfa340378", "0xe3ee160e", "0xcf092995", "0xef55bec6"]);
+const METHOD_NAME: Record<string, string> = { "0xfa340378": "settleWithPermit", "0xe3ee160e": "transferWithAuthorization", "0xcf092995": "transferWithAuthorization", "0xef55bec6": "receiveWithAuthorization" };
 const sales: any[] = [];
 let params = "";
 for (;;) {
@@ -86,7 +87,7 @@ for (;;) {
   const j = await r.json();
   for (const t of j.items) {
     if (!SETTLE.has(t.method)) continue;
-    sales.push({ at: t.timestamp, token: t.token.symbol, amount: Number(t.total.value) / 10 ** Number(t.total.decimals), buyer: getAddress(t.from.hash), buyerLabel: label(t.from.hash), buyerRole: roleOf(t.from.hash), method: t.method, tx: t.transaction_hash, url: tx(t.transaction_hash) });
+    sales.push({ at: t.timestamp, token: t.token.symbol, amount: Number(t.total.value) / 10 ** Number(t.total.decimals), buyer: getAddress(t.from.hash), buyerLabel: label(t.from.hash), buyerRole: roleOf(t.from.hash), method: METHOD_NAME[t.method] ?? t.method, tx: t.transaction_hash, url: tx(t.transaction_hash) });
   }
   if (!j.next_page_params) break;
   params = "&" + new URLSearchParams(j.next_page_params).toString();

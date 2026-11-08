@@ -23,7 +23,7 @@ ERC-8004 agent **#10043** · [MCP](https://adelanto.space/mcp) · Telegram [@ade
 | **Ripio wARS** | The peso that is lent, borrowed, repaid and earned; Ripio's off-ramp sends it to a bank; Ripio's bridge moves it between Celo and Ethereum | [loan #1](https://adelanto.space/prestamo/1) |
 | **MiniPay** | The main way in: three taps to a loan, gas paid in USDT, a whole loan run on a phone | [loan #5 in MiniPay](https://celoscan.io/tx/0x1bcfc3902106a3c27621e41fce1eaf328d25100fa41e58c9e09e406bfcc2ab42) |
 | **ERC-8004** | Agent identity #10043 from the agent's own wallet; a closed loan's borrower rates the agent in the ReputationRegistry | [registration](https://celoscan.io/tx/0xf0bbf26a35801ff47b3e343078cb3d97ef964166f83b458b8104bee88b533795) · [card](agent/registration.json) |
-| **ERC-8021** | Our attribution tag on every transaction, deploys included | [58 of 58 tagged](evidence/attribution-audit.json) |
+| **ERC-8021** | Our attribution tag on every transaction, deploys included | [63 of 63 tagged](evidence/attribution-audit.json) |
 | **x402, Celo facilitator** | Other agents pay ADELANTO in wARS or USD₮ for the peso rate, a firm quote and a credit record | [8 wARS sale](https://celoscan.io/tx/0x8413548ce9ed00b89f43a67a01885b9081eea1f0957e16a479c46a2fffebe335) · [catalog](https://adelanto.space/x402) |
 | **buy** | The agent buys reads from Chainstack's Celo node, which we do not run, paid over x402 in USD₮, to confirm its own RPC before it moves money, every day for the pool and before each weekly summary | [first purchase](https://celoscan.io/tx/0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40) · [receipts](evidence/buy/purchases.json) |
 | **MCP** | Other agents read rates, quotes, credit records and loans, and get unsigned tagged borrow and repay transactions | [`/mcp`](https://adelanto.space/mcp) |
@@ -34,7 +34,7 @@ ERC-8004 agent **#10043** · [MCP](https://adelanto.space/mcp) · Telegram [@ade
 ## Check it yourself
 
 Every link is a real Celo mainnet transaction. Every transaction our wallets send since the event code was issued carries the
-attribution tag `celo_0e96c1ff3fa8` ([audit: 58 of 58 tagged, 0 untagged](evidence/attribution-audit.json)).
+attribution tag `celo_0e96c1ff3fa8` ([audit: 63 of 63 tagged, 0 untagged](evidence/attribution-audit.json)).
 `npm run verify` rebuilds every loan below from the chain alone; every number we quote is generated in [`evidence/`](evidence/README.md).
 
 | What happened | When (UTC) | Check it |

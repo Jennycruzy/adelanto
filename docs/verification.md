@@ -7,7 +7,7 @@ Everything here can be checked on a public explorer with no account. The address
 
 Every transaction from our wallets and contracts since the event issued our code carries the ERC-8021 suffix
 `celo_0e96c1ff3fa8`, contract creations included. [`evidence/attribution-audit.json`](../evidence/attribution-audit.json)
-lists each one with its input data read back from chain: **66 transactions, 58 tagged, 8 sent before the code was
+lists each one with its input data read back from chain: **71 transactions, 63 tagged, 8 sent before the code was
 issued, 0 untagged after it** (8 Nov). Re-run it:
 
 ```sh
