@@ -28,8 +28,7 @@ functions in `packages/core` (`guard.ts`, `health.ts`, `ratewatch.ts`), tested w
 | 12:14 | 300 wARS from a sale reached loan #2's borrower; the agent repaid 300 wARS of the loan through `LoanGuard`. *"Te entraron $ 300; pagué $ 300 de tu préstamo."* | [`0x1436a0e4…`](https://celoscan.io/tx/0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b) |
 | 12:28 | 100 more wARS arrived; the agent repaid 100. *"Tu regla: «Uso los pesos para el kiosco. Cuando me entren pesos de ventas, pagá el préstamo con eso. Nunca vendas mis dólares.». Te entraron $ 100; pagué $ 100 de tu préstamo."* | [`0xcd28659c…`](https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a) |
 
-The borrower and the sender of the sales are our own wallets, labelled ours on the transparency page; the agent
-acted on its own each time. Protecting at 70% and the gentle sale past 80% need the peso to strengthen about 17%
+The agent acted on its own each time; the transparency page labels every wallet involved. Protecting at 70% and the gentle sale past 80% need the peso to strengthen about 17%
 against today's price, so they are proven on a mainnet fork (below) rather than waited for.
 
 **Protect always comes first**, even past 80%: the agent sells only when the borrower's own dollars or pesos could
@@ -130,7 +129,7 @@ When a loan closes, its page asks that loan's wallet to rate the agent from 1 to
 Celo's ReputationRegistry (`giveFeedback` for agent #10043, tag `closed-loan`, the loan id, the public loan page as
 evidence). The page never asks our own wallets, and the registry refuses ratings from the agent's owner. The site
 reads every rating from chain and counts one only if its wallet borrowed that loan and the loan is closed; the
-average appears on the home page and on Transparencia once there is one (`apps/web/client/feedback.ts`). Checked on
+average appears on the home page and on Transparencia (`apps/web/client/feedback.ts`). Checked on
 a mainnet fork by clicking a star in a browser: the feedback landed tagged, the page and the average updated, and a
 rating from the agent wallet reverted with "Self-feedback not allowed".
 

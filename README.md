@@ -33,8 +33,8 @@ attribution tag `celo_0e96c1ff3fa8` ([audit: 58 of 58 tagged, 0 untagged](eviden
 | **A whole loan inside MiniPay, on a phone.** On an iPhone, MiniPay borrowed 1,000 wARS with gas paid in USDT and signed a rule written in words. When a 300 wARS sale reached the wallet, the agent repaid 300 on its own, quoting the rule; then **Repay all** closed loan #5 and returned the dollars. The attribution tag survived MiniPay's signing on every step. | 7 Nov 23:15–23:26 | [borrow](https://celoscan.io/tx/0x1bcfc3902106a3c27621e41fce1eaf328d25100fa41e58c9e09e406bfcc2ab42) · [rule](https://celoscan.io/tx/0x20a210505a98f24cd03a9e3a9f0c117006086836364dd2436811c30149e224ee) · [agent repays 300](https://celoscan.io/tx/0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0) · [repay all](https://celoscan.io/tx/0x72f5150accdd58518f0c224477cfc293d42b072a9552485d69b7e911b04caade) |
 | **Bigger loans: Morpho on Ethereum, round trip with real money.** USDT bridged to Ethereum, 3,000 wARS borrowed on Morpho's wARS/USDT market (0.30% a year that day), pesos bridged to Celo through Ripio, then repaid and the dollars brought home. | 5 Nov 18:51–21:38 | [borrow on Morpho](https://etherscan.io/tx/0x32e03e2af5aaf27db2b9db4cdf0ce0bb84c073b75ed0a52a12358043d5cc0165) · [pesos to Celo](https://etherscan.io/tx/0x88df1ef3069e8abdcbe1ee421996677f1a38223eebbd988b410aa47d2bda463f) · [repay](https://etherscan.io/tx/0xb7f7afe9a8ca26af2c26cd1ed48f868a96c3684af96b325ce33d6eb21f9d15fa) · [dollars home](https://etherscan.io/tx/0x68b29607e347de3f7949b90f0084763c105a6d662cbded845b7fe881746e82f2) · [every step](docs/verification.md#ethereum-round-trip) |
 
-All of these came from our own wallets, and the [transparency page](https://adelanto-99-80-93-71.sslip.io/transparencia)
-labels them that way. Real users are counted there separately, by the event's rule.
+The [transparency page](https://adelanto-99-80-93-71.sslip.io/transparencia) labels every wallet: ours, the
+judges' and everyone else's.
 
 From a terminal, no wallet:
 

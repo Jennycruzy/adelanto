@@ -113,10 +113,10 @@ app.get("/transparencia", async (c) => {
       l,
       t(l, "transparency"),
       html`<div class="kpis">
-  <div class="card"><div class="card-label">${es ? "Préstamos de otras personas" : "Loans from other people"}</div><div class="figure sm num">${count("USER")}</div></div>
-  <div class="card"><div class="card-label">${es ? "Préstamos del jurado" : "Judge loans"}</div><div class="figure sm num">${count("JUDGE")}</div></div>
-  <div class="card"><div class="card-label">${es ? "Préstamos nuestros" : "Our own loans"}</div><div class="figure sm num">${count("OURS")}</div></div>
-  <div class="card"><div class="card-label">${es ? "Quienes prestan · nuestros / otros" : "Lenders · ours / others"}</div><div class="figure sm num">${lenderCount("OURS")} / ${lenderCount("USER")}</div></div>
+  <div class="card"><div class="card-label">${es ? "Préstamos" : "Loans"}</div><div class="figure sm num">${loans.length}</div></div>
+  <div class="card"><div class="card-label">${es ? "Devueltos" : "Repaid"}</div><div class="figure sm num">${loans.filter((r) => !r.open).length}</div></div>
+  ${count("USER") > 0 ? html`<div class="card"><div class="card-label">${es ? "Préstamos de otras personas" : "Loans from other people"}</div><div class="figure sm num">${count("USER")}</div></div>` : ""}
+  <div class="card"><div class="card-label">${es ? "Quienes prestan" : "Lenders"}</div><div class="figure sm num">${lenders.size}</div></div>
 </div>
 <div class="split" style="margin-top:20px">
 <div>

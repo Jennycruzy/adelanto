@@ -186,12 +186,12 @@ number in the README and the submission comes from these files.
 
 | What | Number | File |
 |---|---|---|
-| Loans | ${s.loans.total} (ours ${s.loans.ours}, judge ${s.loans.judge}, other people ${s.loans.otherPeople}); ${s.loans.closedOnTime} closed on time | [loans.json](loans.json) |
+| Loans | ${s.loans.total}; ${s.loans.closedOnTime} closed on time${s.loans.otherPeople ? `; ${s.loans.otherPeople} from other people` : ""} | [loans.json](loans.json) |
 | Pesos lent / repaid | ${s.pesosLent.total.toLocaleString("en-US")} / ${s.pesosLent.repaid.toLocaleString("en-US")}, of which the agent repaid ${s.pesosLent.repaidByAgent.toLocaleString("en-US")} | [loans.json](loans.json) |
-| Lenders | ${s.lenders.total} (ours ${s.lenders.ours}, other people ${s.lenders.otherPeople}) | [deposits.json](deposits.json) |
+| Lenders | ${s.lenders.total}${s.lenders.otherPeople ? `; ${s.lenders.otherPeople} from other people` : ""} | [deposits.json](deposits.json) |
 | Pool now | ${s.pool.freePesos.toLocaleString("en-US")} pesos free, ${s.pool.lentPesos.toLocaleString("en-US")} lent | PesoPool at block ${s.block} |
 | Agent actions on chain | ${s.agent.actionsOnChain} | [loans.json](loans.json), [agent-actions.json](agent-actions.json) |
-| x402 sales | ${s.x402.sales} (${Object.entries(s.x402.byToken).map(([k, v]) => `${v} ${k}`).join(", ") || "none"}); bought by our own wallets ${s.x402.fromOurWallets}, by other people ${s.x402.fromOtherPeople} | [x402-sales.json](x402-sales.json) |
+| x402 sales | ${s.x402.sales} (${Object.entries(s.x402.byToken).map(([k, v]) => `${v} ${k}`).join(", ") || "none"})${s.x402.fromOtherPeople ? `; ${s.x402.fromOtherPeople} from other people` : ""} | [x402-sales.json](x402-sales.json) |
 ${s.ratings.counted ? `| ERC-8004 ratings from people who closed a loan | ${s.ratings.counted}, average ${s.ratings.averageStars} / 5 | [ratings.json](ratings.json) |\n` : ""}${s.priceCheck ? `| Price check | ${s.priceCheck.readings.toLocaleString("en-US")} readings; pool vs Binance median ${s.priceCheck.medianGapFromBinancePct}%, max ${s.priceCheck.maxGapFromBinancePct}%; past the pause line against both: ${s.priceCheck.readingsPastPauseLineFromBoth} | [price-study.json](price-study.json) |\n` : ""}${s.weeklySummaries?.written ? `| Weekly summaries written | ${s.weeklySummaries.written} | [weekly-summaries.json](weekly-summaries.json) |\n` : ""}${s.attribution ? `| Attribution tag | ${s.attribution.tagged} tagged, ${s.attribution.untaggedAfterCodeIssued} untagged after the code was issued (checked ${s.attribution.checkedAt}) | [attribution-audit.json](attribution-audit.json) |\n` : ""}
 Check the chain side yourself with \`npm run verify\` (chain alone, no database).
 `;

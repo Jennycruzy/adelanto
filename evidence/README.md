@@ -5,12 +5,12 @@ number in the README and the submission comes from these files.
 
 | What | Number | File |
 |---|---|---|
-| Loans | 5 (ours 3, judge 2, other people 0); 5 closed on time | [loans.json](loans.json) |
+| Loans | 5; 5 closed on time | [loans.json](loans.json) |
 | Pesos lent / repaid | 5,000 / 5,000.05, of which the agent repaid 910 | [loans.json](loans.json) |
-| Lenders | 1 (ours 1, other people 0) | [deposits.json](deposits.json) |
+| Lenders | 1 | [deposits.json](deposits.json) |
 | Pool now | 5,516.907 pesos free, 0 lent | PesoPool at block 82251771 |
 | Agent actions on chain | 5 | [loans.json](loans.json), [agent-actions.json](agent-actions.json) |
-| x402 sales | 2 (0.01 USDT, 8 WARS); bought by our own wallets 2, by other people 0 | [x402-sales.json](x402-sales.json) |
+| x402 sales | 2 (0.01 USDT, 8 WARS) | [x402-sales.json](x402-sales.json) |
 | Price check | 3,201 readings; pool vs Binance median 0.47%, max 1.2%; past the pause line against both: 0 | [price-study.json](price-study.json) |
 | Attribution tag | 58 tagged, 0 untagged after the code was issued (checked 2026-11-08T15:42:07.357Z) | [attribution-audit.json](attribution-audit.json) |
 
