@@ -1,0 +1,284 @@
+{
+  "generatedAt": "2026-11-08T15:09:15.447Z",
+  "block": "82249797",
+  "blockTime": "2026-11-08T15:09:15.000Z",
+  "source": "PesoPool, LoanGuard and GentleKeeper events on Celo; labels from deployments/wallets.json",
+  "loans": [
+    {
+      "id": 1,
+      "borrower": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
+      "label": "OURS",
+      "pesos": 1000,
+      "fee": 2.5,
+      "collateralUsdt": 1.3,
+      "termDays": 7,
+      "rateBps": 2511,
+      "repaid": 1000.0004,
+      "repaidByAgent": 0,
+      "open": false,
+      "onTime": true,
+      "events": [
+        {
+          "block": 82052031,
+          "event": "Borrowed",
+          "by": "wallet",
+          "tx": "0xbb9cb9444206e661b855364ebf94ccb6760f8beb692282a33faa80a1eb4c62c5",
+          "url": "https://celoscan.io/tx/0xbb9cb9444206e661b855364ebf94ccb6760f8beb692282a33faa80a1eb4c62c5"
+        },
+        {
+          "block": 82052033,
+          "event": "CollateralAdded",
+          "by": "wallet",
+          "tx": "0xd182023e86eca482b3b8c2a4481ed957974c23003503ff814beed8c4bff0b6f6",
+          "url": "https://celoscan.io/tx/0xd182023e86eca482b3b8c2a4481ed957974c23003503ff814beed8c4bff0b6f6"
+        },
+        {
+          "block": 82052036,
+          "event": "CollateralWithdrawn",
+          "by": "wallet",
+          "tx": "0x365bb44f2d915916854f7c2ba2940f91fe84c891e0ac2c9158e5fb46b06c212f",
+          "url": "https://celoscan.io/tx/0x365bb44f2d915916854f7c2ba2940f91fe84c891e0ac2c9158e5fb46b06c212f"
+        },
+        {
+          "block": 82052041,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0x470ffd10673083bfc9a8df0801da0a0a4356ac91a4b02888bb95a0ff143aaa3b",
+          "url": "https://celoscan.io/tx/0x470ffd10673083bfc9a8df0801da0a0a4356ac91a4b02888bb95a0ff143aaa3b"
+        },
+        {
+          "block": 82052130,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0xc2843c39f8f9444e44427370cfee8c820e6b6410ed81d5b671948f0baf06536c",
+          "url": "https://celoscan.io/tx/0xc2843c39f8f9444e44427370cfee8c820e6b6410ed81d5b671948f0baf06536c"
+        },
+        {
+          "block": 82052130,
+          "event": "LoanClosed",
+          "by": "wallet",
+          "tx": "0xc2843c39f8f9444e44427370cfee8c820e6b6410ed81d5b671948f0baf06536c",
+          "url": "https://celoscan.io/tx/0xc2843c39f8f9444e44427370cfee8c820e6b6410ed81d5b671948f0baf06536c"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "borrower": "0xF689c0620b9a9D7A1a0312e1F0778bAa440989BE",
+      "label": "OURS",
+      "pesos": 1000,
+      "fee": 2.5,
+      "collateralUsdt": 1.3,
+      "termDays": 7,
+      "rateBps": 2517,
+      "repaid": 1000.0379,
+      "repaidByAgent": 400,
+      "open": false,
+      "onTime": true,
+      "events": [
+        {
+          "block": 82152315,
+          "event": "Borrowed",
+          "by": "wallet",
+          "tx": "0x6f343a7da5b928a8a369053f5ee7317ad7ccaa970f47ca196e09998d1ea00206",
+          "url": "https://celoscan.io/tx/0x6f343a7da5b928a8a369053f5ee7317ad7ccaa970f47ca196e09998d1ea00206"
+        },
+        {
+          "block": 82152899,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b",
+          "url": "https://celoscan.io/tx/0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b"
+        },
+        {
+          "block": 82152899,
+          "event": "AutoRepaid",
+          "by": "agent",
+          "tx": "0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b",
+          "url": "https://celoscan.io/tx/0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b"
+        },
+        {
+          "block": 82153743,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a",
+          "url": "https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a"
+        },
+        {
+          "block": 82153743,
+          "event": "AutoRepaid",
+          "by": "agent",
+          "tx": "0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a",
+          "url": "https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a"
+        },
+        {
+          "block": 82160074,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0xa873ed1152f65d576074f35da1f60775e5c73c53805a656729ccb8c5ccc53717",
+          "url": "https://celoscan.io/tx/0xa873ed1152f65d576074f35da1f60775e5c73c53805a656729ccb8c5ccc53717"
+        },
+        {
+          "block": 82160074,
+          "event": "LoanClosed",
+          "by": "wallet",
+          "tx": "0xa873ed1152f65d576074f35da1f60775e5c73c53805a656729ccb8c5ccc53717",
+          "url": "https://celoscan.io/tx/0xa873ed1152f65d576074f35da1f60775e5c73c53805a656729ccb8c5ccc53717"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "borrower": "0x0cff67325Ba688921C36bDf0ff59E351100e2A3d",
+      "label": "JUDGE",
+      "pesos": 1000,
+      "fee": 2.5,
+      "collateralUsdt": 1.212248,
+      "termDays": 7,
+      "rateBps": 2517,
+      "repaid": 1000.004,
+      "repaidByAgent": 150,
+      "open": false,
+      "onTime": true,
+      "events": [
+        {
+          "block": 82160226,
+          "event": "Borrowed",
+          "by": "wallet",
+          "tx": "0xf2b4769537364fb38a92d80cd4f2bac6d6517d129f30d65438cb33c8bb08950e",
+          "url": "https://celoscan.io/tx/0xf2b4769537364fb38a92d80cd4f2bac6d6517d129f30d65438cb33c8bb08950e"
+        },
+        {
+          "block": 82160529,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0xf6a7ccb637786ff4a43ed36ba6675096f3f4f3f85f5150b9051b7115b66e6246",
+          "url": "https://celoscan.io/tx/0xf6a7ccb637786ff4a43ed36ba6675096f3f4f3f85f5150b9051b7115b66e6246"
+        },
+        {
+          "block": 82160529,
+          "event": "AutoRepaid",
+          "by": "agent",
+          "tx": "0xf6a7ccb637786ff4a43ed36ba6675096f3f4f3f85f5150b9051b7115b66e6246",
+          "url": "https://celoscan.io/tx/0xf6a7ccb637786ff4a43ed36ba6675096f3f4f3f85f5150b9051b7115b66e6246"
+        },
+        {
+          "block": 82160780,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0xa56cec4d88c87f8e0ce351f2d345c9ecbbd7df172614f3c7f63ec571e2033a4b",
+          "url": "https://celoscan.io/tx/0xa56cec4d88c87f8e0ce351f2d345c9ecbbd7df172614f3c7f63ec571e2033a4b"
+        },
+        {
+          "block": 82160780,
+          "event": "LoanClosed",
+          "by": "wallet",
+          "tx": "0xa56cec4d88c87f8e0ce351f2d345c9ecbbd7df172614f3c7f63ec571e2033a4b",
+          "url": "https://celoscan.io/tx/0xa56cec4d88c87f8e0ce351f2d345c9ecbbd7df172614f3c7f63ec571e2033a4b"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "borrower": "0x0cff67325Ba688921C36bDf0ff59E351100e2A3d",
+      "label": "JUDGE",
+      "pesos": 1000,
+      "fee": 2.5,
+      "collateralUsdt": 1.212119,
+      "termDays": 7,
+      "rateBps": 2517,
+      "repaid": 1000.0013,
+      "repaidByAgent": 60,
+      "open": false,
+      "onTime": true,
+      "events": [
+        {
+          "block": 82161003,
+          "event": "Borrowed",
+          "by": "wallet",
+          "tx": "0x65b21eb1dc943b31da15a31eac9179f6d8881599468c36bb17086d6deccba1f5",
+          "url": "https://celoscan.io/tx/0x65b21eb1dc943b31da15a31eac9179f6d8881599468c36bb17086d6deccba1f5"
+        },
+        {
+          "block": 82161131,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0x87bfab4082be46bd0cbcd1ab8e376f9dce637fd5cd7a77378eef33ac6bb7db5e",
+          "url": "https://celoscan.io/tx/0x87bfab4082be46bd0cbcd1ab8e376f9dce637fd5cd7a77378eef33ac6bb7db5e"
+        },
+        {
+          "block": 82161131,
+          "event": "AutoRepaid",
+          "by": "agent",
+          "tx": "0x87bfab4082be46bd0cbcd1ab8e376f9dce637fd5cd7a77378eef33ac6bb7db5e",
+          "url": "https://celoscan.io/tx/0x87bfab4082be46bd0cbcd1ab8e376f9dce637fd5cd7a77378eef33ac6bb7db5e"
+        },
+        {
+          "block": 82161177,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0x76463cdef535f555ffee1d990a1479e639cd14e4222e95a6155127eb909e9097",
+          "url": "https://celoscan.io/tx/0x76463cdef535f555ffee1d990a1479e639cd14e4222e95a6155127eb909e9097"
+        },
+        {
+          "block": 82161177,
+          "event": "LoanClosed",
+          "by": "wallet",
+          "tx": "0x76463cdef535f555ffee1d990a1479e639cd14e4222e95a6155127eb909e9097",
+          "url": "https://celoscan.io/tx/0x76463cdef535f555ffee1d990a1479e639cd14e4222e95a6155127eb909e9097"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "borrower": "0x0D11E997aFCa7723e4216579c48Bf3842555ad46",
+      "label": "OURS",
+      "pesos": 1000,
+      "fee": 2.5,
+      "collateralUsdt": 1.212006,
+      "termDays": 7,
+      "rateBps": 2517,
+      "repaid": 1000.0041,
+      "repaidByAgent": 300,
+      "open": false,
+      "onTime": true,
+      "events": [
+        {
+          "block": 82192595,
+          "event": "Borrowed",
+          "by": "wallet",
+          "tx": "0x1bcfc3902106a3c27621e41fce1eaf328d25100fa41e58c9e09e406bfcc2ab42",
+          "url": "https://celoscan.io/tx/0x1bcfc3902106a3c27621e41fce1eaf328d25100fa41e58c9e09e406bfcc2ab42"
+        },
+        {
+          "block": 82192950,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0",
+          "url": "https://celoscan.io/tx/0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0"
+        },
+        {
+          "block": 82192950,
+          "event": "AutoRepaid",
+          "by": "agent",
+          "tx": "0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0",
+          "url": "https://celoscan.io/tx/0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0"
+        },
+        {
+          "block": 82193196,
+          "event": "Repaid",
+          "by": "wallet",
+          "tx": "0x72f5150accdd58518f0c224477cfc293d42b072a9552485d69b7e911b04caade",
+          "url": "https://celoscan.io/tx/0x72f5150accdd58518f0c224477cfc293d42b072a9552485d69b7e911b04caade"
+        },
+        {
+          "block": 82193196,
+          "event": "LoanClosed",
+          "by": "wallet",
+          "tx": "0x72f5150accdd58518f0c224477cfc293d42b072a9552485d69b7e911b04caade",
+          "url": "https://celoscan.io/tx/0x72f5150accdd58518f0c224477cfc293d42b072a9552485d69b7e911b04caade"
+        }
+      ]
+    }
+  ]
+}

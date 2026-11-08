@@ -1,0 +1,10 @@
+{
+  "about": "Every wallet we control on Celo. Loans, deposits and ratings from these are never counted as users. JUDGE is the wallet the judge guide's test loans were run from.",
+  "wallets": [
+    { "address": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1", "label": "OURS", "role": "agent (ERC-8004 #10043, x402 payee, keeper)" },
+    { "address": "0xF689c0620b9a9D7A1a0312e1F0778bAa440989BE", "label": "OURS", "role": "deployer and owner" },
+    { "address": "0xB1fa8cd9f1a85cA2f1e9887A4dB19948deCd641C", "label": "OURS", "role": "guardian (pause only)" },
+    { "address": "0x0D11E997aFCa7723e4216579c48Bf3842555ad46", "label": "OURS", "role": "team MiniPay wallet" },
+    { "address": "0x0cff67325Ba688921C36bDf0ff59E351100e2A3d", "label": "JUDGE", "role": "judge-path test wallet" }
+  ]
+}

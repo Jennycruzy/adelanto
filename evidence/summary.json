@@ -1,0 +1,69 @@
+{
+  "generatedAt": "2026-11-08T15:09:15.447Z",
+  "block": "82249797",
+  "blockTime": "2026-11-08T15:09:15.000Z",
+  "loans": {
+    "total": 5,
+    "ours": 3,
+    "judge": 2,
+    "otherPeople": 0,
+    "closed": 5,
+    "closedOnTime": 5,
+    "from": "loans.json"
+  },
+  "pesosLent": {
+    "total": 5000,
+    "repaid": 5000.05,
+    "repaidByAgent": 910,
+    "from": "loans.json"
+  },
+  "lenders": {
+    "total": 1,
+    "ours": 1,
+    "otherPeople": 0,
+    "from": "deposits.json"
+  },
+  "pool": {
+    "freePesos": 5516.9068,
+    "lentPesos": 0,
+    "from": "PesoPool 0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60 at block 82249797"
+  },
+  "agent": {
+    "actionsOnChain": 5,
+    "from": "loans.json (agent events)"
+  },
+  "x402": {
+    "sales": 2,
+    "fromOurWallets": 2,
+    "fromOtherPeople": 0,
+    "byToken": {
+      "USDT": 0.01,
+      "WARS": 8
+    },
+    "from": "x402-sales.json"
+  },
+  "ratings": {
+    "counted": 0,
+    "averageStars": null,
+    "from": "ratings.json"
+  },
+  "priceCheck": {
+    "readings": 3168,
+    "medianGapFromBinancePct": 0.47,
+    "maxGapFromBinancePct": 1.2,
+    "readingsPastPauseLineFromBoth": 0,
+    "from": "price-study.json"
+  },
+  "weeklySummaries": {
+    "written": 0,
+    "from": "weekly-summaries.json"
+  },
+  "attribution": {
+    "all": 66,
+    "tagged": 58,
+    "sentBeforeCodeIssued": 8,
+    "untaggedAfterCodeIssued": 0,
+    "checkedAt": "2026-11-08T15:07:56.932Z",
+    "from": "attribution-audit.json (npm run audit:attribution)"
+  }
+}

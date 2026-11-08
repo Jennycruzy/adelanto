@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-11-08T15:09:15.447Z",
+  "block": "82249797",
+  "blockTime": "2026-11-08T15:09:15.000Z",
+  "source": "prices table in the agent's database: the agent's own once-a-minute readings (A4 price check)",
+  "readings": 3168,
+  "from": "2026-11-06T10:17:58.598Z",
+  "to": "2026-11-08T15:08:24.041Z",
+  "gapFromBinancePct": {
+    "median": 0.47,
+    "p95": 0.67,
+    "max": 1.2
+  },
+  "gapFromDolarapiPct": {
+    "median": 0.09,
+    "p95": 0.26,
+    "max": 0.53
+  },
+  "readingsPastPauseLineFromBoth": 0,
+  "pauseRule": "new loans pause only if the pool is more than 1.5% from every outside source for 3 minutes"
+}

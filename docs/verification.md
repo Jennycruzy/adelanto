@@ -7,12 +7,17 @@ Everything here can be checked on a public explorer with no account. The address
 
 Every transaction from our wallets and contracts since the event issued our code carries the ERC-8021 suffix
 `celo_0e96c1ff3fa8`, contract creations included. [`evidence/attribution-audit.json`](../evidence/attribution-audit.json)
-lists each one with its input data read back from chain: **44 transactions, 36 tagged, 8 sent before the code was
-issued, 0 untagged after it**. Re-run it:
+lists each one with its input data read back from chain: **66 transactions, 58 tagged, 8 sent before the code was
+issued, 0 untagged after it** (8 Nov). Re-run it:
 
 ```sh
 npm run audit:attribution
 ```
+
+`npm run verify` checks the same from a plain RPC with no database and no API of ours: it reads every event of the
+pool, the guard and the keeper since deployment, rebuilds each loan's history, compares it with the contracts'
+state now, checks that the transparency counts add up, that every transaction behind those events carries the tag,
+and that every agent action came from the agent wallet. `npm run verify -- <loanId>` prints one loan's history.
 
 To check one by hand, open a transaction on Blockscout and look at the end of its input data: it ends with
 `63656c6f5f306539366331666633666138` (`celo_0e96c1ff3fa8` in ASCII), a length byte, a schema byte and the ERC-8021

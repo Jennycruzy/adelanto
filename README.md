@@ -232,10 +232,15 @@ Node 24 and Foundry.
 
 ```sh
 npm ci
-npm test                                   # 226 TypeScript tests, offline
+npm test                                   # 283 TypeScript tests, offline
+npm run verify                             # every loan, the counts and the tags, rebuilt from Celo alone
+npm run verify -- 5                        # one loan's full history from chain
+npm run evidence                           # regenerates evidence/ (needs the agent's database for three files)
 cd contracts && forge test                 # 227 Solidity tests; fork tests need CELO_RPC_URL and ETH_RPC_URL
-npm run audit:attribution                  # re-checks the tag on every transaction from our wallets and contracts
 ```
+
+Every number we quote comes from [`evidence/`](evidence/README.md): loans, deposits, agent actions, x402 sales,
+the price check, weekly summaries, ratings and the attribution audit, each generated, none typed.
 
 The agent, read-only against mainnet:
 

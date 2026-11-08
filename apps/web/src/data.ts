@@ -260,13 +260,10 @@ export function attributionAudit(): { totals: any; checkedAt: string; firstTagge
   return { totals: j.totals, checkedAt: j.checkedAt, firstTagged: j.firstTagged };
 }
 
-/** Labels for our own wallets; everyone else is a user. */
-export const LABELS: Record<string, "OURS" | "JUDGE"> = {
-  [getAddress("0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1")]: "OURS",
-  [getAddress("0xF689c0620b9a9D7A1a0312e1F0778bAa440989BE")]: "OURS",
-  [getAddress("0x0d11e997afca7723e4216579c48bf3842555ad46")]: "OURS",
-  [getAddress("0x0cff67325Ba688921C36bDf0ff59E351100e2A3d")]: "JUDGE",
-};
+/** Labels for our own wallets (deployments/wallets.json); everyone else is a user. */
+export const LABELS: Record<string, "OURS" | "JUDGE"> = Object.fromEntries(
+  (JSON.parse(readFileSync(join(ROOT, "deployments", "wallets.json"), "utf8")).wallets as { address: string; label: "OURS" | "JUDGE" }[]).map((w) => [getAddress(w.address), w.label]),
+);
 export const labelOf = (a: string) => LABELS[getAddress(a)] ?? "USER";
 
 export type PricePoint = { t: number; pool: number; binance: number | null; dolarapi: number | null };

@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-11-08T15:09:15.447Z",
+  "block": "82249797",
+  "blockTime": "2026-11-08T15:09:15.000Z",
+  "source": "PesoPool Deposit and Withdraw events on Celo",
+  "deposits": [
+    {
+      "block": 82051941,
+      "kind": "Deposit",
+      "lender": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
+      "label": "OURS",
+      "pesos": 3052.2476,
+      "tx": "0xd27c79121bb11b8ec32cb492c849d37fa2744adad1544f113061cc25de466c2a",
+      "url": "https://celoscan.io/tx/0xd27c79121bb11b8ec32cb492c849d37fa2744adad1544f113061cc25de466c2a"
+    },
+    {
+      "block": 82051965,
+      "kind": "Deposit",
+      "lender": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
+      "label": "OURS",
+      "pesos": 2564.6111,
+      "tx": "0x49046ee489059c942f38df26b58249b5c20582f6cc943084e85e4dde734f5621",
+      "url": "https://celoscan.io/tx/0x49046ee489059c942f38df26b58249b5c20582f6cc943084e85e4dde734f5621"
+    },
+    {
+      "block": 82052135,
+      "kind": "Withdraw",
+      "lender": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
+      "label": "OURS",
+      "pesos": 100,
+      "tx": "0x9cc2e069c6015bfec97457b4813aed8dc75a3b3b1a3deede1f074c68dda38116",
+      "url": "https://celoscan.io/tx/0x9cc2e069c6015bfec97457b4813aed8dc75a3b3b1a3deede1f074c68dda38116"
+    }
+  ]
+}

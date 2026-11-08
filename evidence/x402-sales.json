@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-11-08T15:09:15.447Z",
+  "block": "82249797",
+  "blockTime": "2026-11-08T15:09:15.000Z",
+  "source": "ERC-20 transfers into the agent wallet settled by an x402 facilitator (Blockscout)",
+  "payTo": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
+  "sales": [
+    {
+      "at": "2026-11-07T13:52:38.000000Z",
+      "token": "USDT",
+      "amount": 0.01,
+      "buyer": "0xF689c0620b9a9D7A1a0312e1F0778bAa440989BE",
+      "buyerLabel": "OURS",
+      "buyerRole": "deployer and owner",
+      "method": "0xe3ee160e",
+      "tx": "0x7ade1408800fdd6700c94dae8ae1f05fbd734bbf775b484b12e34d4586e70344",
+      "url": "https://celoscan.io/tx/0x7ade1408800fdd6700c94dae8ae1f05fbd734bbf775b484b12e34d4586e70344"
+    },
+    {
+      "at": "2026-11-07T13:52:14.000000Z",
+      "token": "WARS",
+      "amount": 8,
+      "buyer": "0xF689c0620b9a9D7A1a0312e1F0778bAa440989BE",
+      "buyerLabel": "OURS",
+      "buyerRole": "deployer and owner",
+      "method": "0xfa340378",
+      "tx": "0x8413548ce9ed00b89f43a67a01885b9081eea1f0957e16a479c46a2fffebe335",
+      "url": "https://celoscan.io/tx/0x8413548ce9ed00b89f43a67a01885b9081eea1f0957e16a479c46a2fffebe335"
+    }
+  ]
+}

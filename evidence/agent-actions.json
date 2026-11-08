@@ -1,0 +1,106 @@
+{
+  "generatedAt": "2026-11-08T15:09:15.447Z",
+  "block": "82249797",
+  "blockTime": "2026-11-08T15:09:15.000Z",
+  "source": "agent_actions in the agent's database; landed actions also appear on chain (loans.json)",
+  "byStatus": {
+    "A2_autorepay:landed": 5
+  },
+  "actions": [
+    {
+      "id": 1,
+      "job": "A2_autorepay",
+      "loan_id": 2,
+      "borrower": "0xF689c0620b9a9D7A1a0312e1F0778bAa440989BE",
+      "decision": {
+        "kind": "autoRepay",
+        "loanId": "2",
+        "wars": "300000000000000000000",
+        "arrived": "300000000000000000000"
+      },
+      "mode": "live",
+      "status": "landed",
+      "tx": "0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b",
+      "sentence_es": "Te entraron $ 300; pagué $ 300 de tu préstamo.",
+      "sentence_en": "ARS 300 arrived; I repaid ARS 300 of your loan.",
+      "at": "2026-11-07T12:14:15.317Z",
+      "url": "https://celoscan.io/tx/0x1436a0e4ebad5b111073ed1ee24fd4b2b3163095def49f08615b8df8201f356b"
+    },
+    {
+      "id": 2,
+      "job": "A2_autorepay",
+      "loan_id": 2,
+      "borrower": "0xF689c0620b9a9D7A1a0312e1F0778bAa440989BE",
+      "decision": {
+        "kind": "autoRepay",
+        "loanId": "2",
+        "wars": "100000000000000000000",
+        "arrived": "100000000000000000000"
+      },
+      "mode": "live",
+      "status": "landed",
+      "tx": "0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a",
+      "sentence_es": "Tu regla: «Uso los pesos para el kiosco. Cuando me entren pesos de ventas, pagá el préstamo con eso. Nunca vendas mis dólares.». Te entraron $ 100; pagué $ 100 de tu préstamo.",
+      "sentence_en": "Your rule: \"Uso los pesos para el kiosco. Cuando me entren pesos de ventas, pagá el préstamo con eso. Nunca vendas mis dólares.\". ARS 100 arrived; I repaid ARS 100 of your loan.",
+      "at": "2026-11-07T12:28:19.725Z",
+      "url": "https://celoscan.io/tx/0xcd28659c76d26850c0179240f42efc5763586e499f2c03772685e4e7b0e2622a"
+    },
+    {
+      "id": 3,
+      "job": "A2_autorepay",
+      "loan_id": 3,
+      "borrower": "0x0cff67325Ba688921C36bDf0ff59E351100e2A3d",
+      "decision": {
+        "kind": "autoRepay",
+        "loanId": "3",
+        "wars": "150000000000000000000",
+        "arrived": "150000000000000000000"
+      },
+      "mode": "live",
+      "status": "landed",
+      "tx": "0xf6a7ccb637786ff4a43ed36ba6675096f3f4f3f85f5150b9051b7115b66e6246",
+      "sentence_es": "Tu regla: «Cuando me entren pesos de ventas, pagá el préstamo con eso, máximo 500 por día. Nunca vendas mis dólares.». Te entraron $ 150; pagué $ 150 de tu préstamo.",
+      "sentence_en": "Your rule: \"Cuando me entren pesos de ventas, pagá el préstamo con eso, máximo 500 por día. Nunca vendas mis dólares.\". ARS 150 arrived; I repaid ARS 150 of your loan.",
+      "at": "2026-11-07T14:21:26.170Z",
+      "url": "https://celoscan.io/tx/0xf6a7ccb637786ff4a43ed36ba6675096f3f4f3f85f5150b9051b7115b66e6246"
+    },
+    {
+      "id": 4,
+      "job": "A2_autorepay",
+      "loan_id": 4,
+      "borrower": "0x0cff67325Ba688921C36bDf0ff59E351100e2A3d",
+      "decision": {
+        "kind": "autoRepay",
+        "loanId": "4",
+        "wars": "60000000000000000000",
+        "arrived": "60000000000000000000"
+      },
+      "mode": "live",
+      "status": "landed",
+      "tx": "0x87bfab4082be46bd0cbcd1ab8e376f9dce637fd5cd7a77378eef33ac6bb7db5e",
+      "sentence_es": "Tu regla: «Cuando me entren pesos de ventas, pagá el préstamo con eso, máximo 500 por día. Nunca vendas mis dólares.». Te entraron $ 60; pagué $ 60 de tu préstamo.",
+      "sentence_en": "Your rule: \"Cuando me entren pesos de ventas, pagá el préstamo con eso, máximo 500 por día. Nunca vendas mis dólares.\". ARS 60 arrived; I repaid ARS 60 of your loan.",
+      "at": "2026-11-07T14:31:27.908Z",
+      "url": "https://celoscan.io/tx/0x87bfab4082be46bd0cbcd1ab8e376f9dce637fd5cd7a77378eef33ac6bb7db5e"
+    },
+    {
+      "id": 5,
+      "job": "A2_autorepay",
+      "loan_id": 5,
+      "borrower": "0x0D11E997aFCa7723e4216579c48Bf3842555ad46",
+      "decision": {
+        "kind": "autoRepay",
+        "loanId": "5",
+        "wars": "300000000000000000000",
+        "arrived": "300000000000000000000"
+      },
+      "mode": "live",
+      "status": "landed",
+      "tx": "0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0",
+      "sentence_es": "Tu regla: «Cuando me entren pesos de ventas, pagá el préstamo con eso. Nunca vendas mis dólares.». Te entraron $ 300; pagué $ 300 de tu préstamo.",
+      "sentence_en": "Your rule: \"Cuando me entren pesos de ventas, pagá el préstamo con eso. Nunca vendas mis dólares.\". ARS 300 arrived; I repaid ARS 300 of your loan.",
+      "at": "2026-11-07T23:21:46.363Z",
+      "url": "https://celoscan.io/tx/0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0"
+    }
+  ]
+}
