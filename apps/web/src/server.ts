@@ -456,7 +456,12 @@ https://github.com/Jennycruzy/adelanto
 });
 
 const port = Number(process.env.PORT ?? 8795);
-serve({ fetch: app.fetch, port, hostname: process.env.HOST ?? "127.0.0.1" });
+// Behind nginx the request arrives as http; give the app the URL the visitor used, so x402 names the https resource.
+const visitorUrl = (req: Request) => {
+  if (req.headers.get("x-forwarded-proto") !== "https" || !req.url.startsWith("http:")) return req;
+  return new Request("https:" + req.url.slice(5), req);
+};
+serve({ fetch: (req: Request, ...rest: any[]) => app.fetch(visitorUrl(req), ...rest), port, hostname: process.env.HOST ?? "127.0.0.1" });
 console.log(`web on http://${process.env.HOST ?? "127.0.0.1"}:${port}`);
 // One poller per bot: only the public service (port 8795) talks to Telegram, never a test copy.
 if (String(port) === "8795" || process.env.TELEGRAM_POLL === "1") void startBot();
