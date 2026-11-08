@@ -5,7 +5,7 @@ import { html } from "hono/html";
 import { getAddress, isAddress } from "viem";
 import { availableToBorrow, dollars, parseRule, pesos, percent } from "@adelanto/core";
 import { CELO } from "@adelanto/chain";
-import { REFS, adminEvents, noticesFor, priceHistory, reputation, reputationSummary, weeklyPool, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, pub, quoteFor } from "./data.ts";
+import { REFS, adminEvents, buyView, noticesFor, priceHistory, reputation, reputationSummary, weeklyPool, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, pub, quoteFor } from "./data.ts";
 import { langOf, t, type Lang } from "./i18n.ts";
 import { addrUrl, ago, repLine, borrowPage, guardPage, historyPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
 import { ruleText, saveRule } from "./rules.ts";
@@ -107,6 +107,7 @@ app.get("/transparencia", async (c) => {
   const pill = (lab: string) => html`<span class="pill ${lab === "USER" ? "ok" : lab === "JUDGE" ? "celeste" : ""}">${lab === "OURS" ? t(l, "ours") : lab === "JUDGE" ? t(l, "judge") : t(l, "user")}</span>`;
   const admin = adminEvents();
   const weekly = weeklyPool();
+  const buy = buyView();
   const rep = await reputationSummary();
   return c.html(
     plain(
@@ -129,6 +130,13 @@ app.get("/transparencia", async (c) => {
   <div class="row"><span>${es ? "Deuda sin cubrir" : "Uncovered debt"}</span><span class="v">${admin.filter((e: any) => e.name === "BadDebt").length === 0 ? pesos(0n, l) : es ? "ver cambios" : "see changes"}</span></div>
   <p class="small muted" style="margin:14px 0 0">${t(l, "updated")} <a href="https://celoscan.io/block/${v.block}">${v.block.toString()}</a></p>
 </div>
+${buy.check?.tx ? html`<div class="card">
+  <div class="card-label">${es ? "Confirmado por un nodo que no es nuestro" : "Confirmed by a node we do not run"} · ${ago(Number(buy.check.at), l)}</div>
+  <p style="margin:0">${buy.check.outcome === "match"
+    ? es ? html`Cada día el agente compra, con <b>buy</b>, la misma lectura del fondo a un nodo de Chainstack y la paga por x402 en USD₮ desde su billetera. En el bloque <a href="https://celoscan.io/block/${buy.check.block}">${buy.check.block}</a> las dos lecturas coinciden: libre, prestado, depositado y la tasa.` : html`Every day the agent buys, through <b>buy</b>, the same read of the pool from a Chainstack node and pays for it over x402 in USD₮ from its own wallet. At block <a href="https://celoscan.io/block/${buy.check.block}">${buy.check.block}</a> both reads agree: free, lent, deposited and the rate.`
+    : es ? html`En el bloque ${buy.check.block} el nodo de afuera dio otra cifra; el agente frena antes de mover plata hasta que coincidan.` : html`At block ${buy.check.block} the outside node gave a different figure; the agent holds before moving money until they agree.`}</p>
+  <p class="small muted" style="margin:12px 0 0">${es ? "Pago" : "Payment"} <a class="tx" href="${txUrl(buy.check.tx)}">${buy.check.tx.slice(0, 10)}…</a> · ${es ? `${buy.paid.length} compras pagas, cada una con su recibo` : `${buy.paid.length} paid purchases, each with its receipt`} · <a href="https://github.com/Jennycruzy/adelanto/blob/main/evidence/buy/purchases.json">purchases.json</a></p>
+</div>` : ""}
 ${weekly ? html`<div class="card">
   <div class="card-label">${es ? "El resumen de la semana del agente" : "The agent's weekly summary"} · ${ago(Number(weekly.created_at), l)}</div>
   <p style="margin:0">${es ? weekly.text_es : weekly.text_en}</p>

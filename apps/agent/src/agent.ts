@@ -27,6 +27,7 @@ import { indexOnce, openLoanIds, refreshLoan, sweepLoans, type Addresses } from 
 import { credit, type LedgerItem } from "./ledger.ts";
 import { loanNotices, poolNotices } from "./notices.ts";
 import { weeklyIfDue } from "./weekly.ts";
+import { poolCheckIfDue } from "./poolcheck.ts";
 import { sameAnswers, type PaidRpc, type Served } from "./buy.ts";
 
 export type Mode = "watch" | "live";
@@ -597,6 +598,8 @@ export class Agent {
     await this.phase("pool notices", async () => {
       for (const n of await poolNotices(pub, a, db)) this.notice(n.key, null, n.kind, n.said);
     });
+    // A few blocks back, so the outside node has surely seen the block.
+    if (this.block) await this.phase("pool check", async () => void (await poolCheckIfDue(db, pub, a.pool, this.block - 5n, this.now(), this.d.paid, this.log)));
     if (indexedOk) await this.phase("weekly", async () => void (await weeklyIfDue(db, pub, a, this.now(), this.log, this.d.paid)));
     setMeta(db, "lastTick", String(this.now()));
   }

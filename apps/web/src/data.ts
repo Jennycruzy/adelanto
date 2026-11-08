@@ -350,3 +350,19 @@ export async function reputationSummary(): Promise<{ count: number; avg: number 
   const r = (await reputation().catch(() => [])).filter((x) => x.counts);
   return r.length ? { count: r.length, avg: r.reduce((s, x) => s + x.stars, 0) / r.length } : null;
 }
+
+/** The agent's latest daily pool check against an outside node bought through buy, and its paid purchases. */
+export function buyView(): { check: any | null; paid: { settlement_tx: string; served: string; at: number }[] } {
+  const d = agentDb();
+  if (!d) return { check: null, paid: [] };
+  let check: any = null;
+  try {
+    const r = d.prepare("SELECT value FROM meta WHERE key = 'poolcheck:last'").get() as any;
+    check = r ? JSON.parse(r.value) : null;
+  } catch {}
+  let paid: any[] = [];
+  try {
+    paid = d.prepare("SELECT settlement_tx, served, at FROM buy_purchases WHERE outcome = 'paid' AND settlement_tx IS NOT NULL ORDER BY id DESC").all() as any[];
+  } catch {}
+  return { check, paid };
+}
