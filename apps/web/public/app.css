@@ -413,3 +413,32 @@ details.card[open] > summary::after { transform: rotate(45deg); }
 .ladder li.here .lad-b b { color: var(--ink); }
 .hist-row { display: flex; gap: 10px; }
 .hist-row input { flex: 1; min-width: 0; font: 400 15px var(--mono); padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--paper); color: var(--ink); }
+
+/* The agent's price check, drawn from its own once-a-minute readings */
+.price-card { grid-column: 1 / -1; }
+.price-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.price-now b { font-size: clamp(26px, 3.2vw, 34px); font-weight: 800; letter-spacing: -0.01em; }
+.price-card .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.price-card .legend span::before { content: ""; display: inline-block; width: 16px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: 6px; border-radius: 2px; }
+.price-card .legend .k-pool::before { border-color: var(--celeste-ink); }
+.price-card .legend .k-binance::before { border-color: var(--sol); }
+.price-card .legend .k-dolarapi::before { border-top-style: dashed !important; border-top-width: 2px !important; border-color: var(--muted); }
+.price-plot { position: relative; margin-top: 16px; padding-left: 64px; }
+.price-plot .plot-area { position: relative; margin-left: 0; height: clamp(150px, 22vw, 210px); }
+.price-plot svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.price-plot path, .price-plot line { fill: none; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.price-plot .grid { stroke: var(--line); stroke-width: 1; }
+.price-plot .l-pool { stroke: var(--celeste-ink); stroke-width: 3; }
+.price-plot svg { clip-path: inset(-10px 100% -10px -10px); transition: clip-path 1.8s var(--ease); }
+.price-card.in .price-plot svg, .no-js .price-plot svg { clip-path: inset(-10px); }
+.price-plot .dot-now { opacity: 0; transition: opacity 0.4s 1.6s; }
+.price-card.in .dot-now, .no-js .dot-now { opacity: 1; }
+.price-plot .l-binance { stroke: var(--sol); stroke-width: 2.5; }
+.price-plot .l-dolarapi { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 5; }
+.price-plot .dot-now { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: var(--celeste-ink); box-shadow: 0 0 0 2px #fff; }
+.price-plot .dot-now::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--celeste-ink); opacity: 0; animation: ping 2s var(--ease) infinite; }
+@keyframes ping { 0% { transform: scale(0.4); opacity: 0.7; } 100% { transform: scale(1.6); opacity: 0; } }
+.price-plot .y-ticks { position: absolute; left: -64px; top: 0; width: 58px; height: 100%; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.price-plot .y-ticks span { position: absolute; right: 0; transform: translateY(-50%); }
+.price-plot .x-ticks { display: flex; justify-content: space-between; margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) { .price-plot svg { transition: none; clip-path: none; } .price-plot .dot-now { opacity: 1; transition: none; } .price-plot .dot-now::after { animation: none; } }

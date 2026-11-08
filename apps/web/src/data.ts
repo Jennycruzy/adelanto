@@ -254,23 +254,44 @@ export const LABELS: Record<string, "OURS" | "JUDGE"> = {
 };
 export const labelOf = (a: string) => LABELS[getAddress(a)] ?? "USER";
 
-/** The minute-by-minute price watch (pool 30-min average against Binance), newest last, thinned to `points`. */
-export function priceHistory(points = 96): { t: number; pool: number; binance: number }[] {
-  const candidates = [process.env.PRICE_LOG, join(process.env.HOME ?? "", "adelanto-private", "g0", "p6", "prices.csv"), join(process.cwd(), "evidence", "price-watch.csv")].filter(Boolean) as string[];
-  for (const f of candidates) {
-    try {
-      const rows = readFileSync(f, "utf8").trim().split("\n").slice(1).map((l) => l.split(","));
-      const ok = rows.filter((r) => r.length >= 5 && Number(r[2]) > 0 && Number(r[4]) > 0).map((r) => ({ t: Date.parse(r[0]), pool: Number(r[2]), binance: Number(r[4]) }));
-      if (ok.length < 2) continue;
-      const step = Math.max(1, Math.floor(ok.length / points));
-      const out = ok.filter((_, i) => i % step === 0);
-      if (out[out.length - 1] !== ok[ok.length - 1]) out.push(ok[ok.length - 1]);
-      return out;
-    } catch {
-      /* try the next source */
-    }
+export type PricePoint = { t: number; pool: number; binance: number | null; dolarapi: number | null };
+
+/** Pivots the agent's price rows (one row per source per reading) into one point per reading, oldest first. */
+export function pivotPrices(rows: { source: string; value: number; observed_at: number }[]): PricePoint[] {
+  const by = new Map<number, PricePoint>();
+  for (const r of rows) {
+    const t = Number(r.observed_at);
+    const p = by.get(t) ?? { t, pool: 0, binance: null, dolarapi: null };
+    if (r.source === "uniswap_twap30") p.pool = Number(r.value);
+    else if (r.source === "binance") p.binance = Number(r.value);
+    else if (r.source === "dolarapi") p.dolarapi = Number(r.value);
+    by.set(t, p);
   }
-  return [];
+  return [...by.values()].filter((p) => p.pool > 0 && (p.binance ?? 0) > 0).sort((x, y) => x.t - y.t);
+}
+
+/** Keeps about `points` evenly spaced points, always ending on the newest one. */
+export function thin<T>(all: T[], points: number): T[] {
+  if (all.length <= points) return all;
+  const step = all.length / points;
+  const out: T[] = [];
+  for (let i = 0; i < points - 1; i++) out.push(all[Math.floor(i * step)]);
+  out.push(all[all.length - 1]);
+  return out;
+}
+
+/**
+ * The prices the agent itself reads once a minute (its A4 price check): the chain's 30-minute pool price against
+ * Binance and dolarapi, over the last `hours`, thinned to `points`. Read from the agent's database, so it is live.
+ */
+export function priceHistory(hours = 24, points = 120): PricePoint[] {
+  const d = agentDb();
+  if (!d) return [];
+  const since = Date.now() - hours * 3_600_000;
+  const rows = d
+    .prepare("SELECT source, value, observed_at FROM prices WHERE observed_at >= ? AND source IN ('uniswap_twap30','binance','dolarapi') ORDER BY observed_at")
+    .all(since) as any[];
+  return thin(pivotPrices(rows), points);
 }
 
 /** A wallet's public credit record from CreditBook, and the step it is on. */

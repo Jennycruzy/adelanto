@@ -5,7 +5,7 @@ import { html } from "hono/html";
 import { getAddress, isAddress } from "viem";
 import { availableToBorrow, dollars, parseRule, pesos, percent } from "@adelanto/core";
 import { CELO } from "@adelanto/chain";
-import { REFS, adminEvents, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, pub, quoteFor } from "./data.ts";
+import { REFS, adminEvents, priceHistory, agentActions, attributionAudit, balancesOf, creditOf, dep, depositRows, labelOf, lastTick, loanEvents, loanRows, loanView, poolView, pub, quoteFor } from "./data.ts";
 import { langOf, t, type Lang } from "./i18n.ts";
 import { addrUrl, borrowPage, guardPage, historyPage, home, href, layout, lendPage, loanPage, plain, txUrl } from "./views.ts";
 import { ruleText, saveRule } from "./rules.ts";
@@ -37,7 +37,7 @@ app.get("/", async (c) => {
     if (loan) proof = { loan, events: loanEvents(loan.id), actions: agentActions(loan.id, 5) };
   }
   const tick = lastTick();
-  return c.html(home(l, v, proof, tick ? Date.now() - tick : null, agentActions(undefined, 4)));
+  return c.html(home(l, v, proof, tick ? Date.now() - tick : null, agentActions(undefined, 4), priceHistory(24, 144)));
 });
 
 app.get("/pedir", async (c) => {
@@ -318,6 +318,16 @@ app.get("/api/public/rates", async (c) => {
   });
 });
 
+app.get("/api/public/prices", (c) => {
+  const hours = Math.min(168, Math.max(1, Number(c.req.query("hours") ?? 24) || 24));
+  const points = priceHistory(hours, 500);
+  return json(c, {
+    what: "The agent's own once-a-minute price check: the Celo wARS/USDT pool's 30-minute average against Binance USDTARS and dolarapi cripto, in pesos per dollar.",
+    hours,
+    points: points.map((p) => ({ at: new Date(p.t).toISOString(), pool30m: p.pool, binance: p.binance, dolarapi: p.dolarapi })),
+  });
+});
+
 app.get("/api/loan/:id", async (c) => {
   const id = c.req.param("id");
   if (!/^\d{1,9}$/.test(id)) return json(c, { error: "bad id" }, 400);
@@ -358,6 +368,7 @@ ${pesos(v.pool.cash, "en")} free to lend, ${pesos(v.pool.totalDebt, "en")} lent.
 ${dep.gentleKeeper ? `- GentleKeeper ${dep.gentleKeeper}: gentle liquidation computed on chain\n` : ""}- Agent wallet 0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1, ERC-8004 identity 10043
 
 ## Check every claim on chain
+- Price history the agent checks: GET /api/public/prices?hours=24 (free JSON)
 - Rates and pool: GET /api/public/rates (free JSON), or read PesoPool.borrowRateBps(0), lenderRateBps(), cash(), totalDebt()
 - A loan: GET /api/loan/<id>, or PesoPool.loans(id) and debtOf(id); its history is the pool's events for that id
 - Attribution: every transaction since the event code carries ERC-8021 code celo_0e96c1ff3fa8 (evidence/attribution-audit.json)

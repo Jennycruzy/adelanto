@@ -6,7 +6,7 @@ import type { HtmlEscapedString } from "hono/utils/html";
 import { availableToBorrow, discountBps, dollars, maxLtvBpsForTier, maxPesosForTier, pesos, percent, type Quote } from "@adelanto/core";
 import { CELO } from "@adelanto/chain";
 import { t, type Lang } from "./i18n.ts";
-import { REFS, dep, labelOf, networkCostUsd, type LoanView, type PoolView } from "./data.ts";
+import { REFS, dep, labelOf, networkCostUsd, type LoanView, type PoolView, type PricePoint } from "./data.ts";
 
 type H = HtmlEscapedString | Promise<HtmlEscapedString>;
 
@@ -137,7 +137,7 @@ const ICON: Record<string, string> = {
 };
 const icon = (k: string) => raw(`<svg viewBox="0 0 24 24" fill="none" stroke="#0e2a47" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`);
 
-export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: any[]; actions: any[] } | null, tickAge: number | null, feed: any[] = []) {
+export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: any[]; actions: any[] } | null, tickAge: number | null, feed: any[] = [], prices: PricePoint[] = []) {
   const es = lang === "es";
   const loc = es ? "es-AR" : "en-US";
   const rate = Number(v.borrowRateBps) / 10_000;
@@ -186,7 +186,7 @@ export function home(lang: Lang, v: PoolView, proof: { loan: LoanView; events: a
   <div><span class="ic">${icon("tag")}</span><b>${es ? "Todo a la vista" : "All in the open"}</b><span>${es ? "Cada transacción en la cadena, con la etiqueta del evento" : "Every transaction on chain, with the event's tag"}</span></div>
 </div></section>
 
-${agentSection(lang, tickAge, feed)}
+${agentSection(lang, tickAge, feed, prices)}
 
 <section class="band"><div class="wrap">
   <h2 class="reveal">${es ? "Dejá de pagar la tasa del banco" : "Stop paying the bank's rate"}</h2>
@@ -598,7 +598,7 @@ export function agentFeed(lang: Lang, actions: any[]) {
 }
 
 /** The home page's agent block: is it running, the rule it last acted on, and what it did on chain. */
-function agentSection(lang: Lang, tickAge: number | null, feed: any[]) {
+function agentSection(lang: Lang, tickAge: number | null, feed: any[], prices: PricePoint[] = []) {
   const es = lang === "es";
   const live = tickAge !== null && tickAge < 5 * 60_000;
   const quoted = feed.map((a) => /«([^»]+)»/.exec(a.sentence_es ?? "")?.[1]).find(Boolean);
@@ -619,7 +619,66 @@ function agentSection(lang: Lang, tickAge: number | null, feed: any[]) {
     <div class="card-label">${es ? "Lo último que hizo, en Celo" : "What it did last, on Celo"}</div>
     ${agentFeed(lang, feed)}
   </div>
+  ${priceChart(lang, prices)}
 </div></div></section>`;
+}
+
+/** Gap between two prices, in percent of the second. */
+const gapPct = (a: number, b: number) => Math.abs(a / b - 1) * 100;
+
+/**
+ * The prices the agent checks every minute, drawn from its own readings: the chain's 30-minute pool price against
+ * Binance and dolarapi. Nothing is drawn from fewer than ten real readings.
+ */
+export function priceChart(lang: Lang, h: PricePoint[]) {
+  if (h.length < 10) return "";
+  const es = lang === "es";
+  const W = 600, H = 180, padT = 10, padB = 10;
+  const vals = h.flatMap((p) => [p.pool, p.binance ?? p.pool, p.dolarapi ?? p.pool]);
+  const lo0 = Math.min(...vals), hi0 = Math.max(...vals), m = (hi0 - lo0) * 0.12 || 1;
+  const lo = lo0 - m, hi = hi0 + m;
+  const t0 = h[0].t, t1 = h[h.length - 1].t;
+  const x = (t: number) => (((t - t0) / (t1 - t0 || 1)) * W).toFixed(1);
+  const y = (v: number) => (padT + (1 - (v - lo) / (hi - lo)) * (H - padT - padB)).toFixed(1);
+  const path = (k: "pool" | "binance" | "dolarapi") => {
+    let d = "", pen = false;
+    for (const p of h) {
+      const v = p[k];
+      if (v == null) { pen = false; continue; }
+      d += `${pen ? "L" : "M"}${x(p.t)} ${y(v)}`;
+      pen = true;
+    }
+    return d;
+  };
+  const last = h[h.length - 1];
+  const maxBin = Math.max(...h.map((p) => (p.binance ? gapPct(p.pool, p.binance) : 0)));
+  const withApi = h.filter((p) => p.dolarapi);
+  const maxApi = withApi.length ? Math.max(...withApi.map((p) => gapPct(p.pool, p.dolarapi!))) : null;
+  const hours = Math.max(1, Math.round((t1 - t0) / 3_600_000));
+  const pct = (n: number) => n.toLocaleString(es ? "es-AR" : "en-US", { maximumFractionDigits: 2, minimumFractionDigits: 2 }) + "%";
+  const num = (n: number) => "$" + n.toLocaleString(es ? "es-AR" : "en-US", { maximumFractionDigits: 0 });
+  const yTicks = [hi0, (hi0 + lo0) / 2, lo0];
+  return html`<div class="card price-card reveal d2">
+  <div class="price-head">
+    <div><div class="card-label">${es ? `El precio que mira el agente · últimas ${hours} h` : `The price the agent watches · last ${hours} h`}</div>
+      <div class="price-now"><b>${num(last.pool)}</b> <span class="muted small">${es ? "por dólar en el fondo de Celo" : "per dollar in the Celo pool"}</span></div></div>
+    <div class="legend"><span class="k-pool">${es ? "Fondo en Celo (30 min)" : "Celo pool (30 min)"}</span><span class="k-binance">Binance</span><span class="k-dolarapi">dolarapi</span></div>
+  </div>
+  <div class="price-plot">
+    <div class="plot-area">
+      <div class="y-ticks" aria-hidden="true">${yTicks.map((v) => html`<span style="top:${((Number(y(v)) / H) * 100).toFixed(1)}%">${num(v)}</span>`)}</div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${es ? `Precio del dólar en el fondo de Celo contra Binance y dolarapi, últimas ${hours} horas` : `Dollar price in the Celo pool against Binance and dolarapi, last ${hours} hours`}">
+        ${yTicks.map((v) => raw(`<line class="grid" x1="0" x2="${W}" y1="${y(v)}" y2="${y(v)}"/>`))}
+        ${raw(`<path class="l-dolarapi" d="${path("dolarapi")}"/><path class="l-binance" d="${path("binance")}"/><path class="l-pool" d="${path("pool")}"/>`)}
+      </svg>
+      <i class="dot-now" style="left:${((Number(x(last.t)) / W) * 100).toFixed(2)}%;top:${((Number(y(last.pool)) / H) * 100).toFixed(1)}%"></i>
+    </div>
+    <div class="x-ticks muted small" aria-hidden="true"><span>${es ? `hace ${hours} h` : `${hours} h ago`}</span><span>${es ? "ahora" : "now"}</span></div>
+  </div>
+  <p class="small muted" style="margin:12px 0 0">${es
+    ? html`Mayor diferencia en este tiempo: <b>${pct(maxBin)}</b> con Binance${maxApi !== null ? html`, <b>${pct(maxApi)}</b> con dolarapi` : ""}. El agente frena los préstamos nuevos solo si el fondo se aleja más de 1,5% de todas las fuentes durante 3 minutos.`
+    : html`Largest gap in this window: <b>${pct(maxBin)}</b> from Binance${maxApi !== null ? html`, <b>${pct(maxApi)}</b> from dolarapi` : ""}. The agent pauses new loans only if the pool is more than 1.5% from every source for 3 minutes.`}</p>
+</div>`;
 }
 
 // ---------------------------------------------------------------- mi historial

@@ -55,6 +55,12 @@ From 5 Nov 22:00 to 6 Nov 11:53 UTC (824 readings), the pool's 30-minute average
 of **0.51%**, 0.68% at the 95th percentile and **0.74% at most**. The agent pauses new borrowing only past 1.5%
 against both outside sources for 3 minutes; in this window it never came close.
 
+Since 6 Nov 10:17 UTC the agent itself takes this reading every minute (its price check) and keeps it. Its
+3,127 readings to 8 Nov 14:27 UTC: the pool's 30-minute average was a median **0.47%** from Binance (0.67% at the
+95th percentile, 1.20% at most) and a median **0.09%** from dolarapi (0.53% at most). Never once was it past 1.5%
+from both. The home page draws the last 24 hours of these readings, and anyone can fetch them:
+[`/api/public/prices?hours=24`](https://adelanto-99-80-93-71.sslip.io/api/public/prices?hours=24) (up to 168 hours).
+
 ## wARS on chain (4 Nov 2026)
 
 | Chain | Supply |
