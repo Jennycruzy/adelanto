@@ -65,7 +65,7 @@ preset. A rule sets:
 the same words always give the same limits. It reads rioplatense Spanish: amounts in digits, "mil", "lucas", "k" or
 words ("treinta lucas"), periods ("por día", "por semana", "por mes"), durations ("por dos meses", "hasta fin de
 mes"), and intents ("pagá con lo que me entre", "nunca vendas mis dólares", "avisame antes", "frená todo"); an amount with no currency in a rule that repays with incoming pesos is read as pesos. Three
-rules keep it honest:
+rules apply to every result:
 
 - **No invented numbers.** Every number in the result is one the borrower said or one read from the loan (its debt,
   its guarantee, its due date). If a cap is needed and missing, the page asks one question with buttons, and the

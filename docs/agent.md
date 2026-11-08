@@ -169,7 +169,7 @@ be valid on mainnet. Anvil's well-known keys have EIP-7702 code on Celo mainnet,
 
 ## Reviews
 
-The contracts and the agent were each reviewed by an outside reviewer reading the code cold, then re-checked after
+The contracts and the agent were each reviewed by a reviewer that did not write the code, then re-checked after
 the fixes.
 
 | Round | Scope | Found | Result |

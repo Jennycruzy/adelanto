@@ -33,13 +33,13 @@ ERC-8004 agent **#10043** · [MCP](https://adelanto.space/mcp) · Telegram [@ade
 
 ## Check it yourself
 
-Every link is a real Celo mainnet transaction. Every transaction our wallets send since the event code was issued carries the
+Every link is a real mainnet transaction. Every transaction our wallets send since the event code was issued carries the
 attribution tag `celo_0e96c1ff3fa8` ([audit: 63 of 63 tagged, 0 untagged](evidence/attribution-audit.json)).
 `npm run verify` rebuilds every loan below from the chain alone; every number we quote is generated in [`evidence/`](evidence/README.md).
 
 | What happened | When (UTC) | Check it |
 |---|---|---|
-| **A real peso loan, opened and closed.** 1,000 wARS borrowed against 1.3 USDT for 7 days at 25.11% a year (fee 2.5 wARS), collateral added and taken back, half repaid in pesos, the rest repaid **with dollars in one transaction** (the pool swaps on Uniswap), dollars returned. | 6 Nov 08:13–08:14 | [borrow](https://celoscan.io/tx/0xbb9cb9444206e661b855364ebf94ccb6760f8beb692282a33faa80a1eb4c62c5) · [add](https://celoscan.io/tx/0xd182023e86eca482b3b8c2a4481ed957974c23003503ff814beed8c4bff0b6f6) · [take back](https://celoscan.io/tx/0x365bb44f2d915916854f7c2ba2940f91fe84c891e0ac2c9158e5fb46b06c212f) · [repay in pesos](https://celoscan.io/tx/0x470ffd10673083bfc9a8df0801da0a0a4356ac91a4b02888bb95a0ff143aaa3b) · [repay with dollars, closes it](https://celoscan.io/tx/0xc2843c39f8f9444e44427370cfee8c820e6b6410ed81d5b671948f0baf06536c) |
+| **A real peso loan, opened and closed.** 1,000 wARS borrowed against 1.3 USDT for 7 days at 25.11% a year (fee 2.5 wARS), collateral added and taken back, half repaid in pesos, the rest repaid with dollars in one transaction (the pool swaps on Uniswap), dollars returned. | 6 Nov 08:13–08:14 | [borrow](https://celoscan.io/tx/0xbb9cb9444206e661b855364ebf94ccb6760f8beb692282a33faa80a1eb4c62c5) · [add](https://celoscan.io/tx/0xd182023e86eca482b3b8c2a4481ed957974c23003503ff814beed8c4bff0b6f6) · [take back](https://celoscan.io/tx/0x365bb44f2d915916854f7c2ba2940f91fe84c891e0ac2c9158e5fb46b06c212f) · [repay in pesos](https://celoscan.io/tx/0x470ffd10673083bfc9a8df0801da0a0a4356ac91a4b02888bb95a0ff143aaa3b) · [repay with dollars, closes it](https://celoscan.io/tx/0xc2843c39f8f9444e44427370cfee8c820e6b6410ed81d5b671948f0baf06536c) |
 | **A lender's pesos in and out.** 5,616.86 wARS deposited into the pool; 100 wARS withdrawn. | 6 Nov 08:11–08:14 | [deposit](https://celoscan.io/tx/0xd27c79121bb11b8ec32cb492c849d37fa2744adad1544f113061cc25de466c2a) · [deposit 2](https://celoscan.io/tx/0x49046ee489059c942f38df26b58249b5c20582f6cc943084e85e4dde734f5621) · [withdraw](https://celoscan.io/tx/0x9cc2e069c6015bfec97457b4813aed8dc75a3b3b1a3deede1f074c68dda38116) |
 | **Five contracts, verified, tagged from the first byte.** The attribution tag is on the deploy transactions themselves. | 6 Nov 07:40, 10:42 | [PesoPool](https://celoscan.io/tx/0xc78058d8c4623ef4b2457f1f260f2589e090e820153b20c794503d7b9ee0a1b7) · [LoanGuard](https://celoscan.io/tx/0xe091e0c93d6e7eb1c8d72ef8a8a2f328845002e2247c7fa4fd25dd867e07cf0b) · [CreditBook](https://celoscan.io/tx/0x4d6f734947024707c03486d6afb006079cecda3ead83cdb696304924c72e297a) · [PriceModule](https://celoscan.io/tx/0xb61c2b6d8b09bf95550fdd947778bc8b03939eb9c662cd148dbc59b5c0130678) · [GentleKeeper](https://celoscan.io/tx/0xa697e3fa3b145ed4f0c7fc90071d5562703b16d27f4217520ff3cf7e9b4e9582) |
 | **An agent with an on-chain identity.** ADELANTO is agent #10043 in Celo's ERC-8004 registry; its card lists the site, the contracts and the agent wallet. | 6 Nov 08:15 | [registration](https://celoscan.io/tx/0xf0bbf26a35801ff47b3e343078cb3d97ef964166f83b458b8104bee88b533795) · [card](agent/registration.json) |
@@ -47,6 +47,7 @@ attribution tag `celo_0e96c1ff3fa8` ([audit: 63 of 63 tagged, 0 untagged](eviden
 | **Other agents pay ADELANTO over x402.** A buyer paid 8 wARS for the peso rate and US$0.01 in USD₮ for a wallet's credit record, settled by Celo's x402 facilitator straight into the agent wallet. The facilitator sends these settlements from its own wallet; ADELANTO declares its attribution code in every 402 through the builder-code extension. | 7 Nov 13:52 | [8 wARS](https://celoscan.io/tx/0x8413548ce9ed00b89f43a67a01885b9081eea1f0957e16a479c46a2fffebe335) · [US$0.01](https://celoscan.io/tx/0x7ade1408800fdd6700c94dae8ae1f05fbd734bbf775b484b12e34d4586e70344) · [catalog](https://adelanto.space/x402) |
 | **A whole loan inside MiniPay, on a phone.** On an iPhone, MiniPay borrowed 1,000 wARS with gas paid in USDT and signed a rule written in words. When a 300 wARS sale reached the wallet, the agent repaid 300 on its own, quoting the rule; then **Repay all** closed loan #5 and returned the dollars. The attribution tag survived MiniPay's signing on every step. | 7 Nov 23:15–23:26 | [borrow](https://celoscan.io/tx/0x1bcfc3902106a3c27621e41fce1eaf328d25100fa41e58c9e09e406bfcc2ab42) · [rule](https://celoscan.io/tx/0x20a210505a98f24cd03a9e3a9f0c117006086836364dd2436811c30149e224ee) · [agent repays 300](https://celoscan.io/tx/0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0) · [repay all](https://celoscan.io/tx/0x72f5150accdd58518f0c224477cfc293d42b072a9552485d69b7e911b04caade) |
 | **The agent buys a check from a node we do not run.** Through buy, the agent paid US$0.01 in USD₮ over x402 for a batch on Chainstack's Celo RPC and read the pool's books at the same block from both nodes: they match. It does this every day and before each weekly summary. | 8 Nov 18:28 | [payment](https://celoscan.io/tx/0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40) · [receipts](evidence/buy/purchases.json) · [Transparencia](https://adelanto.space/transparencia) |
+| **Two people outside the team borrowed.** Two wallets we do not control, neither funded by us, each borrowed 1,000 wARS from the site. The first set a rule, repaid, got its dollars back and rated the agent 5 of 5 in the ERC-8004 ReputationRegistry; the second loan is open. | 8 Nov 20:06–20:17 | [borrow](https://celoscan.io/tx/0xd8363b3537e6d7343c4e37b2d2e4b1d38ca3f7093d7ec5b677db0300f8d8f132) · [rule](https://celoscan.io/tx/0x0026093292f51d03c8e3480bee68ca8af0506a649ad05d4403cbb1c440eb1ba1) · [repay, closes it](https://celoscan.io/tx/0x0942f28c018e31a79d42fb6897d0f20c6e91fe3b41ece083df4367062154346e) · [rating](https://celoscan.io/tx/0x12df40afab47c44da61fbb30e8a708a45b6bde60ed5449145a94d3a9010cb4e5) · [second loan](https://celoscan.io/tx/0x6e305832171b99dbf8102d511da1c0000044eb67cb3710e3db9f8653ca65e767) |
 | **Bigger loans: Morpho on Ethereum, round trip with real money.** USDT bridged to Ethereum, 3,000 wARS borrowed on Morpho's wARS/USDT market (0.30% a year that day), pesos bridged to Celo through Ripio, then repaid and the dollars brought home. | 5 Nov 18:51–21:38 | [borrow on Morpho](https://etherscan.io/tx/0x32e03e2af5aaf27db2b9db4cdf0ce0bb84c073b75ed0a52a12358043d5cc0165) · [pesos to Celo](https://etherscan.io/tx/0x88df1ef3069e8abdcbe1ee421996677f1a38223eebbd988b410aa47d2bda463f) · [repay](https://etherscan.io/tx/0xb7f7afe9a8ca26af2c26cd1ed48f868a96c3684af96b325ce33d6eb21f9d15fa) · [dollars home](https://etherscan.io/tx/0x68b29607e347de3f7949b90f0084763c105a6d662cbded845b7fe881746e82f2) · [every step](docs/verification.md#ethereum-round-trip) |
 
 The [transparency page](https://adelanto.space/transparencia) labels every wallet: ours, the
@@ -91,7 +92,7 @@ ADELANTO is the fourth choice:
    [Mi historial](https://adelanto.space/historial) shows any wallet's step, what the next step
    unlocks and how many loans it needs; MiniPay opens it on your own wallet.
 7. **Other agents pay for what ADELANTO knows.** The peso rate checked against two outside sources, a firm borrow
-   quote, and a wallet's credit record are sold over **x402**, settled by Celo's own facilitator in wARS or USD₮,
+   quote, and a wallet's credit record are sold over x402, settled by Celo's own facilitator in wARS or USD₮,
    straight into the agent's wallet.
 
 ### An example: Lucía
@@ -134,13 +135,13 @@ last checked and what it did last, with the transactions.
 | **Sell gently, only if it must** | A loan crosses 80% and protection could not help | Sells the smallest slice that brings it to 78%, computed on chain by `GentleKeeper` | Pool rules: the 30-minute price, the 50% cap, a 5% bonus. On a 1,000 USDT loan the borrower loses about US$ 5.80 instead of US$ 19 under a standard liquidation back to 70% |
 | **Stop on bad prices** | The pool's price differs from Binance **and** dolarapi by more than 1.5% for 3 minutes | Pauses new borrowing; resumes after 10 minutes in line | Needs two outside sources; the guardian cannot pause repay, withdraw or liquidation |
 | **Rate watch** | Morpho on Ethereum would save more than twice its moving cost | Tells the borrower, with the saving in pesos | Moves no money |
-| **Keep people told** | Risk, due in 3 days, due, late, the pool running low on free pesos | One sentence per change, in Spanish and English, on the wallet's Mi historial and in Telegram ([@adelanto_ar_bot](https://t.me/adelanto_ar_bot)); hysteresis so it never nags | — |
+| **Tell people** | Risk, due in 3 days, due, late, the pool running low on free pesos | One sentence per change, in Spanish and English, on the wallet's Mi historial and in Telegram ([@adelanto_ar_bot](https://t.me/adelanto_ar_bot)); a notice is not repeated until the situation changes | — |
 | **Weekly summary** | Sundays 20:00, Buenos Aires | Per borrower and lender: borrowed, repaid, earned, what the agent did under their rule, what is owed and when. One for the pool on Transparencia | Balances and debts read from chain at one block; any number in the text that the data did not produce blocks it |
 | **Check the pool against an outside node** | Once a day | Buys the same reads of the pool (free, lent, deposited, rate) at one block from Chainstack through buy, paid over x402 in USD₮, and compares them with its own RPC; the answer and the payment are on Transparencia | At most US$0.01 a payment and US$0.05 a day; a mismatch holds money moves |
 
 Every action records its trigger, the inputs (price, health, limits), the decision, the transaction and one
 sentence in Spanish: *"Tu regla: «…». Agregué US$ 3 porque tu préstamo llegó al 71%."* The agent quotes the words
-only when their keccak256 equals the rule hash the borrower signed on chain, so nobody can put words in their mouth.
+only when their keccak256 equals the rule hash the borrower signed on chain, so it can only quote what the borrower wrote.
 
 **From words to limits.** The rule parser (`packages/core/src/rule.ts`) reads rioplatense Spanish: "lucas", "mil",
 "30 lucas por semana", "por dos meses", "hasta fin de mes", "que no me vendan los dólares", "frená todo". Every
@@ -158,7 +159,7 @@ for 10 minutes is replaced at its nonce by a tagged empty transfer. One OS-level
 can never act at once (tested with two processes). The agent starts in watch mode, which reads, decides and logs
 without sending; `AGENT_MODE=live` turns sending on. Details: [docs/agent.md](docs/agent.md).
 
-**Reviewed three times.** An outside review found 14 issues in round 1 (6 high); all were fixed. A fresh reviewer
+**Reviewed three times.** Round 1 found 14 issues (6 high); all were fixed. A second reviewer, new to the code,
 checked rounds 2 and 3; round 3 found no high issue and cleared `GentleKeeper` for mainnet. Its one medium (the
 process lock) is fixed and has a two-process test.
 
@@ -167,9 +168,9 @@ process lock) is fixed and has a two-process test.
 | Criterion | What we show |
 |---|---|
 | **Works on mainnet with a real wFIAT token** | The loan is wARS itself: lend, borrow, add, take back, repay in pesos, repay with dollars and withdraw, all on Celo mainnet, all tagged ([audit](evidence/attribution-audit.json)). |
-| **Real use of wFIAT and the Celo stack** | wARS is what is borrowed and lent; MiniPay with USDT gas; ERC-8004 identity #10043 and reputation (a closed loan's wallet rates the agent from the loan page); ERC-8021 attribution on every transaction; **buy**, to pay Chainstack's node for a second opinion before money moves; an MCP server that builds tagged borrow and repay transactions for other agents' own wallets; Ripio's off-ramp; x402 through Celo's facilitator, paid in wARS by Permit2 with the permit's gas sponsored; Ripio's bridge between Celo and Ethereum; the Celo wARS/USDT Uniswap v3 pool as the price; USDT and wARS EIP-2612 permits. |
-| **The agent is autonomous and useful** | Eight jobs above, each bound by limits the borrower signed and the contract enforces. On mainnet it repaid loans #2 to #5 on its own when pesos arrived, five times, quoting each borrower's rule ([loan #5, in MiniPay](https://celoscan.io/tx/0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0)). It saves the borrower money at the bank's expense and saves them from a full liquidation, and other agents pay it for answers over x402. |
-| **A real person can use it** | Spanish first, pesos everywhere, three taps to a first loan in MiniPay, no crypto words on screen, the rule in your own words or by voice, a credit record page, a US$ 1 loan to try. |
+| **Real use of wFIAT and the Celo stack** | wARS is what is borrowed and lent; MiniPay with USDT gas; ERC-8004 identity #10043 and reputation (a closed loan's wallet rates the agent from the loan page); ERC-8021 attribution on every transaction; buy, to pay Chainstack's node for a second opinion before money moves; an MCP server that builds tagged borrow and repay transactions for other agents' own wallets; Ripio's off-ramp; x402 through Celo's facilitator, paid in wARS by Permit2 with the permit's gas sponsored; Ripio's bridge between Celo and Ethereum; the Celo wARS/USDT Uniswap v3 pool as the price; USDT and wARS EIP-2612 permits. |
+| **The agent is autonomous and useful** | Eight jobs above, each bound by limits the borrower signed and the contract enforces. On mainnet it repaid loans #2 to #5 on its own when pesos arrived, five times, quoting each borrower's rule ([loan #5, in MiniPay](https://celoscan.io/tx/0x8cf6427acf91d87cfda4f74efb82306009efc6035a83734f47a1cd1f652dc3c0)). Against a bank loan it saves the borrower half to two-thirds of the interest, a gentle sale costs them about US$ 5.80 where a standard liquidation costs US$ 19, and other agents pay it for answers over x402. |
+| **A real person can use it** | Two people outside the team took loans from the site on 8 Nov, one repaid and rated the agent. Spanish first, pesos everywhere, three taps to a first loan in MiniPay, no crypto words on screen, the rule in your own words or by voice, a credit record page, a US$ 1 loan to try. |
 | **Impact for LatAm** | Credit in pesos for people who save in dollars, the gap between a 64.63% bank loan and selling your savings. Lenders earn above BADLAR. The credit record belongs to the borrower. |
 
 ## Contracts (Celo mainnet, chain 42220)
@@ -193,8 +194,8 @@ On Ethereum, `MorphoProxy` and `MorphoProxyFactory` give each borrower a proxy t
 - **Rates.** Borrow 22% a year when the pool is idle, rising to 36% at 80% use, then steeply to 156% at 100% use
   so lenders can always get out. Lenders get the interest minus a 10% reserve. Opening fee 0.25%. After the term,
   +5 points until repaid; no loan is ever closed for being late.
-- **When there is risk.** The loan is in pesos and the guarantee in dollars, so a **falling peso makes the loan
-  safer**. Risk comes when the peso strengthens. At 70% the agent protects; at 80% a part can be sold. Every loan
+- **When there is risk.** The loan is in pesos and the guarantee in dollars, so a falling peso makes the loan
+  safer. Risk comes when the peso strengthens. At 70% the agent protects; at 80% a part can be sold. Every loan
   page shows the dollar price at which each line is hit.
 - **Prices.** Borrowing uses the lower of the spot and the 30-minute average, so a spike never lends more.
   Liquidation uses only the 30-minute average, so a one-block push cannot liquidate anyone. Total borrowing is
