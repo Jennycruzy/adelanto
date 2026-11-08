@@ -1,0 +1,8 @@
+[Unit]
+Description=ADELANTO watchdog: site answering, agent ticking
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/adelanto
+ExecStart=/home/ubuntu/.nvm/versions/node/v24.22.1/bin/node scripts/ops/watchdog.ts

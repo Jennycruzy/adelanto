@@ -16,7 +16,8 @@
     "agent": "node apps/agent/src/main.ts",
     "typecheck": "tsc --noEmit -p .",
     "verify": "node scripts/verify.ts",
-    "evidence": "node scripts/attribution-audit.ts && node scripts/evidence.ts"
+    "evidence": "node scripts/attribution-audit.ts && node scripts/evidence.ts",
+    "scan:secrets": "node scripts/secrets-scan.ts"
   },
   "dependencies": {
     "@celo/attribution-tags": "0.5.0",
