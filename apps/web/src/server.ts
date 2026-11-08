@@ -135,7 +135,7 @@ ${buy.check?.tx ? html`<div class="card">
   <p style="margin:0">${buy.check.outcome === "match"
     ? es ? html`Cada día el agente compra, con <b>buy</b>, la misma lectura del fondo a un nodo de Chainstack y la paga por x402 en USD₮ desde su billetera. En el bloque <a href="https://celoscan.io/block/${buy.check.block}">${buy.check.block}</a> las dos lecturas coinciden: libre, prestado, depositado y la tasa.` : html`Every day the agent buys, through <b>buy</b>, the same read of the pool from a Chainstack node and pays for it over x402 in USD₮ from its own wallet. At block <a href="https://celoscan.io/block/${buy.check.block}">${buy.check.block}</a> both reads agree: free, lent, deposited and the rate.`
     : es ? html`En el bloque ${buy.check.block} el nodo de afuera dio otra cifra; el agente frena antes de mover plata hasta que coincidan.` : html`At block ${buy.check.block} the outside node gave a different figure; the agent holds before moving money until they agree.`}</p>
-  <p class="small muted" style="margin:12px 0 0">${es ? "Pago" : "Payment"} <a class="tx" href="${txUrl(buy.check.tx)}">${buy.check.tx.slice(0, 10)}…</a> · ${es ? `${buy.paid.length} compras pagas, cada una con su recibo` : `${buy.paid.length} paid purchases, each with its receipt`} · <a href="https://github.com/Jennycruzy/adelanto/blob/main/evidence/buy/purchases.json">purchases.json</a></p>
+  <p class="small muted" style="margin:12px 0 0">${es ? "Pago" : "Payment"} <a class="tx" href="${txUrl(buy.check.tx)}">${buy.check.tx.slice(0, 10)}…</a> · ${buy.paid.length === 1 ? (es ? "1 compra paga, con su recibo" : "1 paid purchase, with its receipt") : es ? `${buy.paid.length} compras pagas, cada una con su recibo` : `${buy.paid.length} paid purchases, each with its receipt`} · <a href="https://github.com/Jennycruzy/adelanto/blob/main/evidence/buy/purchases.json">purchases.json</a></p>
 </div>` : ""}
 ${weekly ? html`<div class="card">
   <div class="card-label">${es ? "El resumen de la semana del agente" : "The agent's weekly summary"} · ${ago(Number(weekly.created_at), l)}</div>
@@ -260,6 +260,23 @@ app.post("/api/rule", async (c) => {
   return json(c, { result: r }, r === "saved" ? 200 : 400);
 });
 
+/** What ADELANTO is built on, each with where to see it working. Shown to judges on /probar. */
+function stack(l: Lang): [string, string, string][] {
+  const es = l === "es";
+  const tx = (h: string) => `https://celoscan.io/tx/${h}`;
+  return [
+    ["Ripio wARS", es ? "El peso que se presta, se paga y rinde; off-ramp de Ripio al banco" : "The peso that is lent, repaid and earned; Ripio's off-ramp to a bank", href(l, "/prestamo/1")],
+    ["MiniPay", es ? "Préstamo en tres toques, gas en USDT" : "A loan in three taps, gas in USDT", tx("0x1bcfc3902106a3c27621e41fce1eaf328d25100fa41e58c9e09e406bfcc2ab42")],
+    ["ERC-8004 #10043", es ? "Identidad del agente y calificaciones de préstamos cerrados" : "The agent's identity and ratings from closed loans", tx("0xf0bbf26a35801ff47b3e343078cb3d97ef964166f83b458b8104bee88b533795")],
+    ["ERC-8021", es ? "Nuestra etiqueta en cada transacción" : "Our tag on every transaction", href(l, "/transparencia")],
+    ["x402", es ? "Otros agentes le pagan al agente, vía el facilitador de Celo" : "Other agents pay the agent, through Celo's facilitator", "/x402"],
+    ["buy", es ? "El agente le paga a un nodo de Chainstack para confirmar la cadena" : "The agent pays a Chainstack node to confirm the chain", tx("0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40")],
+    ["MCP", es ? "Tasas, cotizaciones y transacciones listas para firmar" : "Rates, quotes and transactions ready to sign", "/llms.txt"],
+    ["Telegram", es ? "Los avisos del agente y tu regla, en el chat" : "The agent's notices and your rule, in chat", "https://t.me/adelanto_ar_bot"],
+    ["Uniswap v3 · Morpho", es ? "El precio en Celo; préstamos grandes en Ethereum" : "The price on Celo; bigger loans on Ethereum", "https://github.com/Jennycruzy/adelanto#runs-on"],
+  ];
+}
+
 app.get("/probar", async (c) => {
   const l = lang(c);
   const es = l === "es";
@@ -275,7 +292,7 @@ app.get("/probar", async (c) => {
         html`<b>Pedí $ 1.000.</b> En MiniPay (Ajustes → Acerca de → tocá la versión hasta activar el modo desarrollador → Developer settings → Load test page → esta dirección) o cualquier billetera de Celo con unos US$ 1,25 en USDT.`,
         html`<b>Decile qué hacer.</b> En la página del préstamo, «Cuidar mi préstamo»: escribí o dictá tu regla, por ejemplo «Cuando me entren pesos, pagá el préstamo, máximo 500 por día». Leé lo que va a hacer y firmá. Si después te mandan pesos, el agente paga solo y cita tu regla.`,
         html`<b>Pagalo.</b> «Pagar todo»: tus dólares vuelven en la misma transacción. Tu préstamo queda en <a href="${href(l, "/historial")}">Mi historial</a>.`,
-        html`<b>Agentes.</b> <code class="tx">GET /api/public/rates</code>, <a href="/llms.txt">/llms.txt</a> y respuestas pagas por x402 en wARS o USD₮: <a href="/x402">/x402</a>. Código: <a href="https://github.com/Jennycruzy/adelanto">GitHub</a>.`,
+        html`<b>Agentes.</b> <code class="tx">GET /api/public/rates</code>, <a href="/llms.txt">/llms.txt</a>, respuestas pagas por x402 en wARS o USD₮ (<a href="/x402">/x402</a>), MCP en <code class="tx">/mcp</code> y el bot <a href="https://t.me/adelanto_ar_bot">@adelanto_ar_bot</a>. Código: <a href="https://github.com/Jennycruzy/adelanto">GitHub</a>.`,
       ]
     : [
         html`<b>No wallet.</b> Look at a real closed loan, with every transaction and what the agent did on its own. ${closed ? html`<a href="${href(l, `/prestamo/${closed.id}`)}">Loan #${closed.id} →</a>` : ""}`,
@@ -283,7 +300,7 @@ app.get("/probar", async (c) => {
         html`<b>Borrow ARS 1,000.</b> In MiniPay (Settings → About → tap the version until developer mode is on → Developer settings → Load test page → this address) or any Celo wallet with about US$1.25 in USDT.`,
         html`<b>Tell it what to do.</b> On the loan page, “Look after my loan”: write or dictate your rule in Spanish, for example “Cuando me entren pesos, pagá el préstamo, máximo 500 por día”. Read what it will do and sign. If pesos are then sent to you, the agent repays on its own and quotes your rule.`,
         html`<b>Repay it.</b> “Repay all”: your dollars come back in the same transaction. The loan stays on <a href="${href(l, "/historial")}">My record</a>.`,
-        html`<b>Agents.</b> <code class="tx">GET /api/public/rates</code>, <a href="/llms.txt">/llms.txt</a> and paid answers over x402 in wARS or USD₮: <a href="/x402">/x402</a>. Code: <a href="https://github.com/Jennycruzy/adelanto">GitHub</a>.`,
+        html`<b>Agents.</b> <code class="tx">GET /api/public/rates</code>, <a href="/llms.txt">/llms.txt</a>, paid answers over x402 in wARS or USD₮ (<a href="/x402">/x402</a>), MCP at <code class="tx">/mcp</code> and the bot <a href="https://t.me/adelanto_ar_bot">@adelanto_ar_bot</a>. Code: <a href="https://github.com/Jennycruzy/adelanto">GitHub</a>.`,
       ];
   return c.html(
     plain(
@@ -304,6 +321,10 @@ ${q.ok
   <p class="small muted" style="text-align:center;margin:12px 0 0">${es ? "Una firma gratis y una confirmación." : "One free signature and one confirmation."}</p>
 </div>`
   : html`<div class="notice">${es ? "Ahora no hay lugar para un préstamo de prueba; volvé en un rato." : "There is no room for a test loan right now; try again shortly."}</div>`}
+<div class="card">
+  <div class="card-label">${es ? "Por dentro" : "Under the hood"}</div>
+  <div class="addr-list">${stack(l).map(([name, what, link]) => html`<a href="${link}"><span style="font-family:inherit;letter-spacing:0"><b>${name}</b><br><span class="small muted" style="font-family:inherit;letter-spacing:0">${what}</span></span><span>→</span></a>`)}</div>
+</div>
 </div>
 </div>`,
       "/probar",
@@ -417,6 +438,17 @@ or wARS (Permit2; the facilitator sponsors the permit, so a wARS payer needs no 
 - GET /x402/quote?pesos=1000&days=30&tier=0: a firm borrow quote from the live pool. US$0.01 or 15 wARS
 - GET /x402/credit/<address>: a wallet's repayment record and the line it unlocks. US$0.01 or 15 wARS
 - Example buyer: scripts/x402-buy.ts in the source
+
+## What the agent buys (buy, usebuy.ai)
+Before it moves money, once a day for the pool, and before the weekly summaries, the agent pays Chainstack's Celo
+RPC (capability chainstack.celo, US$0.01 per batch, x402 in USD₮ from the agent wallet) for the same reads at the
+same block and compares them with its own RPC. First purchase: 0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40
+Receipts: evidence/buy/purchases.json in the source; the latest check is on /transparencia.
+
+## Also
+- ERC-8004 reputation: a closed loan's borrower rates agent 10043 in the ReputationRegistry (tag closed-loan)
+- Telegram: https://t.me/adelanto_ar_bot, linked to a wallet by one EIP-712 signature
+- Ripio off-ramp on every open loan: https://ramp.ripio.com/off-ramp?country=AR&chain=42220&token=WARS
 
 ## Source
 https://github.com/Jennycruzy/adelanto

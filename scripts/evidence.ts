@@ -97,6 +97,7 @@ write("x402-sales.json", { ...generated, source: "ERC-20 transfers into the agen
 
 const dbPath = process.env.DB_PATH ?? join(homedir(), "adelanto-data", "agent.sqlite");
 let actions: any = null, study: any = null, weekly: any = null;
+let buyPaid = 0;
 if (existsSync(dbPath)) {
   const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite");
   const db = new DatabaseSync(dbPath, { readOnly: true });
@@ -141,9 +142,10 @@ if (existsSync(dbPath)) {
       ...generated,
       source: "buy_purchases in the agent's database: every purchase through buy (usebuy.ai), what it served and its settlement",
       paidUsd: bought.filter((b) => b.outcome === "paid").reduce((t, b) => t + Number(b.amount) / 1e6, 0),
-      purchases: bought.map((b) => ({ ...b, served: JSON.parse(b.served), at: new Date(Number(b.at)).toISOString(), url: b.settlement_tx ? tx(b.settlement_tx) : null })),
+      purchases: bought.map((b) => ({ ...b, served: JSON.parse(b.served), at: new Date(Number(b.at)).toISOString(), settlementUrl: b.settlement_tx ? tx(b.settlement_tx) : null })),
     }),
   );
+  buyPaid = bought.filter((b) => b.outcome === "paid").length;
   db.close();
 } else {
   console.log(`No agent database at ${dbPath}: agent-actions.json, price-study.json and weekly-summaries.json are left as they are.`);
@@ -192,7 +194,7 @@ number in the README and the submission comes from these files.
 | Pool now | ${s.pool.freePesos.toLocaleString("en-US")} pesos free, ${s.pool.lentPesos.toLocaleString("en-US")} lent | PesoPool at block ${s.block} |
 | Agent actions on chain | ${s.agent.actionsOnChain} | [loans.json](loans.json), [agent-actions.json](agent-actions.json) |
 | x402 sales | ${s.x402.sales} (${Object.entries(s.x402.byToken).map(([k, v]) => `${v} ${k}`).join(", ") || "none"})${s.x402.fromOtherPeople ? `; ${s.x402.fromOtherPeople} from other people` : ""} | [x402-sales.json](x402-sales.json) |
-${s.ratings.counted ? `| ERC-8004 ratings from people who closed a loan | ${s.ratings.counted}, average ${s.ratings.averageStars} / 5 | [ratings.json](ratings.json) |\n` : ""}${s.priceCheck ? `| Price check | ${s.priceCheck.readings.toLocaleString("en-US")} readings; pool vs Binance median ${s.priceCheck.medianGapFromBinancePct}%, max ${s.priceCheck.maxGapFromBinancePct}%; past the pause line against both: ${s.priceCheck.readingsPastPauseLineFromBoth} | [price-study.json](price-study.json) |\n` : ""}${s.weeklySummaries?.written ? `| Weekly summaries written | ${s.weeklySummaries.written} | [weekly-summaries.json](weekly-summaries.json) |\n` : ""}${s.attribution ? `| Attribution tag | ${s.attribution.tagged} tagged, ${s.attribution.untaggedAfterCodeIssued} untagged after the code was issued (checked ${s.attribution.checkedAt}) | [attribution-audit.json](attribution-audit.json) |\n` : ""}
+${s.ratings.counted ? `| ERC-8004 ratings from people who closed a loan | ${s.ratings.counted}, average ${s.ratings.averageStars} / 5 | [ratings.json](ratings.json) |\n` : ""}${buyPaid ? `| Paid calls through buy (Chainstack's Celo RPC, x402 in USD₮) | ${buyPaid}, US$${(buyPaid * 0.01).toFixed(2)} | [buy/purchases.json](buy/purchases.json) |\n` : ""}${s.priceCheck ? `| Price check | ${s.priceCheck.readings.toLocaleString("en-US")} readings; pool vs Binance median ${s.priceCheck.medianGapFromBinancePct}%, max ${s.priceCheck.maxGapFromBinancePct}%; past the pause line against both: ${s.priceCheck.readingsPastPauseLineFromBoth} | [price-study.json](price-study.json) |\n` : ""}${s.weeklySummaries?.written ? `| Weekly summaries written | ${s.weeklySummaries.written} | [weekly-summaries.json](weekly-summaries.json) |\n` : ""}${s.attribution ? `| Attribution tag | ${s.attribution.tagged} tagged, ${s.attribution.untaggedAfterCodeIssued} untagged after the code was issued (checked ${s.attribution.checkedAt}) | [attribution-audit.json](attribution-audit.json) |\n` : ""}
 Check the chain side yourself with \`npm run verify\` (chain alone, no database).
 `;
 writeFileSync(join(out, "README.md"), md);

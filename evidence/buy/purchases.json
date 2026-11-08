@@ -1,8 +1,25 @@
 {
-  "generatedAt": "2026-11-08T15:42:09.579Z",
-  "block": "82251771",
-  "blockTime": "2026-11-08T15:42:09.000Z",
+  "generatedAt": "2026-11-08T18:36:08.279Z",
+  "block": "82262210",
+  "blockTime": "2026-11-08T18:36:08.000Z",
   "source": "buy_purchases in the agent's database: every purchase through buy (usebuy.ai), what it served and its settlement",
-  "paidUsd": 0,
-  "purchases": []
+  "paidUsd": 0.01,
+  "purchases": [
+    {
+      "capability": "chainstack.celo",
+      "url": "https://gateway.usebuy.ai/chainstack/celo",
+      "payer": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
+      "token": "USDT",
+      "amount": "10000",
+      "settlement_tx": "0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40",
+      "served": {
+        "action": "A8_pool_check",
+        "block": "82261759"
+      },
+      "outcome": "paid",
+      "detail": null,
+      "at": "2026-11-08T18:28:45.503Z",
+      "settlementUrl": "https://celoscan.io/tx/0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40"
+    }
+  ]
 }

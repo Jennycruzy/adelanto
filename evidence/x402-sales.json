@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-11-08T15:42:09.579Z",
-  "block": "82251771",
-  "blockTime": "2026-11-08T15:42:09.000Z",
+  "generatedAt": "2026-11-08T18:36:08.279Z",
+  "block": "82262210",
+  "blockTime": "2026-11-08T18:36:08.000Z",
   "source": "ERC-20 transfers into the agent wallet settled by an x402 facilitator (Blockscout)",
   "payTo": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
   "sales": [

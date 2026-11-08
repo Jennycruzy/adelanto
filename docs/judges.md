@@ -98,6 +98,11 @@ with a funded Celo key (a wARS payer needs no CELO; the facilitator sponsors the
 BUYER_KEY_FILE=path/to/key node scripts/x402-buy.ts https://adelanto-99-80-93-71.sslip.io/x402/peso-rate wars
 ```
 
+The agent also **buys**: through [buy](https://usebuy.ai) it pays Chainstack's Celo node US$0.01 in USD₮ over x402 for
+a second read of the chain before it moves money, and once a day for the pool's books. The first purchase:
+[`0xb31f9ca9…`](https://celoscan.io/tx/0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40); each one is a
+receipt in [`evidence/buy/purchases.json`](../evidence/buy/purchases.json) and the latest is on Transparencia.
+
 The agent's identity is ERC-8004 #10043 in Celo's registry; its card is
 [`agent/registration.json`](../agent/registration.json).
 
@@ -105,7 +110,7 @@ Repo:
 
 ```sh
 git clone https://github.com/Jennycruzy/adelanto && cd adelanto
-npm ci && npm test                          # 287 tests, offline (forge build first for the ABI check)
+npm ci && npm test                          # 296 tests, offline (forge build first for the ABI check)
 npm run verify                              # every loan, the counts and the tags, from Celo alone
 npm run audit:attribution                   # re-checks the tag on every transaction of ours
 cd contracts && forge test --no-match-path 'test/fork/*'   # Solidity tests without an RPC
@@ -116,7 +121,7 @@ cd contracts && forge test --no-match-path 'test/fork/*'   # Solidity tests with
 | Criterion | Look at |
 |---|---|
 | Works on mainnet with a real wFIAT token | Loan #1's page; [docs/verification.md](verification.md); [evidence/attribution-audit.json](../evidence/attribution-audit.json) |
-| Real use of wFIAT and the Celo stack | wARS is the loan; MiniPay; ERC-8004 #10043; the tag on every transaction; x402 through Celo's facilitator, paid in wARS ([catalog](https://adelanto-99-80-93-71.sslip.io/x402)); the Uniswap price; Ripio's bridge in the [Ethereum round trip](verification.md#ethereum-round-trip) |
+| Real use of wFIAT and the Celo stack | wARS is the loan; MiniPay; ERC-8004 #10043; the tag on every transaction; x402 through Celo's facilitator, paid in wARS ([catalog](https://adelanto-99-80-93-71.sslip.io/x402)); buy, paying Chainstack's node for a second read; the MCP server; ratings in the ERC-8004 ReputationRegistry; the Uniswap price; Ripio's off-ramp on every open loan; Ripio's bridge in the [Ethereum round trip](verification.md#ethereum-round-trip) |
 | The agent is autonomous and useful | [Loan #2](https://adelanto-99-80-93-71.sslip.io/prestamo/2): the agent repaid it on its own, quoting the rule; the home page's live block; [docs/agent.md](agent.md); the rule step on your own loan page |
 | A real person can use it | Steps 3.1 to 3.4 above, in MiniPay, in Spanish, amounts in pesos, the rule in your own words or by voice |
 | Impact for LatAm | The README's first lines and [docs/data.md](data.md): a bank charges 64.63%, the pool 22–36% |

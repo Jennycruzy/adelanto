@@ -119,7 +119,10 @@ batch through [buy](https://usebuy.ai) (`chainstack.celo`, US$0.01 for up to 2,0
 agent wallet in USD₮. If the two disagree, it sends nothing that tick. Before the Sunday summaries it does the same
 for every balance, debt, step and pool total they quote, and a disagreement holds the summaries for an hour. One
 payment can never exceed the catalogue price and the agent spends at most US$0.05 a day; past that, or if buy is
-down, it acts on our RPC alone and says so in its log. Every purchase is a receipt with the action and wallets it
+down, it acts on our RPC alone and says so in its log. Once a day it also buys the pool's books (free pesos, debt,
+deposits, the rate) at one block and shows the comparison and the payment on Transparencia; the first one matched at
+block 82261759, paid in [`0xb31f9ca9…`](https://celoscan.io/tx/0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40)
+(`apps/agent/src/poolcheck.ts`). Every purchase is a receipt with the action and wallets it
 served and its settlement transaction: [`evidence/buy/purchases.json`](../evidence/buy/purchases.json)
 (`apps/agent/src/buy.ts`).
 

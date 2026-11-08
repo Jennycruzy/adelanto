@@ -1,19 +1,19 @@
 {
-  "generatedAt": "2026-11-08T15:42:09.579Z",
-  "block": "82251771",
-  "blockTime": "2026-11-08T15:42:09.000Z",
+  "generatedAt": "2026-11-08T18:36:08.279Z",
+  "block": "82262210",
+  "blockTime": "2026-11-08T18:36:08.000Z",
   "source": "prices table in the agent's database: the agent's own once-a-minute readings (A4 price check)",
-  "readings": 3201,
+  "readings": 3375,
   "from": "2026-11-06T10:17:58.598Z",
-  "to": "2026-11-08T15:41:27.321Z",
+  "to": "2026-11-08T18:35:42.550Z",
   "gapFromBinancePct": {
     "median": 0.47,
     "p95": 0.67,
     "max": 1.2
   },
   "gapFromDolarapiPct": {
-    "median": 0.09,
-    "p95": 0.26,
+    "median": 0.08,
+    "p95": 0.25,
     "max": 0.53
   },
   "readingsPastPauseLineFromBoth": 0,
