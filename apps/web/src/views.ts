@@ -263,7 +263,7 @@ ${proof && b ? html`<section class="section"><div class="wrap">
   <div class="reveal d1">
     <details><summary>${es ? "¿Qué pasa si no pago a tiempo?" : "What if I don't repay on time?"}</summary><p>${es ? "La tasa sube 5 puntos hasta que pagues y, a los 7 días, tu historial lo marca como atrasado. Nunca se vende tu garantía por pagar tarde: solo el precio puede hacer que se venda una parte." : "The rate rises 5 points until you repay and, after 7 days, your record marks it late. Your guarantee is never sold for paying late: only the price can trigger a partial sale."}</p></details>
     <details><summary>${es ? "¿Quién tiene mis dólares?" : "Who holds my dollars?"}</summary><p>${es ? "El contrato PesoPool en Celo. No tiene ninguna función para que un administrador los retire. Vuelven a tu billetera cuando pagás." : "The PesoPool contract on Celo. It has no function that lets an administrator withdraw them. They return to your wallet when you repay."}</p></details>
-    <details><summary>${es ? "¿Qué son los wARS?" : "What is wARS?"}</summary><p>${es ? "Pesos digitales de Ripio: 1 wARS = 1 peso. Los podés usar en Celo o pasarlos a tu cuenta bancaria desde la app de Ripio." : "Ripio's digital pesos: 1 wARS = 1 peso. Use them on Celo or move them to your bank account from the Ripio app."}</p></details>
+    <details><summary>${es ? "¿Qué son los wARS?" : "What is wARS?"}</summary><p>${es ? "Pesos digitales de Ripio: 1 wARS = 1 peso. Los podés usar en Celo o pasarlos a tu cuenta bancaria con Ripio: el botón «Mandar a mi banco» está en tu préstamo." : "Ripio's digital pesos: 1 wARS = 1 peso. Use them on Celo or move them to your bank account with Ripio: the "Send to my bank" button is on your loan."}</p></details>
     <details><summary>${es ? "¿Cuándo hay riesgo?" : "When is there risk?"}</summary><p>${es ? "Debés pesos y dejaste dólares: si el peso cae, tu préstamo está más seguro. El riesgo llega si el peso se fortalece mucho. Al 70% el agente te protege; pasando el 80% se vende solo lo justo para volver al 78%." : "You owe pesos and left dollars: if the peso falls, your loan gets safer. Risk comes if the peso strengthens a lot. At 70% the agent protects you; past 80% only enough is sold to get back to 78%."}</p></details>
     <details><summary>${es ? "¿Y si Ripio congela los wARS?" : "What if Ripio freezes wARS?"}</summary><p>${es ? "Tras 24 horas congelados, cada persona puede recuperar sus dólares hasta la línea del 70%. Está escrito en el contrato y probado." : "After 24 hours frozen, each borrower can take their dollars back down to the 70% line. It is written in the contract and tested."}</p></details>
     <details><summary>${es ? "¿De dónde sale el precio del dólar?" : "Where does the dollar price come from?"}</summary><p>${es ? "Del fondo wARS/USDT de Uniswap en Celo, promedio de 30 minutos. El agente lo compara cada minuto con Binance y dolarapi; si no coinciden, pausa préstamos nuevos." : "From the wARS/USDT Uniswap pool on Celo, as a 30-minute average. The agent compares it every minute with Binance and dolarapi; if they disagree, it pauses new loans."}</p></details>
@@ -379,6 +379,30 @@ function quoteCard(lang: Lang, v: PoolView, q: Quote | { ok: false; reason: stri
 
 // ---------------------------------------------------------------- loan
 
+/** Ripio's off-ramp: wARS to an Argentine bank account. It needs no partner keys; Ripio asks the person for their email and ID. */
+export const ripioOffRamp = (pesosWhole: bigint) => `https://ramp.ripio.com/off-ramp?country=AR&chain=42220&token=WARS&amount=${pesosWhole.toString()}`;
+
+/** "Send the pesos to my bank", prefilled with what the loan paid out (pesos minus the opening fee). */
+export function cashOut(lang: Lang, events: { name: string; args: any }[]) {
+  const b = events.find((e) => e.name === "Borrowed");
+  if (!b) return "";
+  const es = lang === "es";
+  const paid = BigInt(b.args.pesos) - BigInt(b.args.fee ?? 0);
+  const whole = paid / 10n ** 18n;
+  if (whole <= 0n) return "";
+  return html`<div class="card cashout">
+  <div class="card-label">${es ? "¿Los querés en el banco?" : "Want them in your bank?"}</div>
+  <h3>${es ? html`Pasá ${pesos(whole * 10n ** 18n, lang)} a tu cuenta con Ripio` : html`Move ${pesos(whole * 10n ** 18n, lang)} to your account with Ripio`}</h3>
+  <ol class="steps-sm">
+    <li>${es ? "Abrís Ripio con el monto ya cargado." : "Open Ripio with the amount filled in."}</li>
+    <li>${es ? "La primera vez te pide tu email y validar tu identidad." : "The first time, it asks for your email and to verify your ID."}</li>
+    <li>${es ? "Elegís tu CBU o CVU y mandás los wARS desde esta billetera a la dirección que te muestra Ripio." : "Choose your CBU or CVU and send the wARS from this wallet to the address Ripio shows you."}</li>
+  </ol>
+  <a class="btn ghost block" href="${ripioOffRamp(whole)}" target="_blank" rel="noopener">${es ? "Mandar a mi banco con Ripio" : "Send to my bank with Ripio"} <span class="arrow">↗</span></a>
+  <p class="small muted" style="margin:10px 0 0">${es ? "Es la página de Ripio, que emite los wARS; nosotros no vemos tus datos." : "It is Ripio's own page, the issuer of wARS; we never see your details."}</p>
+</div>`;
+}
+
 export function loanPage(lang: Lang, v: PoolView, loan: LoanView, events: any[], actions: any[]) {
   const es = lang === "es";
   const widthPct = Math.min(100, Number(loan.ltvBps) / 80);
@@ -415,7 +439,8 @@ ${loan.open
   <h3 style="${loan.guard ? "" : "color:var(--paper)"}">${loan.guard ? t(lang, "guardOn") : t(lang, "guardOff")}</h3>
   ${loan.guard ? guardWords(lang, loan.guard.limits) : html`<p class="small" style="color:rgba(244,239,228,.75)">${es ? "Con un permiso que firmás una vez, el agente puede agregar tus dólares o pagar con tus pesos cuando el préstamo llega a riesgo, sin pasarse de tus límites." : "With one permission you sign once, the agent can add your dollars or repay with your pesos when the loan reaches risk, never beyond your limits."}</p>`}
   <a class="btn ${loan.guard ? "ghost" : "light"} block" style="margin-top:14px" href="${href(lang, `/cuidar/${loan.id}`)}">${t(lang, "guard")} <span class="arrow">→</span></a>
-</div>`
+</div>
+${cashOut(lang, events)}`
   : html`<div class="card"><div class="card-label">${es ? "Estado" : "Status"} · ${pillFor(loan.borrower, lang)}</div><h3>${loan.liquidated ? (es ? "Se vendió parte de la garantía." : "Part of the guarantee was sold.") : es ? "Pagado. Los dólares volvieron a su billetera." : "Repaid. The dollars went back to the wallet."}</h3>
   <p style="margin:12px 0 0"><a class="link-arrow" href="${href(lang, `/historial?w=${loan.borrower}`)}">${es ? "Ver el historial de esta billetera" : "See this wallet's record"}</a></p></div>`}
 </div>

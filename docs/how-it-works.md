@@ -45,6 +45,11 @@ The pool values the dollars at the **lower** of the pool's spot price and its 30
 never lends more pesos. If the price module refuses (thin liquidity, spot far from the average, or a stale price),
 borrowing waits; repaying never does.
 
+The pesos land in the borrower's wallet as wARS. To take them to a bank account, the loan page has **Mandar a mi
+banco**: it opens Ripio's own off-ramp ([`ramp.ripio.com/off-ramp`](https://ramp.ripio.com/off-ramp?country=AR&chain=42220&token=WARS&amount=997))
+with Celo, wARS and the amount paid out already filled in. Ripio asks for an email and ID the first time, then the
+borrower picks a CBU or CVU and sends the wARS from the same wallet. We never see those details.
+
 ## 4. The borrower sets the agent's limits (optional)
 
 On the loan page, **Cuidar mi préstamo**. The borrower writes or dictates the rule in their own words, or picks a
