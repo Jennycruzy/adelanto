@@ -1,5 +1,7 @@
 # Judges' guide: five minutes
 
+Prefer to watch first? [The 3-minute demo](https://youtu.be/u0QUafAyS5s) shows a whole loan in MiniPay on a phone.
+
 Everything below runs on Celo mainnet with real wARS. Site: **https://adelanto.space** (Spanish
 first; add `?lang=en` or use the switch at the top for English).
 

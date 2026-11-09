@@ -54,7 +54,7 @@ export function layout(lang: Lang, title: string, body: H, opts: { path: string;
 <meta property="og:title" content="Adelanto · ${t(lang, "tagline")}">
 <meta property="og:description" content="${es ? "Pesos contra tus dólares, en MiniPay, mucho más barato que el banco. Un agente cuida el préstamo dentro de una regla que firmás vos." : "Pesos against your dollars, in MiniPay, far cheaper than the bank. An agent looks after the loan inside a rule you sign."}">
 <meta property="og:image" content="/static/img/kiosco-1600.webp">
-<link rel="icon" href="/static/adelanto.png">
+<link rel="icon" type="image/png" href="/static/img/favicon.png"><link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
 <link rel="preload" href="/static/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/app.css?v=7">
 </head>

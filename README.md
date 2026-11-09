@@ -18,7 +18,7 @@ MCP server · Uniswap v3 on Celo · Telegram bot · Morpho on Ethereum for the r
 910 pesos repaid by the agent on its own; 2 x402 sales; 63 of 63 transactions tagged
 ([evidence](evidence/README.md)).
 
-**[adelanto.space](https://adelanto.space)** ·
+**[Watch the 3-minute demo](https://youtu.be/u0QUafAyS5s)** · **[adelanto.space](https://adelanto.space)** ·
 [Try it in five minutes](https://adelanto.space/probar) ·
 [Transparency](https://adelanto.space/transparencia) ·
 [Mi historial](https://adelanto.space/historial) ·
