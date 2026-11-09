@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-11-08T21:43:52.671Z",
-  "block": "82273474",
-  "blockTime": "2026-11-08T21:43:52.000Z",
+  "generatedAt": "2026-11-09T01:52:53.280Z",
+  "block": "82288415",
+  "blockTime": "2026-11-09T01:52:53.000Z",
   "loans": {
     "total": 7,
     "ours": 3,
@@ -25,8 +25,8 @@
   },
   "pool": {
     "freePesos": 4516.9088,
-    "lentPesos": 1000.0413,
-    "from": "PesoPool 0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60 at block 82273474"
+    "lentPesos": 1000.1607,
+    "from": "PesoPool 0xCfeafCDd06d3a0E3Bf1596F8Afa1caC1Dc19ed60 at block 82288415"
   },
   "agent": {
     "actionsOnChain": 5,
@@ -48,14 +48,14 @@
     "from": "ratings.json"
   },
   "priceCheck": {
-    "readings": 3514,
-    "medianGapFromBinancePct": 0.47,
-    "maxGapFromBinancePct": 1.2,
+    "readings": 3763,
+    "medianGapFromBinancePct": 0.48,
+    "maxGapFromBinancePct": 1.27,
     "readingsPastPauseLineFromBoth": 0,
     "from": "price-study.json"
   },
   "weeklySummaries": {
-    "written": 0,
+    "written": 7,
     "from": "weekly-summaries.json"
   },
   "attribution": {
@@ -63,7 +63,7 @@
     "tagged": 63,
     "sentBeforeCodeIssued": 8,
     "untaggedAfterCodeIssued": 0,
-    "checkedAt": "2026-11-08T21:43:51.524Z",
+    "checkedAt": "2026-11-09T01:52:51.333Z",
     "from": "attribution-audit.json (npm run audit:attribution)"
   }
 }

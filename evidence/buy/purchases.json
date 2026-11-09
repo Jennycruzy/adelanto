@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-11-08T21:43:52.671Z",
-  "block": "82273474",
-  "blockTime": "2026-11-08T21:43:52.000Z",
+  "generatedAt": "2026-11-09T01:52:53.280Z",
+  "block": "82288415",
+  "blockTime": "2026-11-09T01:52:53.000Z",
   "source": "buy_purchases in the agent's database: every purchase through buy (usebuy.ai), what it served and its settlement",
-  "paidUsd": 0.01,
+  "paidUsd": 0.03,
   "purchases": [
     {
       "capability": "chainstack.celo",
@@ -20,6 +20,46 @@
       "detail": null,
       "at": "2026-11-08T18:28:45.503Z",
       "settlementUrl": "https://celoscan.io/tx/0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40"
+    },
+    {
+      "capability": "chainstack.celo",
+      "url": "https://gateway.usebuy.ai/chainstack/celo",
+      "payer": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
+      "token": "USDT",
+      "amount": "10000",
+      "settlement_tx": "0xc721e4e80e07ec1c3b710cf3783bb3d2a61c27710ef61e198e76f50326b2adfc",
+      "served": {
+        "action": "A7_weekly",
+        "wallets": [
+          "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
+          "0xF689c0620b9a9D7A1a0312e1F0778bAa440989BE",
+          "0x0cff67325Ba688921C36bDf0ff59E351100e2A3d",
+          "0x0D11E997aFCa7723e4216579c48Bf3842555ad46",
+          "0x1a7d0CeECe31D36767f6d9cB94d2BbB08F2929d5",
+          "0x2BcE94aFf0Cf444e082e5F7071c5122Ea0E533Af"
+        ],
+        "block": "82278042"
+      },
+      "outcome": "paid",
+      "detail": null,
+      "at": "2026-11-08T23:01:23.209Z",
+      "settlementUrl": "https://celoscan.io/tx/0xc721e4e80e07ec1c3b710cf3783bb3d2a61c27710ef61e198e76f50326b2adfc"
+    },
+    {
+      "capability": "chainstack.celo",
+      "url": "https://gateway.usebuy.ai/chainstack/celo",
+      "payer": "0xB93A6B8f3bF182780e0366bE0eC6bD027c4CB2d1",
+      "token": "USDT",
+      "amount": "10000",
+      "settlement_tx": "0x6185ae2f131210e318b17804d53e6f3ce8ff432586877ad4481ad4ab8964c318",
+      "served": {
+        "action": "A8_pool_check",
+        "block": "82281654"
+      },
+      "outcome": "paid",
+      "detail": null,
+      "at": "2026-11-09T00:00:21.467Z",
+      "settlementUrl": "https://celoscan.io/tx/0x6185ae2f131210e318b17804d53e6f3ce8ff432586877ad4481ad4ab8964c318"
     }
   ]
 }

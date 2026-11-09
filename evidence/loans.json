@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-11-08T21:43:52.671Z",
-  "block": "82273474",
-  "blockTime": "2026-11-08T21:43:52.000Z",
+  "generatedAt": "2026-11-09T01:52:53.280Z",
+  "block": "82288415",
+  "blockTime": "2026-11-09T01:52:53.000Z",
   "source": "PesoPool, LoanGuard and GentleKeeper events on Celo; labels from deployments/wallets.json",
   "loans": [
     {
