@@ -1,14 +1,24 @@
 # ADELANTO
 
-**Pesos now, without selling your dollars. An agent keeps the loan safe.**
+**Peso loans against your dollars, inside MiniPay, with an agent that looks after the loan.**
 *Pesos ya, sin vender tus dólares. Un agente cuida tu préstamo.*
 
-> An Argentine bank charges **64.63% a year** for a personal loan ([BCRA, 2 Nov 2026](docs/data.md#rates)). ADELANTO
-> lends Ripio's peso stablecoin **wARS** on Celo against **USDT** at **22% a year when the pool is idle, 36% at 80%
-> use**, inside MiniPay. You keep your dollars. A rule you sign once lets an agent protect the loan, and a contract
-> holds the agent to it.
+ADELANTO is a lending app running on Celo mainnet. An Argentine with USDT in MiniPay borrows Ripio's peso
+stablecoin **wARS** in three taps and keeps their dollars. The rate is **22% a year when the pool is idle, 36% at
+80% use**; a bank charges **64.63%** for a personal loan ([BCRA, 2 Nov 2026](docs/data.md#rates)). The borrower
+writes a rule in their own Spanish, signs it once, and the agent repays, protects and reports on the loan inside
+limits the `LoanGuard` contract enforces. Lenders earn on their wARS. Other agents pay ADELANTO for its peso
+rate, quotes and credit records.
 
-Live on Celo mainnet: **[adelanto.space](https://adelanto.space)** ·
+**Built on:** Ripio wARS and off-ramp · MiniPay · Celo mainnet · ERC-8004 identity and reputation (agent #10043) ·
+ERC-8021 attribution on every transaction · x402 through Celo's facilitator · buy (Chainstack's Celo node) ·
+MCP server · Uniswap v3 on Celo · Telegram bot · Morpho on Ethereum for the rate watch, with a real-money round trip through Ripio's bridge
+
+**On mainnet (8 Nov):** 7 loans, 2 of them from people outside the team, one rated the agent 5 of 5 on ERC-8004;
+910 pesos repaid by the agent on its own; 2 x402 sales; 63 of 63 transactions tagged
+([evidence](evidence/README.md)).
+
+**[adelanto.space](https://adelanto.space)** ·
 [Try it in five minutes](https://adelanto.space/probar) ·
 [Transparency](https://adelanto.space/transparencia) ·
 [Mi historial](https://adelanto.space/historial) ·
@@ -28,7 +38,7 @@ ERC-8004 agent **#10043** · [MCP](https://adelanto.space/mcp) · Telegram [@ade
 | **buy** | The agent buys reads from Chainstack's Celo node, which we do not run, paid over x402 in USD₮, to confirm its own RPC before it moves money, every day for the pool and before each weekly summary | [first purchase](https://celoscan.io/tx/0xb31f9ca9ce650470f04832fc83195e29d9cc70880057b941184a0d6d66761b40) · [receipts](evidence/buy/purchases.json) |
 | **MCP** | Other agents read rates, quotes, credit records and loans, and get unsigned tagged borrow and repay transactions | [`/mcp`](https://adelanto.space/mcp) |
 | **Uniswap v3 on Celo** | The wARS/USDT pool is the price: spot, 30-minute and 2-hour averages, depth checks; repay-with-dollars swaps through it | [`PriceModule`](https://celoscan.io/address/0xBC6aa0BC458E01A7A32955DC106F9775569A6355) |
-| **Morpho on Ethereum** | Bigger loans, through a proxy that only runs orders the borrower signed | [round trip](docs/verification.md#ethereum-round-trip) |
+| **Morpho on Ethereum** | The rate watch compares Morpho's wARS rate with ours and tells the borrower when moving would save money; a real-money round trip ran through Ripio's bridge; the proxy for bigger loans, which runs only orders the borrower signed, is tested on a Morpho mainnet fork | [round trip](docs/verification.md#ethereum-round-trip) |
 | **Telegram** | Link a wallet with one signature; the agent's notices, quotes and rules in chat | [@adelanto_ar_bot](https://t.me/adelanto_ar_bot) |
 
 ## Check it yourself
